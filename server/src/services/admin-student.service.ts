@@ -1,0 +1,168 @@
+import pool from "../config/db.js";
+
+const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean"];
+
+async function getAdminDeptId(userId: number): Promise<number | null> {
+    const [rows]: any = await pool.execute(
+        "SELECT department_id FROM admins WHERE user_id = ?",
+        [userId]
+    );
+    return rows[0]?.department_id ?? null;
+}
+
+// ─── Student list (dept-filtered) ─────────────────────────────────────────────
+
+export interface AdminStudentItem {
+    studentId: number;
+    userId: number;
+    studentNo: string;
+    firstName: string;
+    lastName: string;
+    yearLevel: number;
+    section: string;
+    schoolYear: string;
+    semester: string;
+    departmentName: string;
+    departmentCode: string;
+    obligationsTotal: number;
+    obligationsPaid: number;
+    obligationsPending: number;
+    clearanceStatus: string | null;
+}
+
+export const listStudents = async (
+    userId: number,
+    role: string,
+    userDeptId?: number | null
+): Promise<AdminStudentItem[]> => {
+    const deptId = ALL_DEPT_ROLES.includes(role)
+        ? null
+        : (await getAdminDeptId(userId)) ?? userDeptId ?? null;
+
+    let sql = `
+        SELECT
+            s.student_id        AS studentId,
+            s.user_id           AS userId,
+            s.student_no        AS studentNo,
+            s.first_name        AS firstName,
+            s.last_name         AS lastName,
+            s.year_level        AS yearLevel,
+            s.section,
+            s.school_year       AS schoolYear,
+            s.semester,
+            d.name              AS departmentName,
+            d.code              AS departmentCode,
+            COUNT(so.student_obligation_id)                         AS obligationsTotal,
+            SUM(so.status IN ('paid','waived'))                     AS obligationsPaid,
+            SUM(so.status = 'pending_verification')                 AS obligationsPending,
+            cl.clearance_status AS clearanceStatus
+        FROM students s
+        JOIN users u       ON u.user_id       = s.user_id
+        JOIN departments d ON d.department_id = s.department_id
+        LEFT JOIN student_obligations so ON so.student_id = s.student_id
+        LEFT JOIN clearances cl
+            ON cl.student_id = s.student_id
+            AND cl.school_year = s.school_year
+            AND cl.semester   = s.semester
+        WHERE u.status = 'active'
+    `;
+    const params: any[] = [];
+
+    if (deptId) {
+        sql += " AND s.department_id = ?";
+        params.push(deptId);
+    }
+
+    sql += " GROUP BY s.student_id ORDER BY s.last_name, s.first_name";
+
+    const [rows]: any = await pool.execute(sql, params);
+    return rows.map((r: any) => ({
+        ...r,
+        obligationsTotal:   Number(r.obligationsTotal),
+        obligationsPaid:    Number(r.obligationsPaid),
+        obligationsPending: Number(r.obligationsPending),
+    }));
+};
+
+// ─── Per-student obligation list (for admin panel) ────────────────────────────
+
+export interface AdminObligationItem {
+    studentObligationId: number;
+    obligationId: number;
+    obligationName: string;
+    amount: number;
+    requiresPayment: boolean;
+    dueDate: string | null;
+    isOverdue: boolean;
+    status: "unpaid" | "pending_verification" | "paid" | "waived";
+    paymentType: "gcash" | "cash" | null;
+    paymentId: number | null;
+    receiptPath: string | null;
+    amountPaid: number | null;
+    paymentStatus: "pending" | "approved" | "rejected" | null;
+    submittedAt: string | null;
+    remarks: string | null;
+}
+
+export const getStudentObligationsForAdmin = async (
+    studentId: number
+): Promise<AdminObligationItem[]> => {
+    const [rows]: any = await pool.execute(
+        `SELECT
+            so.student_obligation_id,
+            o.obligation_id,
+            o.obligation_name,
+            so.amount_due          AS amount,
+            o.due_date,
+            so.status,
+            ps.payment_id,
+            ps.receipt_path,
+            ps.amount_paid,
+            ps.payment_type,
+            ps.payment_status,
+            ps.submitted_at,
+            pv.remarks
+         FROM student_obligations so
+         JOIN obligations o ON o.obligation_id = so.obligation_id
+         LEFT JOIN payment_submissions ps
+            ON ps.student_obligation_id = so.student_obligation_id
+            AND ps.payment_id = (
+                SELECT MAX(p2.payment_id) FROM payment_submissions p2
+                WHERE p2.student_obligation_id = so.student_obligation_id
+            )
+         LEFT JOIN payment_verifications pv ON pv.payment_id = ps.payment_id
+         WHERE so.student_id = ?
+         ORDER BY o.due_date IS NULL, o.due_date ASC`,
+        [studentId]
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return rows.map((r: any) => {
+        const dueDate = r.due_date
+            ? (r.due_date.toISOString?.().split("T")[0] ?? r.due_date)
+            : null;
+        const isOverdue = dueDate !== null
+            && new Date(dueDate) < today
+            && r.status !== "paid"
+            && r.status !== "waived";
+        return {
+            studentObligationId: r.student_obligation_id,
+            obligationId:        r.obligation_id,
+            obligationName:      r.obligation_name,
+            amount:              Number(r.amount),
+            requiresPayment:     Number(r.amount) > 0,
+            dueDate,
+            isOverdue,
+            status:              r.status,
+            paymentType:         r.payment_type ?? null,
+            paymentId:           r.payment_id ?? null,
+            receiptPath:         r.receipt_path ?? null,
+            amountPaid:          r.amount_paid != null ? Number(r.amount_paid) : null,
+            paymentStatus:       r.payment_status ?? null,
+            submittedAt:         r.submitted_at ?? null,
+            remarks:             r.remarks ?? null,
+        };
+    });
+};
