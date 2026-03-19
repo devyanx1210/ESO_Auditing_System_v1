@@ -7,7 +7,7 @@ export interface AdminUserItem {
     email: string;
     role: string;
     roleLabel: string;
-    departmentName: string | null;
+    programName: string | null;
     position: string;
     status: string;
     createdAt: string;
@@ -19,7 +19,7 @@ export interface CreateAdminInput {
     email: string;
     password: string;
     role: "eso_officer" | "class_officer" | "program_head" | "signatory" | "dean";
-    departmentId?: number | null;
+    programId?: number | null;
     position: string;
 }
 

@@ -10,8 +10,8 @@ export interface AdminStudentItem {
     section: string;
     schoolYear: string;
     semester: string;
-    departmentName: string;
-    departmentCode: string;
+    programName: string;
+    programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
     obligationsPending: number;
@@ -41,7 +41,7 @@ export interface PendingPaymentItem {
     studentObligationId: number;
     studentName: string;
     studentNo: string;
-    departmentCode: string;
+    programCode: string;
     obligationName: string;
     amountPaid: number;
     receiptPath: string;
@@ -101,7 +101,7 @@ export interface PaymentHistoryItem {
     paymentId: number;
     studentName: string;
     studentNo: string;
-    departmentCode: string;
+    programCode: string;
     obligationName: string;
     amountPaid: number;
     paymentType: "gcash" | "cash";
@@ -118,7 +118,7 @@ export interface ClearanceHistoryItem {
     studentNo: string;
     firstName: string;
     lastName: string;
-    departmentCode: string;
+    programCode: string;
     yearLevel: number;
     section: string;
     schoolYear: string;
@@ -133,8 +133,8 @@ export interface PendingClearanceItem {
     studentNo: string;
     firstName: string;
     lastName: string;
-    departmentCode: string;
-    departmentName: string;
+    programCode: string;
+    programName: string;
     yearLevel: number;
     section: string;
     schoolYear: string;

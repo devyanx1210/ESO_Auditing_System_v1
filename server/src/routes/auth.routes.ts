@@ -16,6 +16,6 @@ router.post("/login", login);
 router.post("/refresh", refresh);
 router.post("/logout", authenticate, logout);
 router.get("/me", authenticate, getMe);
-router.put("/change-password", authenticate, updatePassword);
+router.post("/change-password", authenticate, updatePassword);
 
 export default router;

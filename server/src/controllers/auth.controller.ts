@@ -91,14 +91,14 @@ export const register = async (req: Request, res: Response) => {
             email,
             password,
             studentNo,
-            departmentId,
+            programId,
             yearLevel,
             section,
             schoolYear,
             semester,
         } = req.body;
 
-        if (!firstName || !lastName || !email || !password || !studentNo || !departmentId || !yearLevel || !section || !schoolYear || !semester) {
+        if (!firstName || !lastName || !email || !password || !studentNo || !programId || !yearLevel || !section || !schoolYear || !semester) {
             return sendError(res, "All required fields must be provided", 400);
         }
 
@@ -121,7 +121,7 @@ export const register = async (req: Request, res: Response) => {
             email,
             password,
             studentNo,
-            departmentId,
+            programId,
             yearLevel,
             section,
             schoolYear,

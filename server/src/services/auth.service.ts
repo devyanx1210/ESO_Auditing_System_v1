@@ -71,7 +71,7 @@ export const loginUser = async (
         userId: user.user_id,
         email: user.email,
         role: user.role_name,
-        departmentId: user.department_id,
+        programId: user.program_id,
     };
     const tokens = generateTokens(payload);
     const refreshExpiry = new Date();
@@ -93,7 +93,7 @@ export const loginUser = async (
         lastName: user.last_name,
         email: user.email,
         role: user.role_name,
-        departmentId: user.department_id,
+        programId: user.program_id,
         status: user.status,
     };
     return { user: authenticatedUser, tokens };
@@ -123,7 +123,7 @@ export const refreshAccessToken = async (
             userId: user.user_id,
             email: user.email,
             role: user.role_name,
-            departmentId: user.department_id,
+            programId: user.program_id,
         };
         const newAccessToken = jwt.sign(payload, jwtConfig.accessSecret, {
             expiresIn: jwtConfig.accessExpiresIn,
@@ -193,12 +193,12 @@ export const registerUser = async (
 
     const [result]: any = await pool.execute(
         `INSERT INTO users (
-            role_id, department_id, first_name, last_name,
+            role_id, program_id, first_name, last_name,
             email, password_hash, status, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
         [
             roleId,
-            input.departmentId,
+            input.programId,
             input.firstName.trim(),
             input.lastName.trim(),
             input.email.toLowerCase().trim(),
@@ -210,7 +210,7 @@ export const registerUser = async (
     const [studentResult]: any = await pool.execute(
         `INSERT INTO students (
             user_id, student_no, first_name, last_name, middle_name,
-            department_id, year_level, section, school_year, semester,
+            program_id, year_level, section, school_year, semester,
             is_enrolled, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
         [
@@ -219,7 +219,7 @@ export const registerUser = async (
             input.firstName.trim(),
             input.lastName.trim(),
             input.middleName?.trim() ?? null,
-            input.departmentId,
+            input.programId,
             input.yearLevel,
             input.section,
             input.schoolYear,
@@ -237,17 +237,17 @@ export const registerUser = async (
            AND semester = ?
            AND (
                scope = 'all'
-               OR (scope = 'department' AND department_id = ?)
+               OR (scope = 'department' AND program_id = ?)
                OR (scope = 'year_level' AND year_level = ?
-                   AND (department_id IS NULL OR department_id = ?))
+                   AND (program_id IS NULL OR program_id = ?))
                OR (scope = 'section' AND section = ? AND year_level = ?
-                   AND (department_id IS NULL OR department_id = ?))
+                   AND (program_id IS NULL OR program_id = ?))
            )`,
         [
             input.schoolYear, input.semester,
-            input.departmentId,
-            input.yearLevel, input.departmentId,
-            input.section, input.yearLevel, input.departmentId,
+            input.programId,
+            input.yearLevel, input.programId,
+            input.section, input.yearLevel, input.programId,
         ]
     );
     for (const ob of matchingObs) {
@@ -276,7 +276,7 @@ export const registerUser = async (
         userId,
         email: input.email.toLowerCase().trim(),
         role: "student",
-        departmentId: input.departmentId,
+        programId: input.programId,
     };
     const tokens = generateTokens(payload);
     const refreshExpiry = new Date();
@@ -297,7 +297,7 @@ export const registerUser = async (
             lastName: input.lastName.trim(),
             email: input.email.toLowerCase().trim(),
             role: "student",
-            departmentId: input.departmentId,
+            programId: input.programId,
             status: "active",
         },
         tokens,

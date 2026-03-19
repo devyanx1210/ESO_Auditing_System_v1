@@ -9,8 +9,8 @@ export interface ObligationData {
     gcashQrPath: string | null;
     isRequired: boolean;
     scope: "all" | "department" | "year_level" | "section";
-    departmentId: number | null;
-    departmentName: string | null;
+    programId: number | null;
+    programName: string | null;
     yearLevel: number | null;
     section: string | null;
     schoolYear: string;
@@ -27,7 +27,7 @@ export interface CreateObligationInput {
     gcashQrPath?: string | null;
     isRequired?: boolean;
     scope: "all" | "department" | "year_level" | "section";
-    departmentId?: number | null;
+    programId?: number | null;
     yearLevel?: number | null;
     section?: string | null;
     schoolYear: string;
@@ -48,8 +48,8 @@ function mapRow(r: any): ObligationData {
         gcashQrPath:     r.gcashQrPath ?? null,
         isRequired:      Boolean(r.isRequired),
         scope:           r.scope,
-        departmentId:    r.departmentId ?? null,
-        departmentName:  r.departmentName ?? null,
+        programId:    r.programId ?? null,
+        programName:  r.programName ?? null,
         yearLevel:       r.yearLevel ?? null,
         section:         r.section ?? null,
         schoolYear:      r.schoolYear,
@@ -62,9 +62,9 @@ function mapRow(r: any): ObligationData {
 
 const RESTRICTED_ROLES = ["program_head", "class_officer"];
 
-export const getObligations = async (role?: string, departmentId?: number | null): Promise<ObligationData[]> => {
-    const isRestricted = role && RESTRICTED_ROLES.includes(role) && departmentId;
-    const params: any[] = isRestricted ? [departmentId] : [];
+export const getObligations = async (role?: string, programId?: number | null): Promise<ObligationData[]> => {
+    const isRestricted = role && RESTRICTED_ROLES.includes(role) && programId;
+    const params: any[] = isRestricted ? [programId] : [];
 
     const [rows]: any = await pool.execute(`
         SELECT
@@ -75,8 +75,8 @@ export const getObligations = async (role?: string, departmentId?: number | null
             o.gcash_qr_path   AS gcashQrPath,
             o.is_required     AS isRequired,
             o.scope,
-            o.department_id   AS departmentId,
-            d.name            AS departmentName,
+            o.program_id      AS programId,
+            d.name            AS programName,
             o.year_level      AS yearLevel,
             o.section,
             o.school_year     AS schoolYear,
@@ -85,8 +85,8 @@ export const getObligations = async (role?: string, departmentId?: number | null
             o.is_active       AS isActive,
             o.created_at      AS createdAt
         FROM obligations o
-        LEFT JOIN departments d ON o.department_id = d.department_id
-        ${isRestricted ? "WHERE (o.department_id IS NULL OR o.department_id = ?)" : ""}
+        LEFT JOIN programs d ON o.program_id = d.program_id
+        ${isRestricted ? "WHERE (o.program_id IS NULL OR o.program_id = ?)" : ""}
         ORDER BY o.created_at DESC
     `, params);
     return rows.map(mapRow);
@@ -103,7 +103,7 @@ export const createObligation = async (
         const [result]: any = await conn.execute(
             `INSERT INTO obligations (
                 obligation_name, description, amount, is_required,
-                scope, department_id, year_level, section,
+                scope, program_id, year_level, section,
                 school_year, semester, due_date, gcash_qr_path,
                 is_active, created_by, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), NOW())`,
@@ -113,7 +113,7 @@ export const createObligation = async (
                 input.amount,
                 input.isRequired ?? true,
                 input.scope,
-                input.departmentId ?? null,
+                input.programId ?? null,
                 input.yearLevel ?? null,
                 input.section ?? null,
                 input.schoolYear,
@@ -135,21 +135,21 @@ export const createObligation = async (
         `;
         const params: any[] = [input.schoolYear, input.semester];
 
-        if (input.scope === "department" && input.departmentId) {
-            studentQuery += " AND s.department_id = ?";
-            params.push(input.departmentId);
+        if (input.scope === "department" && input.programId) {
+            studentQuery += " AND s.program_id = ?";
+            params.push(input.programId);
         } else if (input.scope === "year_level" && input.yearLevel) {
-            if (input.departmentId) {
-                studentQuery += " AND s.department_id = ? AND s.year_level = ?";
-                params.push(input.departmentId, input.yearLevel);
+            if (input.programId) {
+                studentQuery += " AND s.program_id = ? AND s.year_level = ?";
+                params.push(input.programId, input.yearLevel);
             } else {
                 studentQuery += " AND s.year_level = ?";
                 params.push(input.yearLevel);
             }
         } else if (input.scope === "section" && input.section) {
-            if (input.departmentId) {
-                studentQuery += " AND s.department_id = ? AND s.year_level = ? AND s.section = ?";
-                params.push(input.departmentId, input.yearLevel, input.section);
+            if (input.programId) {
+                studentQuery += " AND s.program_id = ? AND s.year_level = ? AND s.section = ?";
+                params.push(input.programId, input.yearLevel, input.section);
             } else {
                 studentQuery += " AND s.year_level = ? AND s.section = ?";
                 params.push(input.yearLevel, input.section);
@@ -187,12 +187,12 @@ export const createObligation = async (
             `SELECT o.obligation_id AS obligationId, o.obligation_name AS obligationName,
                     o.description, o.amount, o.gcash_qr_path AS gcashQrPath,
                     o.is_required AS isRequired, o.scope,
-                    o.department_id AS departmentId, d.name AS departmentName,
+                    o.program_id AS programId, d.name AS programName,
                     o.year_level AS yearLevel, o.section,
                     o.school_year AS schoolYear, o.semester,
                     o.due_date AS dueDate, o.is_active AS isActive, o.created_at AS createdAt
              FROM obligations o
-             LEFT JOIN departments d ON o.department_id = d.department_id
+             LEFT JOIN programs d ON o.program_id = d.program_id
              WHERE o.obligation_id = ?`,
             [obligationId]
         );
@@ -259,16 +259,16 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
         `;
         const params: any[] = [ob.school_year, ob.semester];
 
-        if (ob.scope === "department" && ob.department_id) {
-            studentQuery += " AND s.department_id = ?";
-            params.push(ob.department_id);
+        if (ob.scope === "department" && ob.program_id) {
+            studentQuery += " AND s.program_id = ?";
+            params.push(ob.program_id);
         } else if (ob.scope === "year_level") {
             if (ob.year_level) { studentQuery += " AND s.year_level = ?"; params.push(ob.year_level); }
-            if (ob.department_id) { studentQuery += " AND s.department_id = ?"; params.push(ob.department_id); }
+            if (ob.program_id) { studentQuery += " AND s.program_id = ?"; params.push(ob.program_id); }
         } else if (ob.scope === "section") {
             if (ob.section) { studentQuery += " AND s.section = ?"; params.push(ob.section); }
             if (ob.year_level) { studentQuery += " AND s.year_level = ?"; params.push(ob.year_level); }
-            if (ob.department_id) { studentQuery += " AND s.department_id = ?"; params.push(ob.department_id); }
+            if (ob.program_id) { studentQuery += " AND s.program_id = ?"; params.push(ob.program_id); }
         }
 
         // Exclude students who already have this obligation

@@ -228,7 +228,7 @@ function SignClearanceModal({ student, token, onClose, onDone }: SignClearanceMo
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
                 <h3 className="font-bold text-gray-800 text-lg mb-1">Sign Clearance</h3>
                 <p className="text-sm text-gray-600 font-medium mb-0.5">{student.lastName}, {student.firstName}</p>
-                <p className="text-xs text-gray-400 mb-4">{student.studentNo} · {student.departmentCode} · {student.schoolYear} Sem {student.semester}</p>
+                <p className="text-xs text-gray-400 mb-4">{student.studentNo} · {student.programCode} · {student.schoolYear} Sem {student.semester}</p>
                 <div className="flex gap-6 mb-4 text-sm">
                     <div>
                         <p className="text-xs text-gray-400">Obligations</p>
@@ -302,7 +302,7 @@ function StudentRow({ student, token, onCash, onVerify, obligationSearch }: Stud
                 <td className="p-3 font-medium text-gray-800">{student.lastName}, {student.firstName}</td>
                 <td className="p-3 text-center text-gray-600 text-xs font-mono">{student.studentNo}</td>
                 <td className="p-3 text-center">
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{student.departmentCode}</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{student.programCode}</span>
                 </td>
                 <td className="p-3 text-center text-gray-600 text-xs">{student.yearLevel}-{student.section}</td>
                 <td className="p-3 text-center text-xs text-gray-700">
@@ -487,7 +487,7 @@ const StudentList = () => {
         s.studentNo.toLowerCase().includes(search.toLowerCase())
     );
     if (!isRestricted && deptFilter !== "all")
-        filtered = filtered.filter(s => s.departmentCode === deptFilter);
+        filtered = filtered.filter(s => s.programCode === deptFilter);
     if (yearFilter !== "all")
         filtered = filtered.filter(s => String(s.yearLevel) === yearFilter);
     if (sectionFilter !== "all")
@@ -502,7 +502,7 @@ const StudentList = () => {
     if (sortKey === "name")    filtered = [...filtered].sort((a, b) => a.lastName.localeCompare(b.lastName));
     if (sortKey === "section") filtered = [...filtered].sort((a, b) => (a.section ?? "").localeCompare(b.section ?? ""));
     if (sortKey === "year")    filtered = [...filtered].sort((a, b) => a.yearLevel - b.yearLevel);
-    if (sortKey === "dept")    filtered = [...filtered].sort((a, b) => a.departmentCode.localeCompare(b.departmentCode));
+    if (sortKey === "dept")    filtered = [...filtered].sort((a, b) => a.programCode.localeCompare(b.programCode));
     if (sortKey === "pending") filtered = [...filtered].sort((a, b) => b.obligationsPending - a.obligationsPending);
     if (sortKey === "paid")    filtered = [...filtered].sort((a, b) => (b.obligationsPaid / Math.max(b.obligationsTotal, 1)) - (a.obligationsPaid / Math.max(a.obligationsTotal, 1)));
 
@@ -528,7 +528,7 @@ const StudentList = () => {
                     <h1 className="font-bold text-gray-800 text-2xl sm:text-3xl">Students</h1>
                     <p className="text-sm text-gray-400 mt-1">
                         {isRestricted && students[0]
-                            ? `${students[0].departmentName} — ${students.length} student${students.length !== 1 ? "s" : ""}`
+                            ? `${students[0].programName} — ${students.length} student${students.length !== 1 ? "s" : ""}`
                             : `${students.length} student${students.length !== 1 ? "s" : ""} across all programs`}
                     </p>
                 </div>
@@ -738,7 +738,7 @@ const StudentList = () => {
                                                     <div className="text-xs text-gray-400">{p.studentNo}</div>
                                                 </td>
                                                 <td className="p-3 text-center">
-                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{p.departmentCode}</span>
+                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{p.programCode}</span>
                                                 </td>
                                                 <td className="p-3 text-gray-700">{p.obligationName}</td>
                                                 <td className="p-3 text-right font-semibold text-gray-800">PHP {Number(p.amountPaid).toFixed(2)}</td>
@@ -785,7 +785,7 @@ const StudentList = () => {
                                                 <div className="text-xs text-gray-400">{h.studentNo}</div>
                                             </td>
                                             <td className="p-3 text-center">
-                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{h.departmentCode}</span>
+                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{h.programCode}</span>
                                             </td>
                                             <td className="p-3 text-gray-700">{h.obligationName}</td>
                                             <td className="p-3 text-right font-semibold text-gray-800">PHP {Number(h.amountPaid).toFixed(2)}</td>
@@ -872,7 +872,7 @@ const StudentList = () => {
                                                 <td className="p-3 font-medium text-gray-800">{c.lastName}, {c.firstName}</td>
                                                 <td className="p-3 text-center text-xs font-mono text-gray-600">{c.studentNo}</td>
                                                 <td className="p-3 text-center">
-                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{c.departmentCode}</span>
+                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{c.programCode}</span>
                                                 </td>
                                                 <td className="p-3 text-center text-xs text-gray-600">{c.yearLevel}-{c.section}</td>
                                                 <td className="p-3 text-center text-xs text-gray-600">{c.schoolYear} · Sem {c.semester}</td>
@@ -918,7 +918,7 @@ const StudentList = () => {
                                                 <div className="text-xs text-gray-400">{h.studentNo}</div>
                                             </td>
                                             <td className="p-3 text-center">
-                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{h.departmentCode}</span>
+                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{h.programCode}</span>
                                             </td>
                                             <td className="p-3 text-center text-xs text-gray-600">{h.yearLevel}-{h.section}</td>
                                             <td className="p-3 text-center text-xs text-gray-600">{h.schoolYear} · Sem {h.semester}</td>

@@ -32,7 +32,7 @@ const BLANK_FORM: CreateObligationInput = {
     amount: 0,
     isRequired: true,
     scope: "all",
-    departmentId: null,
+    programId: null,
     yearLevel: null,
     section: null,
     schoolYear: currentSchoolYear(),
@@ -85,7 +85,7 @@ const Obligations = () => {
             amount: o.amount,
             isRequired: o.isRequired,
             scope: o.scope,
-            departmentId: o.departmentId,
+            programId: o.programId,
             yearLevel: o.yearLevel,
             section: o.section,
             schoolYear: o.schoolYear,
@@ -250,7 +250,7 @@ const Obligations = () => {
                                                     : <span className="text-green-600 text-xs font-semibold">Free</span>}
                                             </td>
                                             <td className="p-3 text-center capitalize">{o.scope === "department" ? "program" : o.scope.replace("_", " ")}</td>
-                                            <td className="p-3 text-center">{o.departmentName ?? "—"}</td>
+                                            <td className="p-3 text-center">{o.programName ?? "—"}</td>
                                             <td className="p-3 text-center">{o.yearLevel ?? "—"}</td>
                                             <td className="p-3 text-center">{o.schoolYear}</td>
                                             <td className="p-3 text-center">{o.semester}</td>
@@ -426,7 +426,7 @@ const Obligations = () => {
                             <select
                                 className="border-2 border-gray-300 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white transition-colors"
                                 value={form.scope}
-                                onChange={e => setForm({ ...form, scope: e.target.value as CreateObligationInput["scope"], departmentId: null, yearLevel: null, section: null })}
+                                onChange={e => setForm({ ...form, scope: e.target.value as CreateObligationInput["scope"], programId: null, yearLevel: null, section: null })}
                             >
                                 {SCOPES.map(s => <option key={s} value={s}>{s === "department" ? "program" : s.replace("_", " ")}</option>)}
                             </select>
@@ -455,8 +455,8 @@ const Obligations = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
                                 <select
                                     className="border-2 border-gray-300 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white transition-colors"
-                                    value={form.departmentId ?? ""}
-                                    onChange={e => setForm({ ...form, departmentId: e.target.value ? Number(e.target.value) : null })}
+                                    value={form.programId ?? ""}
+                                    onChange={e => setForm({ ...form, programId: e.target.value ? Number(e.target.value) : null })}
                                 >
                                     <option value="">All Programs</option>
                                     {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.code}</option>)}

@@ -22,7 +22,7 @@ const DEPARTMENTS = [
 
 const BLANK: CreateAdminInput = {
     firstName: "", lastName: "", email: "", password: "",
-    role: "eso_officer", departmentId: null, position: "",
+    role: "eso_officer", programId: null, position: "",
 };
 
 const AdminSettings = () => {
@@ -164,7 +164,7 @@ const AdminSettings = () => {
                                                     {a.roleLabel}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-gray-600 text-sm">{a.departmentName ?? <span className="text-gray-300">—</span>}</td>
+                                            <td className="px-4 py-3 text-gray-600 text-sm">{a.programName ?? <span className="text-gray-300">—</span>}</td>
                                             <td className="px-4 py-3 text-gray-600 text-sm">{a.position ?? <span className="text-gray-300">—</span>}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${a.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
@@ -247,7 +247,7 @@ const AdminSettings = () => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
                                         <select className={selectCls}
-                                            value={form.departmentId ?? ""} onChange={e => setForm({ ...form, departmentId: e.target.value ? Number(e.target.value) : null })}>
+                                            value={form.programId ?? ""} onChange={e => setForm({ ...form, programId: e.target.value ? Number(e.target.value) : null })}>
                                             <option value="">None</option>
                                             {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                         </select>

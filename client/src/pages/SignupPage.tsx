@@ -39,7 +39,7 @@ export default function Signup({ onCancel }: SignupProps) {
         middleName: "",
         email: "",
         studentNo: "",
-        departmentId: "",
+        programId: "",
         yearLevel: "",
         section: "",
         password: "",
@@ -63,7 +63,7 @@ export default function Signup({ onCancel }: SignupProps) {
             setError("Please fill in all required fields.");
             return;
         }
-        if (!form.departmentId || !form.yearLevel || !form.section) {
+        if (!form.programId || !form.yearLevel || !form.section) {
             setError("Please fill in your program, year level, and section.");
             return;
         }
@@ -89,7 +89,7 @@ export default function Signup({ onCancel }: SignupProps) {
                 email:        form.email.trim(),
                 password:     form.password,
                 studentNo:    form.studentNo.trim(),
-                departmentId: Number(form.departmentId),
+                programId: Number(form.programId),
                 yearLevel:    Number(form.yearLevel),
                 section:      form.section.trim(),
                 schoolYear:   getCurrentSchoolYear(),
@@ -190,8 +190,8 @@ export default function Signup({ onCancel }: SignupProps) {
                         <label className="mb-1 text-sm">Program *</label>
                         <select
                             required
-                            value={form.departmentId}
-                            onChange={e => handleChange("departmentId", e.target.value)}
+                            value={form.programId}
+                            onChange={e => handleChange("programId", e.target.value)}
                             className="w-full rounded-md p-3 text-black"
                         >
                             <option value="">Select Program</option>

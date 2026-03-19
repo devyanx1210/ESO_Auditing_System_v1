@@ -156,7 +156,7 @@ export default function StudentDashboard() {
                     {profile && (
                         <div className="flex flex-wrap gap-2 mt-2">
                             <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">
-                                {profile.departmentCode}
+                                {profile.programCode}
                             </span>
                             <span className="bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full">
                                 {profile.studentNo}

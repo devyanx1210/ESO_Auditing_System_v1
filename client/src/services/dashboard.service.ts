@@ -1,7 +1,7 @@
 import { apiFetch } from "./api";
 
-export interface DepartmentStat {
-    departmentId: number;
+export interface ProgramStat {
+    programId: number;
     code: string;
     name: string;
     totalStudents: number;
@@ -11,7 +11,7 @@ export interface DepartmentStat {
 }
 
 export interface DashboardStats {
-    departments: DepartmentStat[];
+    programs: ProgramStat[];
     totalStudents: number;
     totalCleared: number;
     totalObligations: number;

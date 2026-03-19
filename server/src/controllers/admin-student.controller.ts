@@ -4,7 +4,7 @@ import { listStudents, getStudentObligationsForAdmin } from "../services/admin-s
 
 export const handleListStudents = async (req: Request, res: Response) => {
     try {
-        const students = await listStudents(req.user!.userId, req.user!.role, req.user!.departmentId);
+        const students = await listStudents(req.user!.userId, req.user!.role, req.user!.programId);
         return sendSuccess(res, students);
     } catch (err: any) {
         return sendError(res, err.message, 400);

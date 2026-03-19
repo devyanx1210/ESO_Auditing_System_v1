@@ -20,7 +20,7 @@ async function getAdminId(userId: number): Promise<number | null> {
 
 export const listObligations = async (req: Request, res: Response) => {
     try {
-        const obligations = await getObligations(req.user!.role, req.user!.departmentId);
+        const obligations = await getObligations(req.user!.role, req.user!.programId);
         return sendSuccess(res, obligations, "Obligations fetched");
     } catch (error: any) {
         return sendError(res, error.message, 500);
@@ -37,7 +37,7 @@ export const addObligation = (req: Request, res: Response) => {
 
             const {
                 obligationName, description, amount, isRequired,
-                scope, departmentId, yearLevel, section,
+                scope, programId, yearLevel, section,
                 schoolYear, semester, dueDate,
             } = req.body;
 
@@ -56,7 +56,7 @@ export const addObligation = (req: Request, res: Response) => {
                     gcashQrPath: qrPath,
                     isRequired: isRequired === "true" || isRequired === true,
                     scope,
-                    departmentId: departmentId ? Number(departmentId) : null,
+                    programId: programId ? Number(programId) : null,
                     yearLevel:   yearLevel   ? Number(yearLevel)   : null,
                     section:     section     || null,
                     schoolYear,

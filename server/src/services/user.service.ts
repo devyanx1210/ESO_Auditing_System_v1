@@ -7,7 +7,7 @@ export interface CreateAdminInput {
     email: string;
     password: string;
     role: "eso_officer" | "class_officer" | "program_head" | "signatory" | "dean";
-    departmentId?: number | null;
+    programId?: number | null;
     position: string;
 }
 
@@ -18,7 +18,7 @@ export interface AdminUserItem {
     email: string;
     role: string;
     roleLabel: string;
-    departmentName: string | null;
+    programName: string | null;
     position: string;
     status: string;
     createdAt: string;
@@ -43,7 +43,7 @@ export const createAdminUser = async (input: CreateAdminInput): Promise<AdminUse
 
     const [result]: any = await pool.execute(
         `INSERT INTO users
-            (first_name, last_name, email, password_hash, role_id, department_id, status, created_at, updated_at)
+            (first_name, last_name, email, password_hash, role_id, program_id, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
         [
             input.firstName.trim(),
@@ -51,24 +51,24 @@ export const createAdminUser = async (input: CreateAdminInput): Promise<AdminUse
             input.email.toLowerCase().trim(),
             passwordHash,
             roleId,
-            input.departmentId ?? null,
+            input.programId ?? null,
         ]
     );
     const userId = result.insertId;
 
     await pool.execute(
-        "INSERT INTO admins (user_id, position, department_id, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-        [userId, input.position.trim(), input.departmentId ?? null]
+        "INSERT INTO admins (user_id, position, program_id, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
+        [userId, input.position.trim(), input.programId ?? null]
     );
 
     const [created]: any = await pool.execute(
         `SELECT u.user_id, u.first_name, u.last_name, u.email, u.status, u.created_at,
                 r.role_name, r.role_label,
-                d.name AS departmentName,
+                d.name AS programName,
                 a.position
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
-         LEFT JOIN departments d ON u.department_id = d.department_id
+         LEFT JOIN programs d ON u.program_id = d.program_id
          JOIN admins a ON u.user_id = a.user_id
          WHERE u.user_id = ?`,
         [userId]
@@ -81,7 +81,7 @@ export const createAdminUser = async (input: CreateAdminInput): Promise<AdminUse
         email:          u.email,
         role:           u.role_name,
         roleLabel:      u.role_label,
-        departmentName: u.departmentName,
+        programName: u.programName,
         position:       u.position,
         status:         u.status,
         createdAt:      u.created_at,
@@ -119,11 +119,11 @@ export const getAdminUsers = async (): Promise<AdminUserItem[]> => {
     const [rows]: any = await pool.execute(
         `SELECT u.user_id, u.first_name, u.last_name, u.email, u.status, u.created_at,
                 r.role_name, r.role_label,
-                d.name AS departmentName,
+                d.name AS programName,
                 a.position
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
-         LEFT JOIN departments d ON u.department_id = d.department_id
+         LEFT JOIN programs d ON u.program_id = d.program_id
          JOIN admins a ON u.user_id = a.user_id
          WHERE r.role_name != 'student'
          ORDER BY r.role_name, u.last_name`
@@ -135,7 +135,7 @@ export const getAdminUsers = async (): Promise<AdminUserItem[]> => {
         email:          u.email,
         role:           u.role_name,
         roleLabel:      u.role_label,
-        departmentName: u.departmentName,
+        programName: u.programName,
         position:       u.position,
         status:         u.status,
         createdAt:      u.created_at,

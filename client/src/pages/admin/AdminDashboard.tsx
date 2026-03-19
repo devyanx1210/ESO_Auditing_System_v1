@@ -7,7 +7,7 @@ import "react-circular-progressbar/dist/styles.css";
 import "../../../styles/index.css";
 import { useAuth } from "../../hooks/useAuth";
 import { dashboardService } from "../../services/dashboard.service";
-import type { DepartmentStat } from "../../services/dashboard.service";
+import type { ProgramStat } from "../../services/dashboard.service";
 
 const primaryOrange = "#C2410C";
 
@@ -15,21 +15,21 @@ export default function AdminDashboard() {
     const { accessToken } = useAuth();
     const [loading, setLoading]           = useState(true);
     const [error, setError]               = useState("");
-    const [departments, setDepartments]   = useState<DepartmentStat[]>([]);
+    const [programs, setPrograms]         = useState<ProgramStat[]>([]);
     const [selectedDept, setSelectedDept] = useState<string>("");
 
     useEffect(() => {
         if (!accessToken) return;
         dashboardService.getStats(accessToken)
             .then(stats => {
-                setDepartments(stats.departments);
-                if (stats.departments.length) setSelectedDept(stats.departments[0].code);
+                setPrograms(stats.programs);
+                if (stats.programs.length) setSelectedDept(stats.programs[0].code);
             })
             .catch(e => setError(e.message))
             .finally(() => setLoading(false));
     }, [accessToken]);
 
-    const dept = departments.find(d => d.code === selectedDept);
+    const dept = programs.find(d => d.code === selectedDept);
 
     const verifiedPercent = dept && dept.totalStudents > 0
         ? Math.round((dept.clearedStudents / dept.totalStudents) * 100)
@@ -40,10 +40,10 @@ export default function AdminDashboard() {
         : 0;
 
     const barChartData = {
-        labels: departments.map(d => d.code),
+        labels: programs.map(d => d.code),
         datasets: [{
             label: "Cleared Students",
-            data: departments.map(d => d.clearedStudents),
+            data: programs.map(d => d.clearedStudents),
             backgroundColor: primaryOrange,
             borderRadius: 8,
             barThickness: 28,
@@ -71,12 +71,12 @@ export default function AdminDashboard() {
                 <div className="p-4 sm:p-6 md:p-10 bg-gray-50 min-h-screen">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Admin Dashboard</h1>
-                        {departments.length > 0 && (
+                        {programs.length > 0 && (
                             <div className="flex items-center gap-2 bg-white shadow px-4 py-2 rounded-lg">
                                 <FaSortAmountDown className="text-gray-500" />
                                 <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)}
                                     className="outline-none text-sm bg-transparent">
-                                    {departments.map(d => (
+                                    {programs.map(d => (
                                         <option key={d.code} value={d.code}>{d.name}</option>
                                     ))}
                                 </select>

@@ -5,10 +5,10 @@ async function getAdminClearanceStep(userId: number): Promise<{
     adminId: number;
     roleId: number;
     clearanceStep: number | null;
-    departmentId: number | null;
+    programId: number | null;
 }> {
     const [rows]: any = await pool.execute(
-        `SELECT a.admin_id, u.department_id, r.role_id, r.clearance_step
+        `SELECT a.admin_id, u.program_id, r.role_id, r.clearance_step
          FROM admins a
          JOIN users u  ON u.user_id = a.user_id
          JOIN roles r  ON r.role_id = u.role_id
@@ -20,7 +20,7 @@ async function getAdminClearanceStep(userId: number): Promise<{
         adminId:       rows[0].admin_id,
         roleId:        rows[0].role_id,
         clearanceStep: rows[0].clearance_step ?? null,
-        departmentId:  rows[0].department_id ?? null,
+        programId:  rows[0].program_id ?? null,
     };
 }
 
@@ -31,8 +31,8 @@ export interface PendingClearanceItem {
     studentNo: string;
     firstName: string;
     lastName: string;
-    departmentCode: string;
-    departmentName: string;
+    programCode: string;
+    programName: string;
     yearLevel: number;
     section: string;
     schoolYear: string;
@@ -51,8 +51,8 @@ const CLEARANCE_SELECT = `
         s.student_no    AS studentNo,
         s.first_name    AS firstName,
         s.last_name     AS lastName,
-        d.code          AS departmentCode,
-        d.name          AS departmentName,
+        d.code          AS programCode,
+        d.name          AS programName,
         s.year_level    AS yearLevel,
         s.section,
         s.school_year   AS schoolYear,
@@ -64,7 +64,7 @@ const CLEARANCE_SELECT = `
         SUM(so.status IN ('paid','waived'))       AS obligationsPaid
     FROM students s
     JOIN users u       ON u.user_id       = s.user_id
-    JOIN departments d ON d.department_id = s.department_id
+    JOIN programs d ON d.program_id = s.program_id
     LEFT JOIN student_obligations so ON so.student_id = s.student_id
 `;
 
@@ -72,7 +72,7 @@ export const getPendingClearance = async (
     userId: number,
     role: string
 ): Promise<PendingClearanceItem[]> => {
-    const { clearanceStep, departmentId } = await getAdminClearanceStep(userId);
+    const { clearanceStep, programId } = await getAdminClearanceStep(userId);
 
     // class_officer has no clearance step and no view
     if (!clearanceStep && role === "class_officer") return [];
@@ -105,9 +105,9 @@ export const getPendingClearance = async (
               AND (cl.clearance_id IS NULL OR cl.current_step = 1)
               AND (cl.clearance_status IS NULL OR cl.clearance_status != 'cleared')
         `;
-        if (!ALL_DEPT_ROLES.includes(role) && departmentId) {
-            sql += " AND s.department_id = ?";
-            params.push(departmentId);
+        if (!ALL_DEPT_ROLES.includes(role) && programId) {
+            sql += " AND s.program_id = ?";
+            params.push(programId);
         }
         sql += `
             GROUP BY s.student_id
@@ -126,9 +126,9 @@ export const getPendingClearance = async (
               AND cl.clearance_status = 'in_progress'
         `;
         params.push(clearanceStep);
-        if (!ALL_DEPT_ROLES.includes(role) && departmentId) {
-            sql += " AND s.department_id = ?";
-            params.push(departmentId);
+        if (!ALL_DEPT_ROLES.includes(role) && programId) {
+            sql += " AND s.program_id = ?";
+            params.push(programId);
         }
         sql += " GROUP BY s.student_id ORDER BY s.last_name, s.first_name";
     }
@@ -256,7 +256,7 @@ export interface ClearanceHistoryItem {
     studentNo: string;
     firstName: string;
     lastName: string;
-    departmentCode: string;
+    programCode: string;
     yearLevel: number;
     section: string;
     schoolYear: string;
@@ -270,7 +270,7 @@ export const getClearanceHistory = async (
     userId: number,
     role: string
 ): Promise<ClearanceHistoryItem[]> => {
-    const { adminId, clearanceStep, departmentId } = await getAdminClearanceStep(userId);
+    const { adminId, clearanceStep, programId } = await getAdminClearanceStep(userId);
     if (!clearanceStep) return [];
 
     let sql = `
@@ -280,7 +280,7 @@ export const getClearanceHistory = async (
             s.student_no        AS studentNo,
             s.first_name        AS firstName,
             s.last_name         AS lastName,
-            d.code              AS departmentCode,
+            d.code              AS programCode,
             s.year_level        AS yearLevel,
             s.section,
             s.school_year       AS schoolYear,
@@ -291,14 +291,14 @@ export const getClearanceHistory = async (
         FROM clearance_verifications cv
         JOIN clearances cl  ON cl.clearance_id  = cv.clearance_id
         JOIN students s     ON s.student_id      = cl.student_id
-        JOIN departments d  ON d.department_id   = s.department_id
+        JOIN programs d  ON d.program_id   = s.program_id
         WHERE cv.admin_id = ? AND cv.status = 'signed'
     `;
     const params: any[] = [adminId];
 
-    if (!ALL_DEPT_ROLES.includes(role) && departmentId) {
-        sql += " AND s.department_id = ?";
-        params.push(departmentId);
+    if (!ALL_DEPT_ROLES.includes(role) && programId) {
+        sql += " AND s.program_id = ?";
+        params.push(programId);
     }
 
     sql += " ORDER BY cv.verified_at DESC LIMIT 200";

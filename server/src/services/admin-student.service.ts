@@ -4,10 +4,10 @@ const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean"];
 
 async function getAdminDeptId(userId: number): Promise<number | null> {
     const [rows]: any = await pool.execute(
-        "SELECT department_id FROM admins WHERE user_id = ?",
+        "SELECT program_id FROM admins WHERE user_id = ?",
         [userId]
     );
-    return rows[0]?.department_id ?? null;
+    return rows[0]?.program_id ?? null;
 }
 
 // ─── Student list (dept-filtered) ─────────────────────────────────────────────
@@ -22,8 +22,8 @@ export interface AdminStudentItem {
     section: string;
     schoolYear: string;
     semester: string;
-    departmentName: string;
-    departmentCode: string;
+    programName: string;
+    programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
     obligationsPending: number;
@@ -50,15 +50,15 @@ export const listStudents = async (
             s.section,
             s.school_year       AS schoolYear,
             s.semester,
-            d.name              AS departmentName,
-            d.code              AS departmentCode,
+            d.name              AS programName,
+            d.code              AS programCode,
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
             SUM(so.status IN ('paid','waived'))                     AS obligationsPaid,
             SUM(so.status = 'pending_verification')                 AS obligationsPending,
             cl.clearance_status AS clearanceStatus
         FROM students s
         JOIN users u       ON u.user_id       = s.user_id
-        JOIN departments d ON d.department_id = s.department_id
+        JOIN programs d ON d.program_id = s.program_id
         LEFT JOIN student_obligations so ON so.student_id = s.student_id
         LEFT JOIN clearances cl
             ON cl.student_id = s.student_id
@@ -69,7 +69,7 @@ export const listStudents = async (
     const params: any[] = [];
 
     if (deptId) {
-        sql += " AND s.department_id = ?";
+        sql += " AND s.program_id = ?";
         params.push(deptId);
     }
 

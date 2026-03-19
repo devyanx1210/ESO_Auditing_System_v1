@@ -11,8 +11,8 @@ export interface StudentListItem {
     section: string;
     schoolYear: string;
     semester: string;
-    departmentName: string;
-    departmentCode: string;
+    programName: string;
+    programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
     clearanceStatus: string | null;
@@ -23,8 +23,8 @@ export interface StudentProfile {
     studentNo: string;
     firstName: string;
     lastName: string;
-    departmentCode: string;
-    departmentName: string;
+    programCode: string;
+    programName: string;
     yearLevel: number;
     section: string;
     schoolYear: string;

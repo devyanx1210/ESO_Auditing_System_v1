@@ -9,8 +9,8 @@ export interface StudentListItem {
     section: string;
     schoolYear: string;
     semester: string;
-    departmentName: string;
-    departmentCode: string;
+    programName: string;
+    programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
     clearanceStatus: string | null;
@@ -27,8 +27,8 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
             s.section,
             s.school_year         AS schoolYear,
             s.semester,
-            d.name                AS departmentName,
-            d.code                AS departmentCode,
+            d.name                AS programName,
+            d.code                AS programCode,
             COUNT(so.student_obligation_id)                                          AS obligationsTotal,
             SUM(CASE WHEN so.status = 'paid' THEN 1 ELSE 0 END)                     AS obligationsPaid,
             (SELECT cl.clearance_status
@@ -36,7 +36,7 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
              WHERE cl.student_id = s.student_id
              ORDER BY cl.created_at DESC LIMIT 1)                                    AS clearanceStatus
         FROM students s
-        JOIN departments d ON s.department_id = d.department_id
+        JOIN programs d ON s.program_id = d.program_id
         LEFT JOIN student_obligations so ON s.student_id = so.student_id
         GROUP BY s.student_id
         ORDER BY s.last_name, s.first_name
@@ -51,8 +51,8 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
         section:        r.section,
         schoolYear:     r.schoolYear,
         semester:       r.semester,
-        departmentName: r.departmentName,
-        departmentCode: r.departmentCode,
+        programName: r.programName,
+        programCode: r.programCode,
         obligationsTotal: Number(r.obligationsTotal),
         obligationsPaid:  Number(r.obligationsPaid),
         clearanceStatus:  r.clearanceStatus ?? null,
@@ -66,8 +66,8 @@ export interface StudentProfile {
     studentNo: string;
     firstName: string;
     lastName: string;
-    departmentCode: string;
-    departmentName: string;
+    programCode: string;
+    programName: string;
     yearLevel: number;
     section: string;
     schoolYear: string;
@@ -123,9 +123,9 @@ export const getStudentProfile = async (userId: number): Promise<StudentProfile>
     const [rows]: any = await pool.execute(
         `SELECT s.student_id, s.student_no, s.first_name, s.last_name,
                 s.year_level, s.section, s.school_year, s.semester,
-                d.code AS departmentCode, d.name AS departmentName
+                d.code AS programCode, d.name AS programName
          FROM students s
-         JOIN departments d ON s.department_id = d.department_id
+         JOIN programs d ON s.program_id = d.program_id
          WHERE s.user_id = ?`,
         [userId]
     );
@@ -136,8 +136,8 @@ export const getStudentProfile = async (userId: number): Promise<StudentProfile>
         studentNo:      r.student_no,
         firstName:      r.first_name,
         lastName:       r.last_name,
-        departmentCode: r.departmentCode,
-        departmentName: r.departmentName,
+        programCode: r.programCode,
+        programName: r.programName,
         yearLevel:      r.year_level,
         section:        r.section,
         schoolYear:     r.school_year,

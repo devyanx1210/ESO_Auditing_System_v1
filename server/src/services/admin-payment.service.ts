@@ -4,20 +4,20 @@ import pool from "../config/db.js";
 
 async function getAdminId(userId: number): Promise<number> {
     const [rows]: any = await pool.execute(
-        "SELECT admin_id, department_id FROM admins WHERE user_id = ?",
+        "SELECT admin_id, program_id FROM admins WHERE user_id = ?",
         [userId]
     );
     if (!rows.length) throw new Error("Admin profile not found");
     return rows[0].admin_id;
 }
 
-async function getAdminRecord(userId: number): Promise<{ adminId: number; departmentId: number | null }> {
+async function getAdminRecord(userId: number): Promise<{ adminId: number; programId: number | null }> {
     const [rows]: any = await pool.execute(
-        "SELECT admin_id, department_id FROM admins WHERE user_id = ?",
+        "SELECT admin_id, program_id FROM admins WHERE user_id = ?",
         [userId]
     );
     if (!rows.length) throw new Error("Admin profile not found");
-    return { adminId: rows[0].admin_id, departmentId: rows[0].department_id ?? null };
+    return { adminId: rows[0].admin_id, programId: rows[0].program_id ?? null };
 }
 
 // Roles that can see all departments
@@ -30,7 +30,7 @@ export interface PendingPaymentItem {
     studentObligationId: number;
     studentName: string;
     studentNo: string;
-    departmentCode: string;
+    programCode: string;
     obligationName: string;
     amountPaid: number;
     receiptPath: string;
@@ -42,7 +42,7 @@ export const getPendingPayments = async (
     userId: number,
     role: string
 ): Promise<PendingPaymentItem[]> => {
-    const { departmentId } = await getAdminRecord(userId);
+    const { programId } = await getAdminRecord(userId);
 
     let sql = `
         SELECT
@@ -50,7 +50,7 @@ export const getPendingPayments = async (
             ps.student_obligation_id        AS studentObligationId,
             CONCAT(s.first_name,' ',s.last_name) AS studentName,
             s.student_no                    AS studentNo,
-            d.code                          AS departmentCode,
+            d.code                          AS programCode,
             o.obligation_name               AS obligationName,
             ps.amount_paid                  AS amountPaid,
             ps.receipt_path                 AS receiptPath,
@@ -60,15 +60,15 @@ export const getPendingPayments = async (
         JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
         JOIN students s  ON s.student_id  = ps.student_id
         JOIN obligations o ON o.obligation_id = ps.obligation_id
-        JOIN departments d ON d.department_id = s.department_id
+        JOIN programs d ON d.program_id = s.program_id
         WHERE ps.payment_status = 'pending'
           AND ps.payment_type   = 'gcash'
     `;
     const params: any[] = [];
 
-    if (!ALL_DEPT_ROLES.includes(role) && departmentId) {
-        sql += " AND s.department_id = ?";
-        params.push(departmentId);
+    if (!ALL_DEPT_ROLES.includes(role) && programId) {
+        sql += " AND s.program_id = ?";
+        params.push(programId);
     }
 
     sql += " ORDER BY ps.submitted_at ASC";
@@ -231,7 +231,7 @@ export interface PaymentHistoryItem {
     paymentId: number;
     studentName: string;
     studentNo: string;
-    departmentCode: string;
+    programCode: string;
     obligationName: string;
     amountPaid: number;
     paymentType: "gcash" | "cash";
@@ -246,14 +246,14 @@ export const getPaymentHistory = async (
     userId: number,
     role: string
 ): Promise<PaymentHistoryItem[]> => {
-    const { departmentId } = await getAdminRecord(userId);
+    const { programId } = await getAdminRecord(userId);
 
     let sql = `
         SELECT
             ps.payment_id                        AS paymentId,
             CONCAT(s.first_name,' ',s.last_name) AS studentName,
             s.student_no                         AS studentNo,
-            d.code                               AS departmentCode,
+            d.code                               AS programCode,
             o.obligation_name                    AS obligationName,
             ps.amount_paid                       AS amountPaid,
             ps.payment_type                      AS paymentType,
@@ -265,15 +265,15 @@ export const getPaymentHistory = async (
         FROM payment_submissions ps
         JOIN students s    ON s.student_id    = ps.student_id
         JOIN obligations o ON o.obligation_id = ps.obligation_id
-        JOIN departments d ON d.department_id = s.department_id
+        JOIN programs d ON d.program_id = s.program_id
         LEFT JOIN payment_verifications pv ON pv.payment_id = ps.payment_id
         WHERE ps.payment_status IN ('approved','rejected')
     `;
     const params: any[] = [];
 
-    if (!ALL_DEPT_ROLES.includes(role) && departmentId) {
-        sql += " AND s.department_id = ?";
-        params.push(departmentId);
+    if (!ALL_DEPT_ROLES.includes(role) && programId) {
+        sql += " AND s.program_id = ?";
+        params.push(programId);
     }
 
     sql += " ORDER BY ps.updated_at DESC LIMIT 200";
@@ -284,7 +284,7 @@ export const getPaymentHistory = async (
 // --- Approve all pending GCash submissions at once ---
 
 export const verifyAllPayments = async (userId: number, role: string): Promise<number> => {
-    const { adminId, departmentId } = await getAdminRecord(userId);
+    const { adminId, programId } = await getAdminRecord(userId);
 
     let sql = `
         SELECT ps.payment_id, ps.student_obligation_id,
@@ -296,9 +296,9 @@ export const verifyAllPayments = async (userId: number, role: string): Promise<n
         WHERE ps.payment_status = 'pending' AND ps.payment_type = 'gcash'
     `;
     const params: any[] = [];
-    if (!ALL_DEPT_ROLES.includes(role) && departmentId) {
-        sql += " AND st.department_id = ?";
-        params.push(departmentId);
+    if (!ALL_DEPT_ROLES.includes(role) && programId) {
+        sql += " AND st.program_id = ?";
+        params.push(programId);
     }
 
     const [rows]: any = await pool.execute(sql, params);

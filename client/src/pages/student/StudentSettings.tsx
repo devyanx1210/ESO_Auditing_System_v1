@@ -196,7 +196,7 @@ const StudentSettings = () => {
                                 {/* Read-only */}
                                 <Field label="Program">
                                     <div className="border rounded-lg px-3 py-2 w-full text-sm bg-gray-50 text-gray-500">
-                                        {profile.departmentName}
+                                        {profile.programName}
                                     </div>
                                 </Field>
                                 <Field label="Student Number">

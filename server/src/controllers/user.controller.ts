@@ -4,7 +4,7 @@ import { sendSuccess, sendError } from "../utils/response.js";
 
 export const createAdmin = async (req: Request, res: Response) => {
     try {
-        const { firstName, lastName, email, password, role, departmentId, position } = req.body;
+        const { firstName, lastName, email, password, role, programId, position } = req.body;
 
         if (!firstName || !lastName || !email || !password || !role || !position) {
             return sendError(res, "firstName, lastName, email, password, role, position are required", 400);
@@ -18,7 +18,7 @@ export const createAdmin = async (req: Request, res: Response) => {
             return sendError(res, "Invalid role. Must be one of: " + validRoles.join(", "), 400);
         }
 
-        const user = await createAdminUser({ firstName, lastName, email, password, role, departmentId, position });
+        const user = await createAdminUser({ firstName, lastName, email, password, role, programId, position });
         return sendSuccess(res, user, "Admin account created", 201);
     } catch (error: any) {
         return sendError(res, error.message, 400);

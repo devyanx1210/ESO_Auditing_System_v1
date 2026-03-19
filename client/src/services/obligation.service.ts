@@ -11,8 +11,8 @@ export interface ObligationData {
     gcashQrPath: string | null;
     isRequired: boolean;
     scope: "all" | "department" | "year_level" | "section";
-    departmentId: number | null;
-    departmentName: string | null;
+    programId: number | null;
+    programName: string | null;
     yearLevel: number | null;
     section: string | null;
     schoolYear: string;
@@ -29,7 +29,7 @@ export interface CreateObligationInput {
     gcashQrPath?: string | null;
     isRequired?: boolean;
     scope: "all" | "department" | "year_level" | "section";
-    departmentId?: number | null;
+    programId?: number | null;
     yearLevel?: number | null;
     section?: string | null;
     schoolYear: string;
@@ -46,7 +46,7 @@ function buildFormData(data: CreateObligationInput, qrFile?: File | null): FormD
     fd.append("semester", data.semester);
     if (data.description) fd.append("description", data.description);
     if (data.isRequired !== undefined) fd.append("isRequired", String(data.isRequired));
-    if (data.departmentId != null) fd.append("departmentId", String(data.departmentId));
+    if (data.programId != null) fd.append("programId", String(data.programId));
     if (data.yearLevel != null) fd.append("yearLevel", String(data.yearLevel));
     if (data.section) fd.append("section", data.section);
     if (data.dueDate) fd.append("dueDate", data.dueDate);
