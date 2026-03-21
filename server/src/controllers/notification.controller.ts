@@ -3,6 +3,7 @@ import {
     getNotifications,
     markNotificationRead,
     markAllNotificationsRead,
+    deleteNotificationById,
 } from "../services/notification.service.js";
 import { sendSuccess, sendError } from "../utils/response.js";
 
@@ -32,6 +33,17 @@ export const readAllNotifications = async (req: Request, res: Response) => {
         const userId = req.user!.userId;
         await markAllNotificationsRead(userId);
         return sendSuccess(res, null, "All marked as read");
+    } catch (err: any) {
+        return sendError(res, err.message, 500);
+    }
+};
+
+export const deleteNotification = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user!.userId;
+        const id = Number(req.params.id);
+        await deleteNotificationById(id, userId);
+        return sendSuccess(res, null, "Notification deleted");
     } catch (err: any) {
         return sendError(res, err.message, 500);
     }

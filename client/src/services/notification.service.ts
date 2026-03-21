@@ -20,4 +20,7 @@ export const notificationService = {
 
     markAllRead: (token: string) =>
         apiFetch<null>("/notifications/read-all", { method: "PATCH" }, token),
+
+    delete: (token: string, id: number) =>
+        apiFetch<null>(`/notifications/${id}`, { method: "DELETE" }, token),
 };

@@ -11,9 +11,12 @@ export async function apiFetch<T>(
     options: RequestInit = {},
     token?: string | null
 ): Promise<T> {
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-    };
+    const headers: Record<string, string> = {};
+
+    // Let the browser set Content-Type automatically for FormData (multipart boundary)
+    if (!(options.body instanceof FormData)) {
+        headers["Content-Type"] = "application/json";
+    }
 
     if (token) {
         headers["Authorization"] = `Bearer ${token}`;

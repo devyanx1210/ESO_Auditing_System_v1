@@ -7,6 +7,11 @@ import { AuthProvider } from "./context/AuthContext";
 
 import "../styles/index.css";
 
+// Apply theme synchronously before first render to prevent flash
+if (localStorage.getItem("theme") === "dark") {
+    document.documentElement.classList.add("dark");
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>

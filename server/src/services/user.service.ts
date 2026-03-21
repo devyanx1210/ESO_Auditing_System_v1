@@ -125,7 +125,7 @@ export const getAdminUsers = async (): Promise<AdminUserItem[]> => {
          JOIN roles r ON u.role_id = r.role_id
          LEFT JOIN programs d ON u.program_id = d.program_id
          JOIN admins a ON u.user_id = a.user_id
-         WHERE r.role_name != 'student'
+         WHERE r.role_name != 'student' AND u.deleted_at IS NULL
          ORDER BY r.role_name, u.last_name`
     );
     return rows.map((u: any) => ({

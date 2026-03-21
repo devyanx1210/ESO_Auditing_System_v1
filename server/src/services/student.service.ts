@@ -62,16 +62,17 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
 /* ─── Student self-service (requires userId) ─── */
 
 export interface StudentProfile {
-    studentId: number;
-    studentNo: string;
-    firstName: string;
-    lastName: string;
+    studentId:   number;
+    studentNo:   string;
+    firstName:   string;
+    lastName:    string;
     programCode: string;
     programName: string;
-    yearLevel: number;
-    section: string;
-    schoolYear: string;
-    semester: string;
+    yearLevel:   number;
+    section:     string;
+    schoolYear:  string;
+    semester:    string;
+    avatarPath:  string | null;
 }
 
 export interface StudentObligationItem {
@@ -123,6 +124,7 @@ export const getStudentProfile = async (userId: number): Promise<StudentProfile>
     const [rows]: any = await pool.execute(
         `SELECT s.student_id, s.student_no, s.first_name, s.last_name,
                 s.year_level, s.section, s.school_year, s.semester,
+                s.avatar_path,
                 d.code AS programCode, d.name AS programName
          FROM students s
          JOIN programs d ON s.program_id = d.program_id
@@ -132,41 +134,47 @@ export const getStudentProfile = async (userId: number): Promise<StudentProfile>
     if (!rows.length) throw new Error("Student profile not found");
     const r = rows[0];
     return {
-        studentId:      r.student_id,
-        studentNo:      r.student_no,
-        firstName:      r.first_name,
-        lastName:       r.last_name,
+        studentId:   r.student_id,
+        studentNo:   r.student_no,
+        firstName:   r.first_name,
+        lastName:    r.last_name,
         programCode: r.programCode,
         programName: r.programName,
-        yearLevel:      r.year_level,
-        section:        r.section,
-        schoolYear:     r.school_year,
-        semester:       r.semester,
+        yearLevel:   r.year_level,
+        section:     r.section,
+        schoolYear:  r.school_year,
+        semester:    r.semester,
+        avatarPath:  r.avatar_path ?? null,
     };
 };
 
 export const updateStudentProfile = async (
     userId: number,
     data: {
-        firstName: string;
-        lastName: string;
-        yearLevel: number;
-        section: string;
+        firstName:  string;
+        lastName:   string;
+        yearLevel:  number;
+        section:    string;
         schoolYear: string;
-        semester: string;
+        semester:   string;
+        avatarPath?: string | null;
     }
 ): Promise<StudentProfile> => {
+    const avatarClause = data.avatarPath !== undefined ? ", avatar_path = ?" : "";
+    const params: any[] = [
+        data.firstName.trim(), data.lastName.trim(),
+        data.yearLevel, data.section.trim(),
+        data.schoolYear.trim(), data.semester,
+    ];
+    if (data.avatarPath !== undefined) params.push(data.avatarPath);
+    params.push(userId);
+
     await pool.execute(
         `UPDATE students
             SET first_name = ?, last_name = ?, year_level = ?, section = ?,
-                school_year = ?, semester = ?, updated_at = NOW()
+                school_year = ?, semester = ?${avatarClause}, updated_at = NOW()
           WHERE user_id = ?`,
-        [
-            data.firstName.trim(), data.lastName.trim(),
-            data.yearLevel, data.section.trim(),
-            data.schoolYear.trim(), data.semester,
-            userId,
-        ]
+        params
     );
     await pool.execute(
         `UPDATE users

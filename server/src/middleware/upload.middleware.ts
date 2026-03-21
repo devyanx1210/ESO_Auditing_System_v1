@@ -13,9 +13,11 @@ function ensureDir(dir: string) {
 
 const receiptsDir = path.join(__dirname, "../../uploads/receipts");
 const qrDir       = path.join(__dirname, "../../uploads/qr");
+const avatarsDir  = path.join(__dirname, "../../uploads/avatars");
 
 ensureDir(receiptsDir);
 ensureDir(qrDir);
+ensureDir(avatarsDir);
 
 function makeStorage(dir: string) {
     return multer.diskStorage({
@@ -66,3 +68,9 @@ export const uploadQR = multer({
     fileFilter: imageFilter,
     limits:     { fileSize: 2 * 1024 * 1024 },
 }).single("qrCode");
+
+export const uploadAvatar = multer({
+    storage:    makeStorage(avatarsDir),
+    fileFilter: imageFilter,
+    limits:     { fileSize: 3 * 1024 * 1024 },
+}).single("avatar");

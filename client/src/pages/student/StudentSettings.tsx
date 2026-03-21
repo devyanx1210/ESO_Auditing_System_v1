@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { studentService } from "../../services/student.service";
+import { useTheme } from "../../hooks/useTheme";
+import { studentService, avatarUrl } from "../../services/student.service";
 import type { StudentProfile } from "../../services/student.service";
+import { FiEdit2, FiUpload, FiRefreshCw, FiUser, FiLock, FiSave, FiRotateCcw, FiMoon, FiBell } from "react-icons/fi";
 
 const StudentSettings = () => {
     const { accessToken, changePassword } = useAuth();
+    const { darkMode, setDarkMode, notificationsEnabled, setNotificationsEnabled } = useTheme();
+    const dk = darkMode;
+    const card = dk ? "bg-[#1a1a1a] border border-[#2a2a2a]" : "bg-white";
+    const txt  = dk ? "text-white"   : "text-gray-800";
+    const sub  = dk ? "text-gray-400" : "text-gray-500";
+    const inp  = dk ? "bg-[#252525] border-[#3a3a3a] text-gray-100 focus:border-orange-500" : "border-gray-300 focus:border-orange-400 text-gray-800";
 
     // Profile state
     const [profile,    setProfile]    = useState<StudentProfile | null>(null);
@@ -17,15 +25,24 @@ const StudentSettings = () => {
     const [schoolYear, setSchoolYear] = useState("");
     const [semester,   setSemester]   = useState("");
 
+    // Avatar state
+    const [avatarFile,     setAvatarFile]     = useState<File | null>(null);
+    const [avatarPreview,  setAvatarPreview]  = useState<string | null>(null);
+    const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const avatarMenuRef  = useRef<HTMLDivElement>(null);
+
     // Password state
     const BLANK_PW = { current: "", next: "", confirm: "" };
     const [pw,        setPw]        = useState(BLANK_PW);
     const [pwError,   setPwError]   = useState("");
     const [pwSuccess, setPwSuccess] = useState("");
 
-    const [saving,  setSaving]  = useState(false);
-    const [saveMsg, setSaveMsg] = useState("");
-    const [saveErr, setSaveErr] = useState("");
+    const [saving,      setSaving]      = useState(false);
+    const [saveMsg,     setSaveMsg]     = useState("");
+    const [saveErr,     setSaveErr]     = useState("");
+    const [toastVisible, setToastVisible] = useState(false);
+    const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!accessToken) return;
@@ -38,10 +55,21 @@ const StudentSettings = () => {
                 setSection(p.section);
                 setSchoolYear(p.schoolYear);
                 setSemester(p.semester);
+                if (p.avatarPath) setAvatarPreview(avatarUrl(p.avatarPath));
             })
             .catch(e => setProfileErr(e.message))
             .finally(() => setLoading(false));
     }, [accessToken]);
+
+    // Close avatar menu on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node))
+                setAvatarMenuOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
 
     function handleReset() {
         if (profile) {
@@ -85,7 +113,9 @@ const StudentSettings = () => {
                 section:    section.trim(),
                 schoolYear: schoolYear.trim(),
                 semester,
-            });
+            }, avatarFile);
+            setAvatarFile(null);
+            if (updated.avatarPath) setAvatarPreview(avatarUrl(updated.avatarPath));
             setProfile(updated);
 
             if (changingPw) {
@@ -94,6 +124,9 @@ const StudentSettings = () => {
                 setPw(BLANK_PW);
             }
             setSaveMsg("Changes saved successfully.");
+            setToastVisible(true);
+            if (toastTimer.current) clearTimeout(toastTimer.current);
+            toastTimer.current = setTimeout(() => setToastVisible(false), 3000);
         } catch (err: any) {
             setSaveErr(err.message ?? "Failed to save.");
         } finally {
@@ -102,91 +135,156 @@ const StudentSettings = () => {
     }
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#111111]">
             <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-orange-500" />
         </div>
     );
 
+    const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
+
     return (
-        <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
-            <h1 className="font-bold text-gray-800 text-2xl sm:text-3xl mb-6">Settings</h1>
+        <div className={`p-4 sm:p-6 md:p-8 min-h-screen ${dk ? "bg-[#111111]" : "bg-gray-50"}`}>
+
+            {/* ── Toast notification ── */}
+            {toastVisible && (
+                <div className="fixed top-5 inset-x-0 flex justify-center z-[100] anim-slide-up pointer-events-none px-4">
+                    <div className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white dark:bg-[#1e1e1e] shadow-[0_12px_48px_rgba(0,0,0,0.22)] dark:shadow-[0_12px_48px_rgba(0,0,0,0.75)] w-max max-w-[calc(100vw-2rem)]">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-white whitespace-nowrap">Changes saved successfully</p>
+                    </div>
+                </div>
+            )}
+
+            <h1 className={`anim-section font-bold text-2xl sm:text-3xl mb-6 ${txt}`} style={{ animationDelay: "0ms" }}>Settings</h1>
 
             <form onSubmit={handleSave} className="flex flex-col gap-6 w-full">
 
                 {/* ── PROFILE CARD ── */}
-                <div className="bg-white rounded-2xl shadow-md p-6 w-full">
-                    <h2 className="font-semibold text-gray-700 text-base mb-5 border-b pb-3">My Profile</h2>
+                <div className={`anim-section rounded-2xl shadow-xl p-6 w-full ${card}`} style={{ animationDelay: "80ms" }}>
+                    <div className="flex items-center gap-2 mb-5 pb-4">
+                        <FiUser className="w-4 h-4 text-orange-500" />
+                        <h2 className="font-semibold text-gray-800 dark:text-white text-base">My Profile</h2>
+                    </div>
 
                     {profileErr && <p className="text-red-500 text-sm mb-4">{profileErr}</p>}
 
                     {profile && (
                         <>
-                            {/* Avatar */}
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xl font-bold select-none flex-shrink-0">
-                                    {firstName[0] ?? ""}{lastName[0] ?? ""}
+                            {/* Avatar row */}
+                            <div className="flex items-center gap-5 mb-6">
+                                {/* Avatar circle with pen button */}
+                                <div className="relative shrink-0" ref={avatarMenuRef}>
+                                    <div className="w-20 h-20 rounded-full overflow-hidden">
+                                        {avatarPreview
+                                            ? <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
+                                            : <DefaultAvatarSvg />
+                                        }
+                                    </div>
+
+                                    {/* Pen edit button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setAvatarMenuOpen(o => !o)}
+                                        className="absolute bottom-0 right-0 w-6 h-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-lg transition"
+                                        title="Edit profile picture"
+                                    >
+                                        <FiEdit2 className="w-3 h-3" />
+                                    </button>
+
+                                    {/* Dropdown menu */}
+                                    {avatarMenuOpen && (
+                                        <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 z-20 overflow-hidden min-w-[170px]">
+                                            <button
+                                                type="button"
+                                                onClick={() => { avatarInputRef.current?.click(); setAvatarMenuOpen(false); }}
+                                                className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition"
+                                            >
+                                                <FiUpload className="w-4 h-4 text-orange-500" />
+                                                Upload Photo
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setAvatarFile(null); setAvatarPreview(null); setAvatarMenuOpen(false); }}
+                                                className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition border-t border-gray-100"
+                                            >
+                                                <FiRefreshCw className="w-4 h-4 text-gray-400" />
+                                                Reset to Default
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Hidden file input */}
+                                    <input
+                                        ref={avatarInputRef}
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.webp"
+                                        className="hidden"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0] ?? null;
+                                            setAvatarFile(file);
+                                            if (file) setAvatarPreview(URL.createObjectURL(file));
+                                            e.target.value = "";
+                                        }}
+                                    />
                                 </div>
+
                                 <div>
-                                    <p className="font-bold text-gray-800 text-lg">{firstName} {lastName}</p>
-                                    <p className="text-sm text-gray-500">{profile.studentNo}</p>
+                                    <p className="font-bold text-gray-900 dark:text-white text-xl">{firstName} {lastName}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{profile.studentNo}</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{profile.programName}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                                {/* Editable fields */}
-                                <Field label="First Name *">
+                                <Field label="First Name">
                                     <input
-                                        className="border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={firstName}
                                         onChange={e => setFirstName(e.target.value)}
                                         placeholder="First name"
                                     />
                                 </Field>
-                                <Field label="Last Name *">
+                                <Field label="Last Name">
                                     <input
-                                        className="border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={lastName}
                                         onChange={e => setLastName(e.target.value)}
                                         placeholder="Last name"
                                     />
                                 </Field>
-                                <Field label="Year Level *">
+                                <Field label="Year Level">
                                     <select
-                                        className="border rounded-lg px-3 py-2 w-full text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={yearLevel}
                                         onChange={e => setYearLevel(e.target.value)}
                                     >
-                                        <option value="">Select</option>
                                         <option value="1">1st Year</option>
                                         <option value="2">2nd Year</option>
                                         <option value="3">3rd Year</option>
                                         <option value="4">4th Year</option>
                                     </select>
                                 </Field>
-                                <Field label="Section *">
+                                <Field label="Section">
                                     <input
-                                        className="border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={section}
                                         onChange={e => setSection(e.target.value)}
                                         placeholder="e.g. A"
                                     />
                                 </Field>
-                                <Field label="School Year *">
+                                <Field label="School Year">
                                     <input
-                                        className="border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={schoolYear}
                                         onChange={e => setSchoolYear(e.target.value)}
                                         placeholder="e.g. 2025-2026"
                                     />
                                 </Field>
-                                <Field label="Semester *">
+                                <Field label="Semester">
                                     <select
-                                        className="border rounded-lg px-3 py-2 w-full text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={semester}
                                         onChange={e => setSemester(e.target.value)}
                                     >
-                                        <option value="">Select</option>
                                         <option value="1st">1st Semester</option>
                                         <option value="2nd">2nd Semester</option>
                                         <option value="Summer">Summer</option>
@@ -195,12 +293,12 @@ const StudentSettings = () => {
 
                                 {/* Read-only */}
                                 <Field label="Program">
-                                    <div className="border rounded-lg px-3 py-2 w-full text-sm bg-gray-50 text-gray-500">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
                                         {profile.programName}
                                     </div>
                                 </Field>
                                 <Field label="Student Number">
-                                    <div className="border rounded-lg px-3 py-2 w-full text-sm bg-gray-50 text-gray-500">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-mono">
                                         {profile.studentNo}
                                     </div>
                                 </Field>
@@ -210,15 +308,18 @@ const StudentSettings = () => {
                 </div>
 
                 {/* ── CHANGE PASSWORD CARD ── */}
-                <div className="bg-white rounded-2xl shadow-md p-6 w-full">
-                    <h2 className="font-semibold text-gray-700 text-base mb-2 border-b pb-3">Change Password</h2>
-                    <p className="text-xs text-gray-400 mb-4">Leave these blank if you do not want to change your password.</p>
+                <div className={`anim-section rounded-2xl shadow-xl p-6 w-full ${card}`} style={{ animationDelay: "160ms" }}>
+                    <div className="flex items-center gap-2 mb-2 border-b pb-4">
+                        <FiLock className="w-4 h-4 text-orange-500" />
+                        <h2 className="font-semibold text-gray-800 dark:text-white text-base">Change Password</h2>
+                    </div>
+                    <p className="text-xs text-gray-400 mb-4 mt-3">Leave these blank if you do not want to change your password.</p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <Field label="Current Password">
                             <input
                                 type="password"
-                                className="border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                 placeholder="Current password"
                                 value={pw.current}
                                 onChange={e => setPw(p => ({ ...p, current: e.target.value }))}
@@ -227,7 +328,7 @@ const StudentSettings = () => {
                         <Field label="New Password">
                             <input
                                 type="password"
-                                className="border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                 placeholder="Min. 8 characters"
                                 value={pw.next}
                                 onChange={e => setPw(p => ({ ...p, next: e.target.value }))}
@@ -236,7 +337,7 @@ const StudentSettings = () => {
                         <Field label="Confirm New Password">
                             <input
                                 type="password"
-                                className="border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                 placeholder="Retype new password"
                                 value={pw.confirm}
                                 onChange={e => setPw(p => ({ ...p, confirm: e.target.value }))}
@@ -248,36 +349,86 @@ const StudentSettings = () => {
                     {pwSuccess && <p className="text-green-600 text-sm mt-3">{pwSuccess}</p>}
                 </div>
 
-                {/* ── BOTTOM BUTTONS ── */}
-                {saveErr && <p className="text-red-500 text-sm">{saveErr}</p>}
-                {saveMsg && <p className="text-green-600 text-sm">{saveMsg}</p>}
+                {/* ── APPEARANCE CARD ── */}
+                <div className={`anim-section rounded-2xl shadow-xl p-6 w-full ${card}`} style={{ animationDelay: "220ms" }}>
+                    <div className={`flex items-center gap-2 mb-5 pb-4 border-b ${dk ? "border-[#2a2a2a]" : "border-gray-100"}`}>
+                        <FiMoon className="w-4 h-4 text-orange-500" />
+                        <h2 className={`font-semibold text-base ${txt}`}>Appearance & Notifications</h2>
+                    </div>
 
-                <div className="flex justify-between gap-3">
+                    <div className="flex flex-col gap-5">
+                        {/* Dark Mode Toggle */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className={`text-sm font-semibold ${txt}`}>Dark Mode</p>
+                                <p className={`text-xs mt-0.5 ${sub}`}>Switch to dark orange theme</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setDarkMode(d => !d)}
+                                className={`relative inline-flex items-center w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${dk ? "bg-orange-500" : "bg-gray-300"}`}
+                            >
+                                <span className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${dk ? "translate-x-6" : "translate-x-1"}`} />
+                            </button>
+                        </div>
+
+                        {/* Notifications Toggle */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className={`text-sm font-semibold ${txt}`}>Notifications</p>
+                                <p className={`text-xs mt-0.5 ${sub}`}>Show notification bell and alerts</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setNotificationsEnabled(n => !n)}
+                                className={`relative inline-flex items-center w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${notificationsEnabled ? "bg-orange-500" : "bg-gray-300"}`}
+                            >
+                                <span className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${notificationsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── BOTTOM BUTTONS ── */}
+                {saveErr && <p className="text-red-500 text-sm -mt-2">{saveErr}</p>}
+
+                <div className="anim-section flex justify-between gap-3" style={{ animationDelay: "300ms" }}>
                     <button
                         type="button"
                         onClick={handleReset}
-                        className="px-6 py-2.5 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition text-sm"
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition text-sm ${dk ? "bg-[#2a2a2a] text-gray-300 hover:bg-[#333]" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                     >
+                        <FiRotateCcw className="w-4 h-4" />
                         Reset All
                     </button>
                     <button
                         type="submit"
                         disabled={saving}
-                        className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-sm"
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-sm shadow-lg"
                     >
+                        <FiSave className="w-4 h-4" />
                         {saving ? "Saving..." : "Save Changes"}
                     </button>
                 </div>
-
             </form>
         </div>
     );
 };
 
+function DefaultAvatarSvg() {
+    return (
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ display: "block", width: "100%", height: "100%" }}>
+            <circle cx="50" cy="50" r="50" fill="#E4E6E9" />
+            <ellipse cx="50" cy="37" rx="17" ry="20" fill="#6B7280" />
+            <ellipse cx="50" cy="95" rx="35" ry="28" fill="#6B7280" />
+        </svg>
+    );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">{label}</label>
             {children}
         </div>
     );

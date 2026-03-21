@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { getStudents } from "../services/student.service.js";
 import { sendSuccess, sendError } from "../utils/response.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
 export const listStudents = async (req: Request, res: Response) => {
     try {
@@ -41,10 +46,17 @@ export const updateMyProfile = async (req: Request, res: Response) => {
         const { firstName, lastName, yearLevel, section, schoolYear, semester } = req.body;
         if (!firstName || !lastName || !yearLevel || !section || !schoolYear || !semester)
             return sendError(res, "firstName, lastName, yearLevel, section, schoolYear, and semester are required", 400);
+
+        // If an avatar file was uploaded, build its relative path
+        const avatarPath = req.file
+            ? `/uploads/avatars/${req.file.filename}`
+            : undefined;
+
         const profile = await updateStudentProfile(req.user!.userId, {
             firstName, lastName,
             yearLevel: Number(yearLevel),
             section, schoolYear, semester,
+            avatarPath,
         });
         return sendSuccess(res, profile, "Profile updated");
     } catch (err: any) {

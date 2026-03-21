@@ -42,12 +42,12 @@ const AdminLayout = () => {
     return (
         <div className="main-admin-layout flex flex-col md:flex-row h-screen bg-white">
 
-            <div className="desktop-sidebar hidden md:flex w-64 bg-[#F1F3F4] p-6 flex-col">
+            <div className="desktop-sidebar hidden md:flex w-52 bg-gray-100 p-5 flex-col">
                 <div className="logo-container flex w-[100%] items-center justify-center">
-                    <img src={logo} className="logo object-contain mb-5  "
+                    <img src={logo} className="logo object-contain mb-5"
                         style={{
-                            width: "clamp(50px,28vw,90px)",
-                            height: "clamp(50px,28vw,90px)",
+                            width: "clamp(36px,20vw,64px)",
+                            height: "clamp(36px,20vw,64px)",
                         }} />
 
                 </div>

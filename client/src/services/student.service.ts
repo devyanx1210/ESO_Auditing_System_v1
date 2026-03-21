@@ -19,16 +19,22 @@ export interface StudentListItem {
 }
 
 export interface StudentProfile {
-    studentId: number;
-    studentNo: string;
-    firstName: string;
-    lastName: string;
+    studentId:   number;
+    studentNo:   string;
+    firstName:   string;
+    lastName:    string;
     programCode: string;
     programName: string;
-    yearLevel: number;
-    section: string;
-    schoolYear: string;
-    semester: string;
+    yearLevel:   number;
+    section:     string;
+    schoolYear:  string;
+    semester:    string;
+    avatarPath:  string | null;
+}
+
+export function avatarUrl(p: string | null | undefined): string | null {
+    if (!p) return null;
+    return `${UPLOADS_BASE}/${p.replace(/^\/uploads\//, "")}`;
 }
 
 export interface LatestPayment {
@@ -80,11 +86,24 @@ export const studentService = {
     getProfile: (token: string) =>
         apiFetch<StudentProfile>("/students/me/profile", {}, token),
 
-    updateProfile: (token: string, data: { firstName: string; lastName: string; yearLevel: number; section: string; schoolYear: string; semester: string }) =>
-        apiFetch<StudentProfile>("/students/me/profile", {
+    updateProfile: (
+        token: string,
+        data: { firstName: string; lastName: string; yearLevel: number; section: string; schoolYear: string; semester: string },
+        avatarFile?: File | null,
+    ) => {
+        const form = new FormData();
+        form.append("firstName",  data.firstName);
+        form.append("lastName",   data.lastName);
+        form.append("yearLevel",  String(data.yearLevel));
+        form.append("section",    data.section);
+        form.append("schoolYear", data.schoolYear);
+        form.append("semester",   data.semester);
+        if (avatarFile) form.append("avatar", avatarFile);
+        return apiFetch<StudentProfile>("/students/me/profile", {
             method: "PATCH",
-            body: JSON.stringify(data),
-        }, token),
+            body: form,
+        }, token);
+    },
 
     getMyObligations: (token: string) =>
         apiFetch<StudentObligationItem[]>("/students/me/obligations", {}, token),

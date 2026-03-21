@@ -49,3 +49,13 @@ export const markAllNotificationsRead = async (userId: number): Promise<void> =>
         [userId]
     );
 };
+
+export const deleteNotificationById = async (
+    notificationId: number,
+    userId: number
+): Promise<void> => {
+    await pool.execute(
+        `DELETE FROM notifications WHERE notification_id = ? AND user_id = ?`,
+        [notificationId, userId]
+    );
+};

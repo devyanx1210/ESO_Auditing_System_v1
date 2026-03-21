@@ -1,11 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { studentService, receiptUrl } from "../../services/student.service";
+import { useTheme } from "../../hooks/useTheme";
+import { studentService } from "../../services/student.service";
 import type { StudentProfile, StudentObligationItem, StudentClearance } from "../../services/student.service";
 import { notificationService } from "../../services/notification.service";
 import type { NotificationItem } from "../../services/notification.service";
 import { paymentService } from "../../services/payment.service";
 import { qrUrl } from "../../services/obligation.service";
+import {
+    FiBell, FiCreditCard, FiCamera, FiTrash2, FiX, FiZoomIn,
+    FiDownload, FiCheckCircle, FiFileText, FiUpload,
+    FiAlertCircle, FiClock, FiCircle,
+    FiList, FiAlertTriangle, FiTrendingUp, FiShield, FiCheckSquare,
+} from "react-icons/fi";
 
 /* ── helpers ── */
 function timeAgo(dateStr: string) {
@@ -18,6 +25,44 @@ function timeAgo(dateStr: string) {
     return `${Math.floor(h / 24)}d ago`;
 }
 
+function ordinalYear(n: number) {
+    if (n === 1) return "1st";
+    if (n === 2) return "2nd";
+    if (n === 3) return "3rd";
+    return `${n}th`;
+}
+
+function cleanMessage(text: string) {
+    return text.replace(/\s*[-–—]{2,}\s*/g, " ").replace(/^\s*[-–—]\s*/g, "").replace(/\s*[-–—]\s*$/g, "").trim();
+}
+
+function notifTypeIcon(type: string) {
+    const t = type.toLowerCase();
+    // New / assigned obligation
+    if (t.includes("assign") || t.includes("new_obligation") || t.includes("new obligation"))
+        return <FiAlertCircle className="w-4 h-4 text-orange-500" />;
+    // Overdue
+    if (t.includes("overdue"))
+        return <FiAlertTriangle className="w-4 h-4 text-red-500" />;
+    // Pending / pending verification
+    if (t.includes("pending") || t.includes("verification") || t.includes("submitted"))
+        return <FiClock className="w-4 h-4 text-yellow-500" />;
+    // Settled / paid / waived
+    if (t.includes("paid") || t.includes("settled") || t.includes("waived") || t.includes("approved"))
+        return <FiCheckCircle className="w-4 h-4 text-green-500" />;
+    // Payment / GCash / receipt
+    if (t.includes("payment") || t.includes("receipt") || t.includes("cash"))
+        return <FiCreditCard className="w-4 h-4 text-orange-500" />;
+    // Clearance / signed
+    if (t.includes("clearance") || t.includes("signed") || t.includes("cleared"))
+        return <FiShield className="w-4 h-4 text-green-600" />;
+    // Proof / event / photo
+    if (t.includes("proof") || t.includes("photo") || t.includes("event"))
+        return <FiCamera className="w-4 h-4 text-blue-500" />;
+    // Default
+    return <FiBell className="w-4 h-4 text-gray-400" />;
+}
+
 const CLEARANCE_STEPS = [
     { order: 1, label: "ESO Officer" },
     { order: 2, label: "Program Head" },
@@ -25,8 +70,18 @@ const CLEARANCE_STEPS = [
     { order: 4, label: "Dean" },
 ];
 
+type FilterMode = "all" | "settled" | "pending" | "overdue";
+
 export default function StudentDashboard() {
     const { accessToken } = useAuth();
+    const { darkMode, notificationsEnabled } = useTheme();
+    const dk = darkMode;
+
+    const [justSignedUp] = useState<boolean>(() => {
+        const flag = sessionStorage.getItem("justSignedUp") === "1";
+        if (flag) sessionStorage.removeItem("justSignedUp");
+        return flag;
+    });
 
     const [profile,       setProfile]       = useState<StudentProfile | null>(null);
     const [obligations,   setObligations]   = useState<StudentObligationItem[]>([]);
@@ -35,13 +90,30 @@ export default function StudentDashboard() {
     const [loading,       setLoading]       = useState(true);
     const [error,         setError]         = useState("");
 
-    // Notification bell
-    const [bellOpen, setBellOpen] = useState(false);
-    const bellRef = useRef<HTMLDivElement>(null);
+    // Filter for stat cards
+    const [filterMode, setFilterMode] = useState<FilterMode>("all");
 
-    // Payment modal
+    // Notification bell
+    const [bellOpen,   setBellOpen]   = useState(false);
+    const [bellFading, setBellFading] = useState(false);
+    const bellRef      = useRef<HTMLDivElement>(null);
+    const bellTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    function startBellTimer() {
+        if (bellTimerRef.current) clearTimeout(bellTimerRef.current);
+        bellTimerRef.current = setTimeout(() => {
+            setBellFading(true);
+            setTimeout(() => { setBellOpen(false); setBellFading(false); }, 200);
+        }, 10000);
+    }
+    function clearBellTimer() {
+        if (bellTimerRef.current) clearTimeout(bellTimerRef.current);
+    }
+
+    // Payment / proof modal — reused for both payment and non-payment proof
     const [payModal,    setPayModal]    = useState<StudentObligationItem | null>(null);
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
+    const [filePreview, setFilePreview] = useState<string | null>(null);
     const [payNotes,    setPayNotes]    = useState("");
     const [paying,      setPaying]      = useState(false);
     const [payError,    setPayError]    = useState("");
@@ -71,20 +143,37 @@ export default function StudentDashboard() {
     /* ── close bell on outside click ── */
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (bellRef.current && !bellRef.current.contains(e.target as Node))
-                setBellOpen(false);
+            if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+                setBellFading(true);
+                setTimeout(() => { setBellOpen(false); setBellFading(false); }, 180);
+                clearBellTimer();
+            }
         };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
+    /* ── auto-close bell after 10s of no interaction ── */
+    useEffect(() => {
+        if (bellOpen) { startBellTimer(); }
+        else { clearBellTimer(); }
+        return clearBellTimer;
+    }, [bellOpen]);
+
     /* ── derived stats ── */
     const paidCount    = obligations.filter(o => o.status === "paid" || o.status === "waived").length;
     const totalCount   = obligations.length;
     const progressPct  = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
-    const overdueCount = obligations.filter(o => o.isOverdue).length;
+    const overdueCount = obligations.filter(o => o.isOverdue && o.status !== "paid" && o.status !== "waived").length;
     const unreadCount  = notifications.filter(n => !n.isRead).length;
     const pendingCount = obligations.filter(o => o.status === "pending_verification").length;
+
+    /* ── filtered obligations based on active stat card ── */
+    const visibleObs =
+        filterMode === "settled" ? obligations.filter(o => o.status === "paid" || o.status === "waived") :
+        filterMode === "pending" ? obligations.filter(o => o.status === "pending_verification") :
+        filterMode === "overdue" ? obligations.filter(o => o.isOverdue && o.status !== "paid" && o.status !== "waived") :
+        obligations;
 
     /* ── notification actions ── */
     async function handleMarkRead(id: number) {
@@ -97,12 +186,36 @@ export default function StudentDashboard() {
         await notificationService.markAllRead(accessToken);
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     }
+    async function handleDeleteNotif(id: number) {
+        if (!accessToken) return;
+        try { await notificationService.delete(accessToken, id); } catch { /* silent */ }
+        setNotifications(prev => prev.filter(n => n.notificationId !== id));
+    }
 
-    /* ── payment submit ── */
+    /* ── open modal ── */
+    function openPayModal(o: StudentObligationItem) {
+        setPayModal(o);
+        setPayError("");
+        setReceiptFile(null);
+        setFilePreview(null);
+        setPayNotes("");
+    }
+
+    /* ── file with image preview ── */
+    function handleFileChange(file: File | null) {
+        setReceiptFile(file);
+        if (file && file.type.startsWith("image/")) {
+            setFilePreview(URL.createObjectURL(file));
+        } else {
+            setFilePreview(null);
+        }
+    }
+
+    /* ── payment / proof submit ── */
     async function handlePaySubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!accessToken || !payModal || !receiptFile) {
-            setPayError("Please attach a receipt file.");
+            setPayError("Please attach a file.");
             return;
         }
         setPaying(true);
@@ -111,9 +224,9 @@ export default function StudentDashboard() {
             await paymentService.submitReceipt(
                 accessToken,
                 payModal.studentObligationId,
-                payModal.amount,
+                payModal.requiresPayment ? payModal.amount : 0,
                 receiptFile,
-                payNotes || undefined
+                payNotes || undefined,
             );
             const [updatedObs, updatedNotifs] = await Promise.all([
                 studentService.getMyObligations(accessToken),
@@ -123,9 +236,10 @@ export default function StudentDashboard() {
             setNotifications(updatedNotifs);
             setPayModal(null);
             setReceiptFile(null);
+            setFilePreview(null);
             setPayNotes("");
         } catch (err: any) {
-            setPayError(err.message ?? "Failed to submit payment.");
+            setPayError(err.message ?? "Failed to submit.");
         } finally {
             setPaying(false);
         }
@@ -133,38 +247,43 @@ export default function StudentDashboard() {
 
     /* ── loading / error ── */
     if (loading) return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className={`flex items-center justify-center min-h-screen ${dk ? "bg-[#111111]" : "bg-gray-50"}`}>
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-orange-500" />
         </div>
     );
     if (error) return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className={`flex items-center justify-center min-h-screen ${dk ? "bg-[#111111]" : "bg-gray-50"}`}>
             <p className="text-red-500">{error}</p>
         </div>
     );
 
+    const isPaymentModal = payModal?.requiresPayment ?? true;
+    const card = dk ? "bg-[#1a1a1a] border border-[#2a2a2a]" : "bg-white";
+    const txt  = dk ? "text-white"   : "text-gray-800";
+    const sub  = dk ? "text-gray-400" : "text-gray-500";
+
     /* ── render ── */
     return (
-        <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
+        <div className={`p-4 sm:p-6 md:p-8 min-h-screen ${dk ? "bg-[#111111]" : "bg-gray-50"}`}>
 
             {/* ── TOP BAR ── */}
             <div className="flex items-start justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                        Welcome back, {profile?.firstName}!
+                    <h1 className={`text-2xl sm:text-3xl font-bold ${txt}`}>
+                        {justSignedUp ? `Welcome, ${profile?.firstName}!` : `Welcome back, ${profile?.firstName}!`}
                     </h1>
                     {profile && (
                         <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">
-                                {profile.programCode}
+                            <span className="bg-orange-500/20 text-orange-500 text-xs font-semibold px-3 py-1 rounded-full">
+                                {profile.programName}
                             </span>
-                            <span className="bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full">
+                            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${dk ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-200 text-gray-700"}`}>
                                 {profile.studentNo}
                             </span>
-                            <span className="bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full">
-                                Year {profile.yearLevel} — {profile.section}
+                            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${dk ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-200 text-gray-700"}`}>
+                                {ordinalYear(profile.yearLevel)} Year Section {profile.section}
                             </span>
-                            <span className="bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full">
+                            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${dk ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-200 text-gray-700"}`}>
                                 {profile.schoolYear} · {profile.semester} Sem
                             </span>
                         </div>
@@ -173,130 +292,256 @@ export default function StudentDashboard() {
 
                 {/* Notification Bell */}
                 <div className="relative mt-1" ref={bellRef}>
+                    {notificationsEnabled && (<>
                     <button
                         onClick={() => setBellOpen(o => !o)}
-                        className="relative p-2 rounded-full bg-white shadow hover:bg-gray-100 transition"
+                        className="relative p-1.5 text-orange-500 hover:text-orange-600 transition"
                         aria-label="Notifications"
                     >
-                        <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 2a6 6 0 00-6 6v2.586l-1.707 1.707A1 1 0 003 14h14a1 1 0 00.707-1.707L16 10.586V8a6 6 0 00-6-6zm0 16a2 2 0 002-2H8a2 2 0 002 2z" />
-                        </svg>
+                        <FiBell className="w-6 h-6" />
                         {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                                 {unreadCount > 9 ? "9+" : unreadCount}
                             </span>
                         )}
                     </button>
 
                     {bellOpen && (
-                        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl z-50 border border-gray-100 overflow-hidden">
-                            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-                                <span className="font-semibold text-gray-800 text-sm">Notifications</span>
+                        <div
+                            className={`absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl shadow-2xl z-50 border overflow-hidden ${bellFading ? "anim-drop-out" : "anim-drop-in"} ${dk ? "bg-[#1a1a1a] border-[#2a2a2a]" : "bg-white border-gray-100"}`}
+                            onMouseEnter={startBellTimer}
+                        >
+                            <div className={`flex items-center justify-between px-4 py-3 border-b ${dk ? "bg-[#0f0f0f] border-[#2a2a2a]" : "bg-gray-50"}`}>
+                                <span className={`font-semibold text-sm ${dk ? "text-white" : "text-gray-800"}`}>Notifications</span>
                                 {unreadCount > 0 && (
-                                    <button onClick={handleMarkAllRead} className="text-xs text-orange-500 hover:text-orange-700 font-medium">
+                                    <button onClick={() => { handleMarkAllRead(); startBellTimer(); }} className="text-xs text-orange-500 hover:text-orange-400 font-medium">
                                         Mark all read
                                     </button>
                                 )}
                             </div>
-                            <div className="max-h-80 overflow-y-auto divide-y">
+                            <div className={`max-h-96 overflow-y-auto divide-y ${dk ? "divide-[#2a2a2a]" : ""}`}>
                                 {notifications.length === 0 ? (
-                                    <div className="flex flex-col items-center py-8 text-gray-400">
+                                    <div className="flex flex-col items-center py-10 text-gray-400">
+                                        <FiBell className="w-8 h-8 mb-2 opacity-40" />
                                         <p className="text-sm">No notifications yet</p>
                                     </div>
-                                ) : notifications.map(n => (
+                                ) : notifications.map((n, idx) => (
                                     <div
                                         key={n.notificationId}
-                                        className={`flex gap-3 px-4 py-3 hover:bg-gray-50 transition ${!n.isRead ? "bg-orange-50" : ""}`}
+                                        className={`anim-item px-4 py-3 transition ${!n.isRead
+                                            ? dk ? "bg-orange-500/10 hover:bg-orange-500/20" : "bg-gray-100 hover:bg-gray-200"
+                                            : dk ? "bg-[#1a1a1a] hover:bg-[#222]" : "bg-white hover:bg-gray-50"}`}
+                                        style={{ animationDelay: `${idx * 40}ms` }}
                                     >
-                                        <div className="flex-1 min-w-0">
-                                            <p className={`text-sm font-medium truncate ${!n.isRead ? "text-gray-900" : "text-gray-600"}`}>
+                                        <div className="flex items-start justify-between gap-2">
+                                            <p className={`text-sm font-semibold leading-tight ${!n.isRead ? dk ? "text-orange-300" : "text-gray-900" : dk ? "text-gray-400" : "text-gray-600"}`}>
                                                 {n.title}
                                             </p>
-                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
-                                            <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
+                                            <span className="shrink-0 mt-0.5">{notifTypeIcon(n.type)}</span>
                                         </div>
-                                        {!n.isRead && (
-                                            <button
-                                                onClick={() => handleMarkRead(n.notificationId)}
-                                                className="self-start mt-1 text-[10px] text-orange-500 hover:text-orange-700 whitespace-nowrap"
-                                            >
-                                                Mark read
+                                        <p className={`text-xs mt-1 line-clamp-2 ${dk ? "text-gray-500" : "text-gray-500"}`}>{cleanMessage(n.message)}</p>
+                                        <div className="flex items-center justify-between mt-1.5">
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-[10px] text-gray-400">{timeAgo(n.createdAt)}</p>
+                                                {!n.isRead && (
+                                                    <button onClick={() => { handleMarkRead(n.notificationId); startBellTimer(); }} className="text-[10px] text-orange-500 hover:text-orange-400 font-medium">
+                                                        Mark read
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <button onClick={() => { handleDeleteNotif(n.notificationId); startBellTimer(); }} className="text-red-400 hover:text-red-500 transition" title="Delete">
+                                                <FiTrash2 className="w-3.5 h-3.5" />
                                             </button>
-                                        )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
+                    </>)}
                 </div>
             </div>
 
-            {/* ── STATS ROW ── */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                <StatCard label="Total" value={totalCount}   color="orange" />
-                <StatCard label="Settled" value={paidCount}  color="green" />
-                <StatCard label="Pending" value={pendingCount} color="yellow" />
-                <StatCard label="Overdue" value={overdueCount} color="red" />
+            {/* ── STAT CARDS ── */}
+            <div className="anim-section grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" style={{ animationDelay: "60ms", gridAutoRows: "1fr" }}>
+                <StatCard
+                    label="Total Obligations"
+                    value={totalCount}
+                    color="orange"
+                    active={filterMode === "all"}
+                    onClick={() => setFilterMode("all")}
+                />
+                <StatCard
+                    label="Total Obligations Settled"
+                    value={paidCount}
+                    color="green"
+                    active={filterMode === "settled"}
+                    onClick={() => setFilterMode(f => f === "settled" ? "all" : "settled")}
+                />
+                <StatCard
+                    label="Pending Obligations"
+                    value={pendingCount}
+                    color="yellow"
+                    active={filterMode === "pending"}
+                    onClick={() => setFilterMode(f => f === "pending" ? "all" : "pending")}
+                />
+                <StatCard
+                    label="Overdue Obligations"
+                    value={overdueCount}
+                    color="red"
+                    active={filterMode === "overdue"}
+                    onClick={() => setFilterMode(f => f === "overdue" ? "all" : "overdue")}
+                />
             </div>
 
-            {/* ── PROGRESS BAR ── */}
-            <div className="bg-white rounded-2xl shadow-md p-5 mb-6">
-                <div className="flex justify-between items-center mb-2">
-                    <h2 className="font-semibold text-gray-800 text-sm">Obligation Progress</h2>
+            {/* ── PROGRESS + CLEARANCE CARD ── */}
+            <div className={`anim-section rounded-2xl shadow-xl p-6 mb-6 ${card}`} style={{ animationDelay: "160ms" }}>
+
+                {/* Obligation progress */}
+                <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center gap-2">
+                        <FiTrendingUp className="w-4 h-4 text-orange-500" />
+                        <h2 className={`font-semibold text-sm ${txt}`}>Progress</h2>
+                    </div>
                     <span className="text-sm font-bold text-orange-600">{progressPct}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-gray-100 rounded-full h-3.5 overflow-hidden">
                     <div
-                        className="h-3 rounded-full transition-all duration-700"
-                        style={{ width: `${progressPct}%`, backgroundColor: "#FE8901" }}
+                        className="h-3.5 rounded-full transition-all duration-700"
+                        style={{ width: `${progressPct}%`, backgroundColor: "#EA580C" }}
                     />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-400 mt-1.5">
                     {paidCount} of {totalCount} obligation{totalCount !== 1 ? "s" : ""} settled
                 </p>
+
+                {/* Divider */}
+                <div className="border-t border-gray-100 my-5" />
+
+                {/* Clearance stepper */}
+                <div className="flex items-center gap-2 mb-4">
+                    <FiShield className="w-4 h-4 text-orange-500" />
+                    <h3 className={`font-semibold text-sm ${txt}`}>Clearance Status</h3>
+                    {clearance && clearance.clearanceId !== null && (
+                        <span className={`ml-auto text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                            clearance.status === "cleared"     ? "bg-green-100 text-green-700"  :
+                            clearance.status === "in_progress" ? "bg-blue-100 text-blue-700"    :
+                            clearance.status === "rejected"    ? "bg-red-100 text-red-700"      :
+                            "bg-gray-100 text-gray-600"
+                        }`}>
+                            {clearance.status === "cleared"     ? "Fully Cleared"  :
+                             clearance.status === "in_progress" ? "In Progress"    :
+                             clearance.status === "rejected"    ? "Rejected"        :
+                             "Pending"}
+                        </span>
+                    )}
+                </div>
+
+                {!clearance || clearance.clearanceId === null ? (
+                    <p className="text-xs text-gray-400 text-center py-3">
+                        Complete all obligations to begin clearance.
+                    </p>
+                ) : (
+                    <div className="flex items-start">
+                        {CLEARANCE_STEPS.map((step, idx) => {
+                            const match      = clearance.steps.find(s => s.stepOrder === step.order);
+                            const isCurrent  = clearance.currentStep === step.order;
+                            const isDone     = match?.status === "signed";
+                            const isRejected = match?.status === "rejected";
+
+                            return (
+                                <React.Fragment key={step.order}>
+                                    <div className="flex flex-col items-center flex-1">
+                                        {/* Step circle */}
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+                                            isDone     ? "bg-green-500 border-green-500 text-white"  :
+                                            isRejected ? "bg-red-500   border-red-500   text-white"  :
+                                            isCurrent  ? "bg-orange-500 border-orange-500 text-white" :
+                                            "bg-white border-gray-300 text-gray-400"
+                                        }`}>
+                                            {isDone ? <FiCheckCircle className="w-4 h-4" /> : isRejected ? "✕" : step.order}
+                                        </div>
+                                        {/* Step label */}
+                                        <p className={`text-[10px] font-medium text-center mt-1.5 leading-tight max-w-[64px] ${
+                                            isDone     ? "text-green-600"  :
+                                            isRejected ? "text-red-500"    :
+                                            isCurrent  ? "text-orange-600" :
+                                            "text-gray-400"
+                                        }`}>
+                                            {step.label}
+                                        </p>
+                                        {match?.verifiedAt && (
+                                            <p className="text-[9px] text-gray-400 mt-0.5 text-center">
+                                                {new Date(match.verifiedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                                            </p>
+                                        )}
+                                        {match?.remarks && isRejected && (
+                                            <p className="text-[9px] text-red-500 mt-0.5 text-center leading-tight max-w-[64px]">{match.remarks}</p>
+                                        )}
+                                    </div>
+                                    {/* Connector line */}
+                                    {idx < CLEARANCE_STEPS.length - 1 && (
+                                        <div className={`flex-1 h-0.5 mt-4 mx-1 ${isDone ? "bg-green-400" : "bg-gray-200"}`} />
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* ── OBLIGATIONS CHECKLIST ── */}
-                <div className="lg:col-span-2 bg-white rounded-2xl shadow-md p-5">
-                    <h2 className="font-semibold text-gray-800 mb-4 text-sm">My Obligations</h2>
+                <div className={`anim-section lg:col-span-2 rounded-2xl shadow-xl p-5 ${card}`} style={{ animationDelay: "260ms" }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <FiList className="w-4 h-4 text-orange-500" />
+                            <h2 className={`font-semibold text-sm ${txt}`}>My Obligations</h2>
+                        </div>
+                        {filterMode !== "all" && (
+                            <button
+                                onClick={() => setFilterMode("all")}
+                                className="text-xs text-orange-500 hover:text-orange-700 font-medium flex items-center gap-1"
+                            >
+                                <FiX className="w-3 h-3" /> Clear filter
+                            </button>
+                        )}
+                    </div>
 
-                    {obligations.length === 0 ? (
-                        <p className="text-center text-gray-400 text-sm py-10">No obligations assigned yet.</p>
+                    {visibleObs.length === 0 ? (
+                        <p className="text-center text-gray-400 text-sm py-10">
+                            {obligations.length === 0 ? "No obligations assigned yet." : "No obligations in this category."}
+                        </p>
                     ) : (
                         <div className="space-y-3">
-                            {obligations.map(o => {
-                                const isDone = o.status === "paid" || o.status === "waived";
-                                const isPending = o.status === "pending_verification";
+                            {visibleObs.map((o, idx) => {
+                                const isDone     = o.status === "paid" || o.status === "waived";
+                                const isPending  = o.status === "pending_verification";
                                 const isRejected = o.latestPayment?.paymentStatus === "rejected";
-                                const canPay = o.requiresPayment && (o.status === "unpaid" || (isPending && isRejected));
+                                const canPay     = o.requiresPayment  && (o.status === "unpaid" || (isPending && isRejected));
+                                const canProof   = !o.requiresPayment && (o.status === "unpaid" || (isPending && isRejected));
 
                                 return (
                                     <div
                                         key={o.studentObligationId}
-                                        className={`p-4 rounded-xl border ${
-                                            o.isOverdue && !isDone
-                                                ? "border-red-200 bg-red-50"
-                                                : isDone
-                                                ? "border-green-200 bg-green-50"
-                                                : isPending
-                                                ? "border-yellow-200 bg-yellow-50"
-                                                : "border-gray-200 bg-gray-50"
-                                        }`}
+                                        className={`anim-item p-4 rounded-xl border shadow-sm ${dk ? "bg-[#222] border-[#2a2a2a]" : "bg-gray-50 border-gray-200"}`}
+                                        style={{ animationDelay: `${idx * 60}ms` }}
                                     >
                                         <div className="flex items-start gap-3">
-                                            {/* Status dot */}
-                                            <div className={`mt-0.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                                                isDone     ? "bg-green-500"  :
-                                                isPending  ? "bg-yellow-400" :
-                                                o.isOverdue ? "bg-red-500"  :
-                                                "bg-gray-400"
-                                            }`} />
+                                            {/* Status icon */}
+                                            {isDone
+                                                ? <FiCheckCircle className="mt-0.5 w-4 h-4 text-green-500 shrink-0" />
+                                                : isPending
+                                                ? <FiClock       className="mt-0.5 w-4 h-4 text-yellow-500 shrink-0" />
+                                                : o.isOverdue
+                                                ? <FiAlertCircle className="mt-0.5 w-4 h-4 text-red-500   shrink-0" />
+                                                : <FiCircle      className="mt-0.5 w-4 h-4 text-gray-400  shrink-0" />
+                                            }
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                    <p className={`font-medium text-sm ${isDone ? "line-through text-gray-400" : "text-gray-800"}`}>
+                                                    <p className={`font-medium text-sm ${isDone ? "line-through text-gray-400 dark:text-gray-600" : "text-gray-800 dark:text-white"}`}>
                                                         {o.obligationName}
                                                     </p>
                                                     <StatusBadge obligation={o} />
@@ -309,51 +554,45 @@ export default function StudentDashboard() {
                                                 <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                                                     {o.requiresPayment
                                                         ? <span className="font-semibold text-gray-700">₱{Number(o.amount).toFixed(2)}</span>
-                                                        : <span className="text-green-600 font-semibold">Free</span>
+                                                        : <span className="text-blue-600 font-semibold flex items-center gap-1">
+                                                            <FiCamera className="w-3 h-3" /> Proof Required
+                                                          </span>
                                                     }
                                                     {o.dueDate && (
                                                         <span className={o.isOverdue && !isDone ? "text-red-600 font-semibold" : ""}>
                                                             Due: {new Date(o.dueDate).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                                                         </span>
                                                     )}
-                                                    {/* GCash QR link */}
-                                                    {o.requiresPayment && o.gcashQrPath && !isDone && (
-                                                        <button
-                                                            onClick={() => setQrView({ url: qrUrl(o.gcashQrPath!), name: o.obligationName })}
-                                                            className="text-orange-500 hover:underline font-medium"
-                                                        >
-                                                            View GCash QR
-                                                        </button>
-                                                    )}
                                                 </div>
 
-                                                {/* Receipt link + rejection remark */}
-                                                {o.latestPayment && (
-                                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-                                                        <a
-                                                            href={receiptUrl(o.latestPayment.receiptPath)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-orange-600 hover:underline"
-                                                        >
-                                                            View Receipt
-                                                        </a>
-                                                        {isRejected && o.latestPayment.remarks && (
-                                                            <span className="text-red-600">Rejected: {o.latestPayment.remarks}</span>
-                                                        )}
-                                                    </div>
+                                                {isRejected && o.latestPayment?.remarks && (
+                                                    <p className="mt-1.5 text-xs text-red-600">Rejected: {o.latestPayment.remarks}</p>
                                                 )}
                                             </div>
 
-                                            {/* Pay / Re-submit button */}
+                                            {/* Pay button */}
                                             {canPay && (
                                                 <button
-                                                    onClick={() => { setPayModal(o); setPayError(""); setReceiptFile(null); setPayNotes(""); }}
-                                                    className={`flex-shrink-0 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
+                                                    onClick={() => openPayModal(o)}
+                                                    className={`flex-shrink-0 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm ${
                                                         isRejected ? "bg-red-500 hover:bg-red-600" : "bg-orange-500 hover:bg-orange-600"
                                                     }`}
                                                 >
+                                                    <FiCreditCard className="w-3 h-3" />
                                                     {isRejected ? "Re-submit" : "Pay"}
+                                                </button>
+                                            )}
+
+                                            {/* Proof button for non-payment obligations */}
+                                            {canProof && (
+                                                <button
+                                                    onClick={() => openPayModal(o)}
+                                                    className={`flex-shrink-0 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm ${
+                                                        isRejected ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
+                                                    }`}
+                                                >
+                                                    <FiCamera className="w-3 h-3" />
+                                                    {isRejected ? "Re-submit" : "Submit Proof"}
                                                 </button>
                                             )}
                                         </div>
@@ -365,125 +604,90 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* ── RIGHT COLUMN ── */}
-                <div className="space-y-6">
-
-                    {/* CLEARANCE STATUS */}
-                    <div className="bg-white rounded-2xl shadow-md p-5">
-                        <h2 className="font-semibold text-gray-800 mb-4 text-sm">Clearance Status</h2>
-
-                        {!clearance || clearance.clearanceId === null ? (
-                            <div className="text-center py-4 text-gray-400">
-                                <p className="text-xs">No clearance record yet.</p>
-                                <p className="text-xs mt-1">Complete all obligations to begin clearance.</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="mb-4">
-                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                                        clearance.status === "cleared"     ? "bg-green-100 text-green-700"  :
-                                        clearance.status === "in_progress" ? "bg-blue-100 text-blue-700"    :
-                                        clearance.status === "rejected"    ? "bg-red-100 text-red-700"      :
-                                        "bg-gray-100 text-gray-600"
-                                    }`}>
-                                        {clearance.status === "cleared"     ? "Fully Cleared"  :
-                                         clearance.status === "in_progress" ? "In Progress"    :
-                                         clearance.status === "rejected"    ? "Rejected"        :
-                                         "Pending"}
-                                    </span>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {CLEARANCE_STEPS.map(step => {
-                                        const match      = clearance.steps.find(s => s.stepOrder === step.order);
-                                        const isCurrent  = clearance.currentStep === step.order;
-                                        const isDone     = match?.status === "signed";
-                                        const isRejected = match?.status === "rejected";
-
-                                        return (
-                                            <div key={step.order} className="flex items-center gap-3">
-                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                                                    isDone     ? "bg-green-500 text-white"  :
-                                                    isRejected ? "bg-red-500 text-white"    :
-                                                    isCurrent  ? "bg-orange-500 text-white" :
-                                                    "bg-gray-200 text-gray-500"
-                                                }`}>
-                                                    {isDone ? "✓" : isRejected ? "✕" : step.order}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className={`text-xs font-medium ${
-                                                        isDone     ? "text-green-700"  :
-                                                        isRejected ? "text-red-600"    :
-                                                        isCurrent  ? "text-orange-600" :
-                                                        "text-gray-500"
-                                                    }`}>
-                                                        {step.label}
-                                                    </p>
-                                                    {match?.verifiedAt && (
-                                                        <p className="text-[10px] text-gray-400">
-                                                            {new Date(match.verifiedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
-                                                        </p>
-                                                    )}
-                                                    {match?.remarks && isRejected && (
-                                                        <p className="text-[10px] text-red-500">{match.remarks}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    {/* QUICK CHECKLIST */}
-                    <div className="bg-white rounded-2xl shadow-md p-5">
-                        <h2 className="font-semibold text-gray-800 mb-3 text-sm">Checklist</h2>
-                        <div className="space-y-2">
-                            {obligations.length === 0 && (
-                                <p className="text-xs text-gray-400 text-center py-2">No obligations yet</p>
-                            )}
-                            {obligations.map(o => {
-                                const isDone = o.status === "paid" || o.status === "waived";
-                                return (
-                                    <div key={o.studentObligationId} className="flex items-center gap-2">
-                                        <span className={`text-sm leading-none ${
-                                            isDone               ? "text-green-500" :
-                                            o.status === "pending_verification" ? "text-yellow-500" :
-                                            o.isOverdue          ? "text-red-500"   :
-                                            "text-gray-400"
-                                        }`}>
-                                            {isDone ? "✓" : o.isOverdue ? "!" : "○"}
-                                        </span>
-                                        <span className={`text-xs truncate ${isDone ? "line-through text-gray-400" : "text-gray-700"}`}>
-                                            {o.obligationName}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                <div className="anim-section" style={{ animationDelay: "340ms" }}>
+                    {/* CHECKLIST */}
+                    <div className={`rounded-2xl shadow-xl p-5 h-full ${card}`}>
+                        <div className="flex items-center gap-2 mb-4">
+                            <FiCheckSquare className="w-4 h-4 text-orange-500" />
+                            <h2 className={`font-semibold text-sm ${txt}`}>Checklist</h2>
+                            <span className="ml-auto text-xs font-semibold text-orange-500 dark:text-orange-400">
+                                {paidCount}/{totalCount}
+                            </span>
                         </div>
+
+                        {obligations.length === 0 ? (
+                            <p className="text-xs text-gray-400 text-center py-6">No obligations yet</p>
+                        ) : (
+                            <div className="space-y-2.5">
+                                {obligations.map(o => {
+                                    const isDone = o.status === "paid" || o.status === "waived";
+                                    return (
+                                        <label
+                                            key={o.studentObligationId}
+                                            className="flex items-center gap-3 py-2 px-1 cursor-default select-none"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                readOnly
+                                                checked={isDone}
+                                                className="w-4 h-4 shrink-0 pointer-events-none"
+                                            />
+                                            <span className={`text-sm flex-1 truncate ${isDone ? "line-through text-gray-400" : "text-gray-700 font-medium"}`}>
+                                                {o.obligationName}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* ── PAYMENT MODAL ── */}
+            {/* ── PAYMENT / PROOF MODAL ── */}
             {payModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-                        <div className="bg-orange-500 px-6 py-4 flex items-center justify-between">
-                            <span className="font-semibold text-white">Submit Payment</span>
-                            <button onClick={() => setPayModal(null)} className="text-white hover:text-orange-200 text-xl leading-none">&times;</button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="anim-slide-up bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+
+                        {/* Header */}
+                        <div className={`px-6 py-5 flex items-center justify-between shrink-0 ${isPaymentModal ? "bg-orange-500" : "bg-blue-600"}`}>
+                            <div className="flex items-center gap-3">
+                                {isPaymentModal
+                                    ? <FiCreditCard className="w-5 h-5 text-white" />
+                                    : <FiCamera className="w-5 h-5 text-white" />
+                                }
+                                <div>
+                                    <p className="font-bold text-white text-base leading-tight">
+                                        {isPaymentModal ? "Submit Payment" : "Submit Proof of Participation"}
+                                    </p>
+                                    <p className="text-xs text-white/70 mt-0.5">{payModal.obligationName}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setPayModal(null)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition text-white"
+                            >
+                                <FiX className="w-4 h-4" />
+                            </button>
                         </div>
 
-                        <form onSubmit={handlePaySubmit} className="p-6 space-y-4">
-                            {/* Obligation info */}
-                            <div className="bg-orange-50 rounded-xl p-4">
-                                <p className="font-semibold text-gray-800 text-sm">{payModal.obligationName}</p>
+                        <form onSubmit={handlePaySubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+
+                            {/* Obligation summary card */}
+                            <div className={`rounded-xl p-4 ${isPaymentModal ? "bg-orange-50 border border-orange-100" : "bg-blue-50 border border-blue-100"}`}>
+                                <p className="font-bold text-gray-900 text-base">{payModal.obligationName}</p>
                                 {payModal.description && (
                                     <p className="text-xs text-gray-500 mt-1">{payModal.description}</p>
                                 )}
-                                <p className="text-lg font-bold text-orange-600 mt-2">
-                                    ₱{Number(payModal.amount).toFixed(2)}
-                                </p>
+                                {isPaymentModal ? (
+                                    <p className="text-2xl font-extrabold text-orange-600 mt-2">
+                                        ₱{Number(payModal.amount).toFixed(2)}
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-blue-600 font-semibold mt-2 flex items-center gap-1">
+                                        <FiCamera className="w-3.5 h-3.5" /> Photo / attendance proof required
+                                    </p>
+                                )}
                                 {payModal.dueDate && (
                                     <p className={`text-xs mt-1 ${payModal.isOverdue ? "text-red-600 font-semibold" : "text-gray-500"}`}>
                                         Due: {new Date(payModal.dueDate).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}
@@ -492,50 +696,92 @@ export default function StudentDashboard() {
                                 )}
                             </div>
 
-                            {/* GCash QR in modal */}
-                            {payModal.gcashQrPath && (
-                                <div className="border rounded-xl p-3 text-center">
-                                    <p className="text-xs font-medium text-gray-700 mb-2">GCash QR Code</p>
+                            {/* GCash QR (payment only) */}
+                            {isPaymentModal && payModal.gcashQrPath && (
+                                <div className="border border-gray-200 rounded-xl p-4 flex items-center gap-4 bg-gray-50">
                                     <img
                                         src={qrUrl(payModal.gcashQrPath)}
                                         alt="GCash QR"
-                                        className="w-32 h-32 object-contain mx-auto border rounded cursor-pointer"
+                                        className="w-20 h-20 object-contain rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
                                         onClick={() => setQrView({ url: qrUrl(payModal.gcashQrPath!), name: payModal.obligationName })}
-                                        title="Click to view fullscreen"
                                     />
-                                    <p className="text-[10px] text-gray-400 mt-1">Click image to enlarge</p>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-800">GCash QR Code</p>
+                                        <p className="text-xs text-gray-500 mt-1">Scan with your GCash app to pay</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setQrView({ url: qrUrl(payModal.gcashQrPath!), name: payModal.obligationName })}
+                                            className="mt-2 text-xs text-orange-500 hover:text-orange-700 flex items-center gap-1 font-medium"
+                                        >
+                                            <FiZoomIn className="w-3 h-3" /> View full size
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
                             {/* Instructions */}
-                            <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 space-y-1">
-                                <p className="font-semibold">GCash Payment Instructions:</p>
-                                <p>1. Scan the QR code above or send to the ESO GCash number</p>
-                                <p>2. Take a screenshot of your GCash receipt</p>
-                                <p>3. Upload the screenshot below</p>
-                            </div>
+                            {isPaymentModal ? (
+                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 space-y-1">
+                                    <p className="font-semibold">Payment Instructions:</p>
+                                    <p>1. Scan the GCash QR above or send to the ESO GCash number</p>
+                                    <p>2. Take a screenshot of your GCash receipt showing the transaction</p>
+                                    <p>3. Upload the screenshot below</p>
+                                </div>
+                            ) : (
+                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 space-y-1">
+                                    <p className="font-semibold">Proof Submission Instructions:</p>
+                                    <p>1. Take a clear selfie or photo at the event / activity</p>
+                                    <p>2. Make sure your face and the event background are visible</p>
+                                    <p>3. Upload the photo below</p>
+                                </div>
+                            )}
 
                             {/* File upload */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Receipt / Proof of Payment *
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    {isPaymentModal ? "GCash Receipt / Payment Screenshot" : "Proof Photo / Event Selfie"} *
                                 </label>
-                                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-orange-300 rounded-xl cursor-pointer bg-orange-50 hover:bg-orange-100 transition">
-                                    {receiptFile ? (
-                                        <span className="text-sm text-orange-700 font-medium px-4 truncate max-w-full">
-                                            {receiptFile.name}
-                                        </span>
-                                    ) : (
-                                        <div className="flex flex-col items-center text-orange-400">
-                                            <span className="text-xs">Click to upload JPG, PNG, or PDF</span>
-                                            <span className="text-[10px] text-gray-400 mt-0.5">Max 5MB</span>
+
+                                {/* Image preview */}
+                                {filePreview && (
+                                    <div className="mb-3 relative">
+                                        <img
+                                            src={filePreview}
+                                            alt="Preview"
+                                            className="w-full max-h-52 object-contain rounded-xl border border-gray-200 bg-gray-50"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => { setReceiptFile(null); setFilePreview(null); }}
+                                            className="absolute top-2 right-2 w-6 h-6 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition"
+                                        >
+                                            <FiX className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition ${
+                                    isPaymentModal
+                                        ? "border-orange-300 bg-orange-50 hover:bg-orange-100"
+                                        : "border-blue-300 bg-blue-50 hover:bg-blue-100"
+                                }`}>
+                                    {receiptFile && !filePreview ? (
+                                        <div className="flex items-center gap-2 text-sm text-gray-700 font-medium px-4 text-center">
+                                            <FiFileText className={`w-5 h-5 ${isPaymentModal ? "text-orange-500" : "text-blue-500"}`} />
+                                            <span className="truncate max-w-xs">{receiptFile.name}</span>
                                         </div>
-                                    )}
+                                    ) : !receiptFile ? (
+                                        <div className="flex flex-col items-center pointer-events-none">
+                                            <FiUpload className={`w-6 h-6 mb-2 ${isPaymentModal ? "text-orange-400" : "text-blue-400"}`} />
+                                            <p className="text-sm font-medium text-gray-600">Click to upload</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">JPG, PNG or PDF · Max 5MB</p>
+                                        </div>
+                                    ) : null}
                                     <input
                                         type="file"
                                         accept=".jpg,.jpeg,.png,.pdf"
                                         className="hidden"
-                                        onChange={e => setReceiptFile(e.target.files?.[0] ?? null)}
+                                        onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
                                     />
                                 </label>
                             </div>
@@ -545,8 +791,11 @@ export default function StudentDashboard() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
                                 <textarea
                                     rows={2}
-                                    className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
-                                    placeholder="e.g. Reference number, payment date..."
+                                    className="w-full border border-gray-200 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 text-sm resize-none"
+                                    placeholder={isPaymentModal
+                                        ? "e.g. Reference number, payment date..."
+                                        : "e.g. Event name, date attended..."
+                                    }
                                     value={payNotes}
                                     onChange={e => setPayNotes(e.target.value)}
                                 />
@@ -557,9 +806,11 @@ export default function StudentDashboard() {
                             <button
                                 type="submit"
                                 disabled={paying || !receiptFile}
-                                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition"
+                                className={`w-full disabled:opacity-50 text-white font-bold py-3.5 rounded-xl transition text-sm ${
+                                    isPaymentModal ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"
+                                }`}
                             >
-                                {paying ? "Submitting..." : "Submit Receipt"}
+                                {paying ? "Submitting..." : isPaymentModal ? "Submit Receipt" : "Submit Proof"}
                             </button>
                         </form>
                     </div>
@@ -573,21 +824,31 @@ export default function StudentDashboard() {
                     onClick={() => setQrView(null)}
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center"
+                        className="anim-slide-up bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm"
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <p className="font-semibold text-gray-800 text-sm truncate">{qrView.name} — GCash QR</p>
-                            <button onClick={() => setQrView(null)} className="text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
+                        <div className="bg-orange-500 px-5 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <FiZoomIn className="w-4 h-4 text-white" />
+                                <p className="font-semibold text-white text-sm truncate">{qrView.name}</p>
+                            </div>
+                            <button
+                                onClick={() => setQrView(null)}
+                                className="w-7 h-7 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition"
+                            >
+                                <FiX className="w-4 h-4" />
+                            </button>
                         </div>
-                        <img src={qrView.url} alt="GCash QR Code" className="w-full max-w-xs mx-auto rounded-xl border" />
-                        <a
-                            href={qrView.url}
-                            download
-                            className="mt-4 inline-block bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2 rounded-lg transition"
-                        >
-                            Download QR
-                        </a>
+                        <div className="p-5">
+                            <img src={qrView.url} alt="GCash QR Code" className="w-full rounded-xl border border-gray-200" />
+                            <a
+                                href={qrView.url}
+                                download
+                                className="mt-4 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition"
+                            >
+                                <FiDownload className="w-4 h-4" /> Download QR
+                            </a>
+                        </div>
                     </div>
                 </div>
             )}
@@ -598,29 +859,55 @@ export default function StudentDashboard() {
 /* ── Status Badge ── */
 function StatusBadge({ obligation: o }: { obligation: StudentObligationItem }) {
     if (o.status === "paid" || o.status === "waived") {
-        return <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">{o.status === "waived" ? "Waived" : "Paid"}</span>;
+        return <span className="text-xs font-semibold text-white dark:text-green-300 bg-green-500 dark:bg-green-900/60 px-2 py-0.5 rounded-full">{o.status === "waived" ? "Waived" : "Paid"}</span>;
     }
     if (o.status === "pending_verification") {
-        return <span className="text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">Pending Verification</span>;
+        return <span className="text-xs font-semibold text-white dark:text-yellow-300 bg-yellow-500 dark:bg-yellow-900/60 px-2 py-0.5 rounded-full">Pending Verification</span>;
     }
     if (o.isOverdue) {
-        return <span className="text-xs font-semibold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">Overdue</span>;
+        return <span className="text-xs font-semibold text-white dark:text-red-300 bg-red-500 dark:bg-red-900/60 px-2 py-0.5 rounded-full">Overdue</span>;
     }
-    return <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">Unpaid</span>;
+    return <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-200 dark:bg-[#2a2a2a] px-2 py-0.5 rounded-full">Unpaid</span>;
 }
 
 /* ── Stat Card ── */
-function StatCard({ label, value, color }: { label: string; value: number; color: "orange" | "green" | "yellow" | "red" }) {
-    const styles: Record<string, string> = {
-        orange: "bg-orange-50 border-orange-200 text-orange-600",
-        green:  "bg-green-50  border-green-200  text-green-600",
-        yellow: "bg-yellow-50 border-yellow-200 text-yellow-600",
-        red:    "bg-red-50    border-red-200    text-red-600",
-    };
+const STAT_ICONS = {
+    orange: FiList,
+    green:  FiCheckCircle,
+    yellow: FiClock,
+    red:    FiAlertTriangle,
+};
+
+const ACTIVE_BG = {
+    orange: "bg-orange-500",
+    green:  "bg-green-600",
+    yellow: "bg-yellow-500",
+    red:    "bg-red-500",
+};
+
+function StatCard({
+    label, value, color, active, onClick,
+}: {
+    label: string; value: number; color: "orange" | "green" | "yellow" | "red";
+    active?: boolean; onClick?: () => void;
+}) {
+    const Icon = STAT_ICONS[color];
     return (
-        <div className={`rounded-xl border p-4 shadow-md ${styles[color]}`}>
-            <p className="text-xs text-gray-600 font-medium mb-1">{label}</p>
-            <p className="text-2xl font-bold text-gray-800">{value}</p>
-        </div>
+        <button
+            onClick={onClick}
+            className={`rounded-xl p-4 text-left transition cursor-pointer w-full h-full flex flex-col justify-between relative overflow-hidden ${
+                active
+                    ? `${ACTIVE_BG[color]} shadow-xl`
+                    : "bg-white dark:bg-[#1a1a1a] dark:border dark:border-[#2a2a2a] shadow-lg hover:shadow-xl"
+            }`}
+        >
+            {/* Top row: label + icon */}
+            <div className="flex items-start justify-between gap-2">
+                <p className={`text-xs font-semibold leading-tight ${active ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>{label}</p>
+                <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${active ? "text-white/60" : "text-orange-400"}`} />
+            </div>
+            {/* Number */}
+            <p className={`text-2xl font-extrabold mt-2 ${active ? "text-white" : "text-gray-800 dark:text-white"}`}>{value}</p>
+        </button>
     );
 }
