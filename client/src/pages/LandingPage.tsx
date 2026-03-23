@@ -61,23 +61,41 @@ const LandingPage = () => {
 
             <div
                 className="landing-bg absolute md:fixed inset-0 bg-cover bg-center z-0 min-h-screen"
-                style={{ backgroundImage: `url(${MarSU_BG})` }}
+                style={{ backgroundImage: `url(${MarSU_BG})`, filter: "blur(2px) brightness(0.55)", transform: "scale(1.04)" }}
             />
-            <div className="landing-overlay absolute md:fixed inset-0 bg-black bg-opacity-60 z-0" />
+            <div className="landing-overlay absolute md:fixed inset-0 bg-black bg-opacity-75 z-0" />
+            {/* Subtle orange glow accent */}
+            <div className="absolute md:fixed inset-0 z-0 pointer-events-none"
+                style={{ background: "radial-gradient(ellipse 60% 50% at 18% 8%, rgba(234,88,12,0.18) 0%, transparent 60%)" }} />
 
-            <header className="landing-header relative z-10 flex h-[80px] w-full items-center justify-between bg-primary px-6 text-white">
+            <header className="landing-header relative z-10 flex h-[72px] w-full items-center justify-between px-6 text-white"
+                style={{ background: "linear-gradient(to right, #fbbf24, #f97316, #ea580c)" }}>
                 <div className="flex items-center gap-3">
-                    <img src={logo} alt="ESO Logo" className="h-10 w-10 object-contain" />
-                    <div className="font-bold text-[clamp(14px,1.5vw,50px)]">
-                        Marinduque State University
+                    <img src={logo} alt="ESO Logo" className="h-10 w-10 object-contain drop-shadow" />
+                    <div className="leading-tight">
+                        <div className="font-bold text-[clamp(13px,1.4vw,18px)] tracking-wide">
+                            Marinduque State University
+                        </div>
+                        <div className="text-white/80 text-[10px] tracking-widest uppercase font-medium hidden sm:block">
+                            College of Engineering &nbsp;·&nbsp; Engineering Student Organization
+                        </div>
                     </div>
                 </div>
-                <button className="hover:underline text-[clamp(14px,1.5vw,50px)]">
+                <a
+                    href="https://www.marsu.edu.ph"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline text-[clamp(12px,1.2vw,15px)] text-white/90 hover:text-white
+                        border border-white/30 hover:border-white px-4 py-1.5 rounded-full transition-all"
+                >
                     More Info
-                </button>
+                </a>
             </header>
+            {/* Accent line under header */}
+            <div className="relative z-10 h-[3px]"
+                style={{ background: "linear-gradient(to right, #fbbf24, #ea580c, #9a3412)" }} />
 
-            <main className="landing-main relative z-10 flex min-h-[calc(100vh-80px)] overflow-y-auto
+            <main className="landing-main relative z-10 flex min-h-[calc(100vh-75px)] overflow-y-auto
                 flex-col items-center justify-center gap-4 py-8 px-4
                 md:flex-row md:items-center md:justify-start md:gap-0 md:py-0">
 

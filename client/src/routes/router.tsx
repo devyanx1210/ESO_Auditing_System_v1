@@ -15,6 +15,9 @@ import MoreInfo from "../pages/MoreInfo";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminSettings from "../pages/admin/AdminSettings";           // system_admin ONLY
 import StudentList from "../pages/admin/StudentList";
+import StudentObligationList from "../pages/admin/StudentObligationList";
+import PaymentVerification from "../pages/admin/PaymentVerification";
+import ClearanceVerification from "../pages/admin/ClearanceVerification";
 import Obligations from "../pages/admin/Obligations";
 import Documents from "../pages/admin/Documents";
 import Reports from "../pages/admin/Reports";
@@ -63,7 +66,11 @@ const router = createBrowserRouter([
         children: [
             { index: true, element: <Navigate to="home" replace /> },
             { path: "home", element: <AdminDashboard /> },
-            { path: "students", element: <StudentList /> },
+            { path: "students", element: <Navigate to="/dashboard/students/list" replace /> },
+            { path: "students/list", element: <StudentList /> },
+            { path: "students/obligations-list", element: <StudentObligationList /> },
+            { path: "students/payments", element: <PaymentVerification /> },
+            { path: "students/clearances", element: <ClearanceVerification /> },
             { path: "obligations", element: <Obligations /> },
             { path: "documents", element: <Documents /> },
             { path: "reports", element: <Reports /> },

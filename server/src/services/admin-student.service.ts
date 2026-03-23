@@ -95,6 +95,7 @@ export interface AdminObligationItem {
     dueDate: string | null;
     isOverdue: boolean;
     status: "unpaid" | "pending_verification" | "paid" | "waived";
+    proofImage: string | null;
     paymentType: "gcash" | "cash" | null;
     paymentId: number | null;
     receiptPath: string | null;
@@ -102,6 +103,9 @@ export interface AdminObligationItem {
     paymentStatus: "pending" | "approved" | "rejected" | null;
     submittedAt: string | null;
     remarks: string | null;
+    verifiedByName: string | null;
+    verifiedByRole: string | null;
+    verifiedAt: string | null;
 }
 
 export const getStudentObligationsForAdmin = async (
@@ -115,13 +119,17 @@ export const getStudentObligationsForAdmin = async (
             so.amount_due          AS amount,
             o.due_date,
             so.status,
+            so.proof_image,
             ps.payment_id,
-            ps.receipt_path,
+            ps.payment_receipt_path,
             ps.amount_paid,
             ps.payment_type,
             ps.payment_status,
             ps.submitted_at,
-            pv.remarks
+            pv.remarks,
+            pv.verified_at,
+            CONCAT(vu.first_name, ' ', vu.last_name) AS verified_by_name,
+            vr.role_label                             AS verified_by_role
          FROM student_obligations so
          JOIN obligations o ON o.obligation_id = so.obligation_id
          LEFT JOIN payment_submissions ps
@@ -131,6 +139,9 @@ export const getStudentObligationsForAdmin = async (
                 WHERE p2.student_obligation_id = so.student_obligation_id
             )
          LEFT JOIN payment_verifications pv ON pv.payment_id = ps.payment_id
+         LEFT JOIN admins va ON va.admin_id = pv.admin_id
+         LEFT JOIN users  vu ON vu.user_id  = va.user_id
+         LEFT JOIN roles  vr ON vr.role_id  = vu.role_id
          WHERE so.student_id = ?
          ORDER BY o.due_date IS NULL, o.due_date ASC`,
         [studentId]
@@ -156,13 +167,57 @@ export const getStudentObligationsForAdmin = async (
             dueDate,
             isOverdue,
             status:              r.status,
+            proofImage:          r.proof_image ?? null,
             paymentType:         r.payment_type ?? null,
             paymentId:           r.payment_id ?? null,
-            receiptPath:         r.receipt_path ?? null,
+            receiptPath:         r.payment_receipt_path ?? null,
             amountPaid:          r.amount_paid != null ? Number(r.amount_paid) : null,
             paymentStatus:       r.payment_status ?? null,
             submittedAt:         r.submitted_at ?? null,
             remarks:             r.remarks ?? null,
+            verifiedByName:      r.verified_by_name ?? null,
+            verifiedByRole:      r.verified_by_role ?? null,
+            verifiedAt:          r.verified_at
+                ? (r.verified_at.toISOString?.() ?? String(r.verified_at))
+                : null,
         };
     });
+};
+
+// ─── Verify proof submission (non-payment obligation) ─────────────────────────
+
+export const verifyProofObligation = async (
+    userId: number,
+    studentObligationId: number,
+    status: "paid" | "unpaid"
+): Promise<void> => {
+    const adminId = await getAdminId(userId);
+
+    const [rows]: any = await pool.execute(
+        `SELECT so.student_id, so.amount_due, o.obligation_name,
+                s.user_id AS studentUserId
+         FROM student_obligations so
+         JOIN obligations o ON o.obligation_id = so.obligation_id
+         JOIN students s    ON s.student_id    = so.student_id
+         WHERE so.student_obligation_id = ?`,
+        [studentObligationId]
+    );
+    if (!rows.length) throw new Error("Obligation not found");
+    const ob = rows[0];
+    if (Number(ob.amount_due) > 0) throw new Error("This obligation requires payment verification, not proof.");
+
+    await pool.execute(
+        `UPDATE student_obligations SET status = ?, updated_at = NOW() WHERE student_obligation_id = ?`,
+        [status, studentObligationId]
+    );
+
+    const title   = status === "paid" ? "Proof Verified" : "Proof Rejected";
+    const message = status === "paid"
+        ? `Your proof for "${ob.obligation_name}" has been verified.`
+        : `Your proof for "${ob.obligation_name}" was not accepted.`;
+    await pool.execute(
+        `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+         VALUES (?, ?, ?, ?, ?, 'obligation', 0, NOW())`,
+        [ob.studentUserId, title, message, `proof_${status}`, studentObligationId]
+    );
 };

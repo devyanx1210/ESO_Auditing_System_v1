@@ -76,12 +76,32 @@ input[type="checkbox"]:indeterminate {
     from { opacity: 0; transform: translateX(-10px); }
     to   { opacity: 1; transform: translateX(0); }
 }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes cardPop {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes modalBackdropIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes modalPanelIn {
+    from { opacity: 0; transform: translateY(32px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
 
-.anim-drop-in  { animation: fadeDropIn  0.18s ease-out both; }
-.anim-drop-out { animation: fadeDropOut 0.18s ease-in  both; }
-.anim-slide-up { animation: slideUpIn   0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
-.anim-item     { animation: itemSlideIn 0.2s  ease-out both; }
-.anim-section  { animation: slideUpIn   0.45s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-drop-in      { animation: fadeDropIn      0.18s ease-out both; }
+.anim-drop-out     { animation: fadeDropOut     0.18s ease-in  both; }
+.anim-slide-up     { animation: slideUpIn       0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
+.anim-item         { animation: itemSlideIn     0.22s ease-out both; }
+.anim-section      { animation: slideUpIn       0.45s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-fade-in      { animation: fadeIn          0.2s  ease-out both; }
+.anim-card-pop     { animation: cardPop         0.4s  cubic-bezier(0.22,1,0.36,1) both; }
+.anim-modal-backdrop { animation: modalBackdropIn 0.2s ease-out both; }
+.anim-modal-panel  { animation: modalPanelIn    0.32s cubic-bezier(0.34,1.56,0.64,1) both; }
 
 /* Hide browser password reveal button */
 input[type="password"]::-ms-reveal,

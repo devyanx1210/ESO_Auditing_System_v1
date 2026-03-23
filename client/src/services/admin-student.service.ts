@@ -27,6 +27,7 @@ export interface AdminObligationItem {
     dueDate: string | null;
     isOverdue: boolean;
     status: "unpaid" | "pending_verification" | "paid" | "waived";
+    proofImage: string | null;
     paymentType: "gcash" | "cash" | null;
     paymentId: number | null;
     receiptPath: string | null;
@@ -34,6 +35,9 @@ export interface AdminObligationItem {
     paymentStatus: "pending" | "approved" | "rejected" | null;
     submittedAt: string | null;
     remarks: string | null;
+    verifiedByName: string | null;
+    verifiedByRole: string | null;
+    verifiedAt: string | null;
 }
 
 export interface PendingPaymentItem {
@@ -49,8 +53,9 @@ export interface PendingPaymentItem {
     submittedAt: string;
 }
 
-const UPLOADS = "http://localhost:5000/uploads";
-export const receiptUrl = (path: string) => `${UPLOADS}/${path}`;
+// Cloudinary URLs are already absolute; legacy local paths get the uploads prefix
+export const receiptUrl = (p: string) =>
+    p.startsWith("http") ? p : `http://localhost:5000/uploads/${p}`;
 
 export const adminStudentService = {
     listStudents: (token: string) =>
@@ -95,6 +100,42 @@ export const adminStudentService = {
 
     getClearanceHistory: (token: string) =>
         apiFetch<ClearanceHistoryItem[]>("/admin/clearance/history", {}, token),
+
+    bulkVerify: (token: string, paymentIds: number[]) =>
+        apiFetch<{ count: number }>("/admin/payments/bulk-verify", {
+            method: "POST",
+            body: JSON.stringify({ paymentIds }),
+        }, token),
+
+    bulkUnverify: (token: string, paymentIds: number[]) =>
+        apiFetch<{ count: number }>("/admin/payments/bulk-unverify", {
+            method: "POST",
+            body: JSON.stringify({ paymentIds }),
+        }, token),
+
+    bulkDelete: (token: string, paymentIds: number[]) =>
+        apiFetch<{ count: number }>("/admin/payments/bulk-delete", {
+            method: "POST",
+            body: JSON.stringify({ paymentIds }),
+        }, token),
+
+    verifyProof: (token: string, studentObligationId: number, status: "paid" | "unpaid") =>
+        apiFetch<null>(`/admin/students/obligations/${studentObligationId}/verify-proof`, {
+            method: "PATCH",
+            body: JSON.stringify({ status }),
+        }, token),
+
+    unapproveHistory: (token: string, clearanceIds: number[]) =>
+        apiFetch<{ count: number }>("/admin/clearance/unapprove", {
+            method: "POST",
+            body: JSON.stringify({ clearanceIds }),
+        }, token),
+
+    deleteClearanceHistory: (token: string, clearanceIds: number[]) =>
+        apiFetch<{ count: number }>("/admin/clearance/delete", {
+            method: "POST",
+            body: JSON.stringify({ clearanceIds }),
+        }, token),
 };
 
 export interface PaymentHistoryItem {
@@ -109,6 +150,8 @@ export interface PaymentHistoryItem {
     notes: string | null;
     submittedAt: string;
     verifiedAt: string | null;
+    verifiedByName: string | null;
+    verifiedByRole: string | null;
     remarks: string | null;
 }
 

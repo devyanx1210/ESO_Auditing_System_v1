@@ -31,9 +31,10 @@ export const loginUser = async (
     ipAddress: string
 ): Promise<{ user: AuthenticatedUser; tokens: AuthTokens }> => {
     const [rows]: any = await pool.execute(
-        `SELECT u.*, r.role_name
+        `SELECT u.*, r.role_name, a.year_level AS admin_year_level, a.section AS admin_section
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
+         LEFT JOIN admins a ON u.user_id = a.user_id
          WHERE u.email = ? AND u.deleted_at IS NULL`,
         [input.email.toLowerCase().trim()]
     );
@@ -67,11 +68,14 @@ export const loginUser = async (
         }
         throw new Error("Invalid email or password");
     }
+    const isClassOfficer = user.role_name === "class_officer";
     const payload: JwtAccessPayload = {
         userId: user.user_id,
         email: user.email,
         role: user.role_name,
         programId: user.program_id,
+        yearLevel: isClassOfficer ? (user.admin_year_level ?? null) : null,
+        section: isClassOfficer ? (user.admin_section ?? null) : null,
     };
     const tokens = generateTokens(payload);
     const refreshExpiry = new Date();
@@ -95,6 +99,8 @@ export const loginUser = async (
         role: user.role_name,
         programId: user.program_id,
         status: user.status,
+        yearLevel: isClassOfficer ? (user.admin_year_level ?? null) : null,
+        section: isClassOfficer ? (user.admin_section ?? null) : null,
     };
     return { user: authenticatedUser, tokens };
 };
@@ -108,9 +114,10 @@ export const refreshAccessToken = async (
             jwtConfig.refreshSecret
         ) as JwtRefreshPayload;
         const [rows]: any = await pool.execute(
-            `SELECT u.*, r.role_name
+            `SELECT u.*, r.role_name, a.year_level AS admin_year_level, a.section AS admin_section
              FROM users u
              JOIN roles r ON u.role_id = r.role_id
+             LEFT JOIN admins a ON u.user_id = a.user_id
              WHERE u.user_id = ? AND u.refresh_token = ? AND u.deleted_at IS NULL`,
             [decoded.userId, refreshToken]
         );
@@ -119,11 +126,14 @@ export const refreshAccessToken = async (
         if (user.refresh_token_expires_at && new Date() > new Date(user.refresh_token_expires_at)) {
             throw new Error("Refresh token expired. Please login again.");
         }
+        const isClassOfficer = user.role_name === "class_officer";
         const payload: JwtAccessPayload = {
             userId: user.user_id,
             email: user.email,
             role: user.role_name,
             programId: user.program_id,
+            yearLevel: isClassOfficer ? (user.admin_year_level ?? null) : null,
+            section: isClassOfficer ? (user.admin_section ?? null) : null,
         };
         const newAccessToken = jwt.sign(payload, jwtConfig.accessSecret, {
             expiresIn: jwtConfig.accessExpiresIn,
@@ -142,6 +152,18 @@ export const logoutUser = async (userId: number): Promise<void> => {
          WHERE user_id = ?`,
         [userId]
     );
+};
+
+export const verifyPassword = async (
+    userId: number,
+    password: string
+): Promise<boolean> => {
+    const [rows]: any = await pool.execute(
+        `SELECT password_hash FROM users WHERE user_id = ?`,
+        [userId]
+    );
+    if (!rows.length) return false;
+    return bcrypt.compare(password, rows[0].password_hash);
 };
 
 export const changePassword = async (
@@ -209,16 +231,17 @@ export const registerUser = async (
 
     const [studentResult]: any = await pool.execute(
         `INSERT INTO students (
-            user_id, student_no, first_name, last_name, middle_name,
+            user_id, student_no, first_name, last_name, middle_name, suffix,
             program_id, year_level, section, school_year, semester,
             is_enrolled, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
         [
             userId,
             input.studentNo,
             input.firstName.trim(),
             input.lastName.trim(),
             input.middleName?.trim() ?? null,
+            input.suffix?.trim() ?? null,
             input.programId,
             input.yearLevel,
             input.section,
@@ -234,7 +257,6 @@ export const registerUser = async (
          FROM obligations
          WHERE is_active = 1
            AND school_year = ?
-           AND semester = ?
            AND (
                scope = 'all'
                OR (scope = 'department' AND program_id = ?)
@@ -244,32 +266,29 @@ export const registerUser = async (
                    AND (program_id IS NULL OR program_id = ?))
            )`,
         [
-            input.schoolYear, input.semester,
+            input.schoolYear,
             input.programId,
             input.yearLevel, input.programId,
             input.section, input.yearLevel, input.programId,
         ]
     );
     for (const ob of matchingObs) {
-        const isFree = Number(ob.amount) === 0;
         await pool.execute(
             `INSERT IGNORE INTO student_obligations
                 (student_id, obligation_id, amount_due, status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, NOW(), NOW())`,
-            [studentId, ob.obligation_id, ob.amount, isFree ? "paid" : "unpaid"]
+             VALUES (?, ?, ?, 'unpaid', NOW(), NOW())`,
+            [studentId, ob.obligation_id, ob.amount]
         );
-        if (!isFree) {
-            await pool.execute(
-                `INSERT INTO notifications
-                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
-                [
-                    userId,
-                    `New obligation assigned — ₱${ob.amount}`,
-                    ob.obligation_id,
-                ]
-            );
-        }
+        await pool.execute(
+            `INSERT INTO notifications
+                (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+             VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
+            [
+                userId,
+                `New obligation assigned: ${ob.obligation_name ?? "obligation"}`,
+                ob.obligation_id,
+            ]
+        );
     }
 
     const payload: JwtAccessPayload = {

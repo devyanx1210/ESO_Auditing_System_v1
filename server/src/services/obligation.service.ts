@@ -43,9 +43,9 @@ function mapRow(r: any): ObligationData {
         obligationId:    r.obligationId,
         obligationName:  r.obligationName,
         description:     r.description ?? null,
-        amount:          Number(r.amount),
-        requiresPayment: Number(r.amount) > 0,
-        gcashQrPath:     r.gcashQrPath ?? null,
+        amount:             Number(r.amount),
+        requiresPayment:    Number(r.amount) > 0,
+        gcashQrPath:        r.gcashQrPath ?? null,
         isRequired:      Boolean(r.isRequired),
         scope:           r.scope,
         programId:    r.programId ?? null,
@@ -72,8 +72,8 @@ export const getObligations = async (role?: string, programId?: number | null): 
             o.obligation_name AS obligationName,
             o.description,
             o.amount,
-            o.gcash_qr_path   AS gcashQrPath,
-            o.is_required     AS isRequired,
+            o.gcash_qr_path          AS gcashQrPath,
+            o.is_required            AS isRequired,
             o.scope,
             o.program_id      AS programId,
             d.name            AS programName,
@@ -124,16 +124,16 @@ export const createObligation = async (
             ]
         );
         const obligationId = result.insertId;
-        const isFree = Number(input.amount) === 0;
 
-        // Find matching students
+        // Find matching students — match by school_year only so students
+        // registered in any semester of the year receive the obligation
         let studentQuery = `
             SELECT s.student_id, u.user_id
             FROM students s
             JOIN users u ON s.user_id = u.user_id
-            WHERE s.school_year = ? AND s.semester = ? AND s.is_enrolled = 1
+            WHERE s.school_year = ? AND s.is_enrolled = 1
         `;
-        const params: any[] = [input.schoolYear, input.semester];
+        const params: any[] = [input.schoolYear];
 
         if (input.scope === "department" && input.programId) {
             studentQuery += " AND s.program_id = ?";
@@ -159,26 +159,23 @@ export const createObligation = async (
         const [students]: any = await conn.execute(studentQuery, params);
 
         for (const student of students) {
-            // Free obligations → auto-mark as paid, no notification needed
             await conn.execute(
                 `INSERT IGNORE INTO student_obligations
                     (student_id, obligation_id, amount_due, status, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, NOW(), NOW())`,
-                [student.student_id, obligationId, input.amount, isFree ? "paid" : "unpaid"]
+                 VALUES (?, ?, ?, 'unpaid', NOW(), NOW())`,
+                [student.student_id, obligationId, input.amount]
             );
 
-            if (!isFree) {
-                await conn.execute(
-                    `INSERT INTO notifications
-                        (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                     VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
-                    [
-                        student.user_id,
-                        `New obligation: ${input.obligationName} — ₱${input.amount}`,
-                        obligationId,
-                    ]
-                );
-            }
+            await conn.execute(
+                `INSERT INTO notifications
+                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+                 VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
+                [
+                    student.user_id,
+                    `New obligation assigned: ${input.obligationName}`,
+                    obligationId,
+                ]
+            );
         }
 
         await conn.commit();
@@ -212,12 +209,12 @@ export const updateObligation = async (
     const fields: string[] = [];
     const values: any[]    = [];
 
-    if (input.obligationName !== undefined) { fields.push("obligation_name = ?"); values.push(input.obligationName); }
-    if (input.description    !== undefined) { fields.push("description = ?");     values.push(input.description); }
-    if (input.amount         !== undefined) { fields.push("amount = ?");           values.push(input.amount); }
-    if (input.isRequired     !== undefined) { fields.push("is_required = ?");      values.push(input.isRequired); }
-    if (input.dueDate        !== undefined) { fields.push("due_date = ?");         values.push(input.dueDate); }
-    if (input.gcashQrPath    !== undefined) { fields.push("gcash_qr_path = ?");    values.push(input.gcashQrPath); }
+    if (input.obligationName      !== undefined) { fields.push("obligation_name = ?");       values.push(input.obligationName); }
+    if (input.description         !== undefined) { fields.push("description = ?");           values.push(input.description); }
+    if (input.amount              !== undefined) { fields.push("amount = ?");                values.push(input.amount); }
+    if (input.isRequired          !== undefined) { fields.push("is_required = ?");           values.push(input.isRequired); }
+    if (input.dueDate             !== undefined) { fields.push("due_date = ?");              values.push(input.dueDate); }
+    if (input.gcashQrPath         !== undefined) { fields.push("gcash_qr_path = ?");         values.push(input.gcashQrPath); }
 
     if (!fields.length) return;
     fields.push("updated_at = NOW()");
@@ -255,9 +252,9 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
             SELECT s.student_id, u.user_id
             FROM students s
             JOIN users u ON s.user_id = u.user_id
-            WHERE s.school_year = ? AND s.semester = ? AND s.is_enrolled = 1
+            WHERE s.school_year = ? AND s.is_enrolled = 1
         `;
-        const params: any[] = [ob.school_year, ob.semester];
+        const params: any[] = [ob.school_year];
 
         if (ob.scope === "department" && ob.program_id) {
             studentQuery += " AND s.program_id = ?";
@@ -280,28 +277,25 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
         params.push(obligationId);
 
         const [students]: any = await conn.execute(studentQuery, params);
-        const isFree = Number(ob.amount) === 0;
         let inserted = 0;
 
         for (const student of students) {
             await conn.execute(
                 `INSERT IGNORE INTO student_obligations
                     (student_id, obligation_id, amount_due, status, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, NOW(), NOW())`,
-                [student.student_id, obligationId, ob.amount, isFree ? "paid" : "unpaid"]
+                 VALUES (?, ?, ?, 'unpaid', NOW(), NOW())`,
+                [student.student_id, obligationId, ob.amount]
             );
-            if (!isFree) {
-                await conn.execute(
-                    `INSERT INTO notifications
-                        (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                     VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
-                    [
-                        student.user_id,
-                        `New obligation: ${ob.obligation_name} — ₱${ob.amount}`,
-                        obligationId,
-                    ]
-                );
-            }
+            await conn.execute(
+                `INSERT INTO notifications
+                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+                 VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
+                [
+                    student.user_id,
+                    `New obligation assigned: ${ob.obligation_name}`,
+                    obligationId,
+                ]
+            );
             inserted++;
         }
 

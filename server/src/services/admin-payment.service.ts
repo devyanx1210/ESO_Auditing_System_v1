@@ -53,7 +53,7 @@ export const getPendingPayments = async (
             d.code                          AS programCode,
             o.obligation_name               AS obligationName,
             ps.amount_paid                  AS amountPaid,
-            ps.receipt_path                 AS receiptPath,
+            ps.payment_receipt_path                 AS receiptPath,
             ps.notes,
             ps.submitted_at                 AS submittedAt
         FROM payment_submissions ps
@@ -63,6 +63,7 @@ export const getPendingPayments = async (
         JOIN programs d ON d.program_id = s.program_id
         WHERE ps.payment_status = 'pending'
           AND ps.payment_type   = 'gcash'
+          AND ps.amount_paid    > 0
     `;
     const params: any[] = [];
 
@@ -182,7 +183,7 @@ export const recordCashPayment = async (
         const [result]: any = await conn.execute(
             `INSERT INTO payment_submissions
                 (student_id, obligation_id, student_obligation_id,
-                 receipt_path, amount_paid, notes,
+                 payment_receipt_path, amount_paid, notes,
                  payment_type, recorded_by_admin_id,
                  payment_status, submitted_at, updated_at)
              VALUES (?, ?, ?, NULL, ?, ?, 'cash', ?, 'approved', NOW(), NOW())`,
@@ -239,6 +240,8 @@ export interface PaymentHistoryItem {
     notes: string | null;
     submittedAt: string;
     verifiedAt: string | null;
+    verifiedByName: string | null;
+    verifiedByRole: string | null;
     remarks: string | null;
 }
 
@@ -260,13 +263,18 @@ export const getPaymentHistory = async (
             ps.payment_status                    AS paymentStatus,
             ps.notes,
             ps.submitted_at                      AS submittedAt,
-            pv.verified_at                       AS verifiedAt,
+            pv.verified_at                             AS verifiedAt,
+            CONCAT(vu.first_name, ' ', vu.last_name)   AS verifiedByName,
+            vr.role_label                              AS verifiedByRole,
             pv.remarks
         FROM payment_submissions ps
         JOIN students s    ON s.student_id    = ps.student_id
         JOIN obligations o ON o.obligation_id = ps.obligation_id
         JOIN programs d ON d.program_id = s.program_id
         LEFT JOIN payment_verifications pv ON pv.payment_id = ps.payment_id
+        LEFT JOIN admins va ON va.admin_id = pv.admin_id
+        LEFT JOIN users  vu ON vu.user_id  = va.user_id
+        LEFT JOIN roles  vr ON vr.role_id  = vu.role_id
         WHERE ps.payment_status IN ('approved','rejected')
     `;
     const params: any[] = [];
@@ -314,7 +322,12 @@ export const verifyAllPayments = async (userId: number, role: string): Promise<n
             );
             await conn.execute(
                 `INSERT INTO payment_verifications (payment_id, admin_id, verification_status, remarks, verified_at)
-                 VALUES (?, ?, 'approved', 'Bulk approved', NOW())`,
+                 VALUES (?, ?, 'approved', 'Bulk approved', NOW())
+                 ON DUPLICATE KEY UPDATE
+                     admin_id = VALUES(admin_id),
+                     verification_status = VALUES(verification_status),
+                     remarks = VALUES(remarks),
+                     verified_at = VALUES(verified_at)`,
                 [pmt.payment_id, adminId]
             );
             await conn.execute(
@@ -335,4 +348,103 @@ export const verifyAllPayments = async (userId: number, role: string): Promise<n
     } finally {
         conn.release();
     }
+};
+
+// ─── Bulk verify selected pending payments ────────────────────────────────────
+
+export const bulkVerifyPayments = async (userId: number, paymentIds: number[]): Promise<number> => {
+    if (!paymentIds.length) return 0;
+    const adminId = await getAdminId(userId);
+    const placeholders = paymentIds.map(() => "?").join(",");
+    const [rows]: any = await pool.execute(
+        `SELECT ps.payment_id, ps.student_obligation_id, o.obligation_name, st.user_id AS studentUserId
+         FROM payment_submissions ps
+         JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
+         JOIN students st ON st.student_id = ps.student_id
+         JOIN obligations o ON o.obligation_id = ps.obligation_id
+         WHERE ps.payment_id IN (${placeholders}) AND ps.payment_status = 'pending'`,
+        paymentIds
+    );
+    if (!rows.length) return 0;
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        for (const pmt of rows) {
+            await conn.execute("UPDATE payment_submissions SET payment_status = 'approved', updated_at = NOW() WHERE payment_id = ?", [pmt.payment_id]);
+            await conn.execute(
+                `INSERT INTO payment_verifications (payment_id, admin_id, verification_status, remarks, verified_at)
+                 VALUES (?, ?, 'approved', NULL, NOW())
+                 ON DUPLICATE KEY UPDATE
+                     admin_id = VALUES(admin_id),
+                     verification_status = VALUES(verification_status),
+                     remarks = VALUES(remarks),
+                     verified_at = VALUES(verified_at)`,
+                [pmt.payment_id, adminId]
+            );
+            await conn.execute("UPDATE student_obligations SET status = 'paid', updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
+            await conn.execute(`INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at) VALUES (?, 'Payment Approved', ?, 'payment_approved', ?, 'payment', 0, NOW())`,
+                [pmt.studentUserId, `Your payment for "${pmt.obligation_name}" has been approved.`, pmt.payment_id]);
+        }
+        await conn.commit();
+        return rows.length;
+    } catch (err) { await conn.rollback(); throw err; } finally { conn.release(); }
+};
+
+// ─── Bulk unverify history payments (revert to rejected + unpaid) ─────────────
+
+export const bulkUnverifyPayments = async (userId: number, paymentIds: number[]): Promise<number> => {
+    if (!paymentIds.length) return 0;
+    const adminId = await getAdminId(userId);
+    const placeholders = paymentIds.map(() => "?").join(",");
+    const [rows]: any = await pool.execute(
+        `SELECT ps.payment_id, ps.student_obligation_id, o.obligation_name, st.user_id AS studentUserId
+         FROM payment_submissions ps
+         JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
+         JOIN students st ON st.student_id = ps.student_id
+         JOIN obligations o ON o.obligation_id = ps.obligation_id
+         WHERE ps.payment_id IN (${placeholders}) AND ps.payment_status IN ('approved','rejected')`,
+        paymentIds
+    );
+    if (!rows.length) return 0;
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        for (const pmt of rows) {
+            await conn.execute("UPDATE payment_submissions SET payment_status = 'pending', updated_at = NOW() WHERE payment_id = ?", [pmt.payment_id]);
+            await conn.execute("DELETE FROM payment_verifications WHERE payment_id = ?", [pmt.payment_id]);
+            await conn.execute("UPDATE student_obligations SET status = 'pending_verification', updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
+            await conn.execute(
+                `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+                 VALUES (?, 'Payment Returned for Review', ?, 'payment_pending', ?, 'payment', 0, NOW())`,
+                [pmt.studentUserId, `Your payment for "${pmt.obligation_name}" has been returned for re-review.`, pmt.payment_id]
+            );
+        }
+        await conn.commit();
+        return rows.length;
+    } catch (err) { await conn.rollback(); throw err; } finally { conn.release(); }
+};
+
+// ─── Bulk delete payment records ──────────────────────────────────────────────
+
+export const bulkDeletePayments = async (paymentIds: number[]): Promise<number> => {
+    if (!paymentIds.length) return 0;
+    const placeholders = paymentIds.map(() => "?").join(",");
+    const [rows]: any = await pool.execute(
+        `SELECT payment_id, student_obligation_id, payment_status FROM payment_submissions WHERE payment_id IN (${placeholders})`,
+        paymentIds
+    );
+    if (!rows.length) return 0;
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        for (const pmt of rows) {
+            if (pmt.payment_status === "approved") {
+                await conn.execute("UPDATE student_obligations SET status = 'unpaid', updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
+            }
+            await conn.execute("DELETE FROM payment_verifications WHERE payment_id = ?", [pmt.payment_id]);
+            await conn.execute("DELETE FROM payment_submissions WHERE payment_id = ?", [pmt.payment_id]);
+        }
+        await conn.commit();
+        return rows.length;
+    } catch (err) { await conn.rollback(); throw err; } finally { conn.release(); }
 };

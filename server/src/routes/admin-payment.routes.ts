@@ -8,6 +8,9 @@ import {
     handleVerifyPayment,
     handleRecordCash,
     handleVerifyAll,
+    handleBulkVerify,
+    handleBulkUnverify,
+    handleBulkDelete,
 } from "../controllers/admin-payment.controller.js";
 
 const router = Router();
@@ -19,5 +22,8 @@ router.get(  "/history",      authenticate, authorize(...adminRoles), listPaymen
 router.post( "/verify-all",   authenticate, authorize(...adminRoles), handleVerifyAll);
 router.patch("/:id/verify",   authenticate, authorize(...adminRoles), handleVerifyPayment);
 router.post( "/cash",         authenticate, authorize(...adminRoles), handleRecordCash);
+router.post("/bulk-verify",   authenticate, authorize(...adminRoles), handleBulkVerify);
+router.post("/bulk-unverify", authenticate, authorize(...adminRoles), handleBulkUnverify);
+router.post("/bulk-delete",   authenticate, authorize(...adminRoles), handleBulkDelete);
 
 export default router;

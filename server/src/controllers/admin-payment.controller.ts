@@ -6,6 +6,9 @@ import {
     verifyPayment,
     recordCashPayment,
     verifyAllPayments,
+    bulkVerifyPayments,
+    bulkUnverifyPayments,
+    bulkDeletePayments,
 } from "../services/admin-payment.service.js";
 
 export const listPendingPayments = async (req: Request, res: Response) => {
@@ -63,4 +66,34 @@ export const listPaymentHistory = async (req: Request, res: Response) => {
     } catch (err: any) {
         return sendError(res, err.message, 400);
     }
+};
+
+export const handleBulkVerify = async (req: Request, res: Response) => {
+    try {
+        const { paymentIds } = req.body;
+        if (!Array.isArray(paymentIds) || !paymentIds.length)
+            return sendError(res, "paymentIds array required", 400);
+        const count = await bulkVerifyPayments(req.user!.userId, paymentIds);
+        return sendSuccess(res, { count }, `${count} payment(s) verified`);
+    } catch (error: any) { return sendError(res, error.message, 500); }
+};
+
+export const handleBulkUnverify = async (req: Request, res: Response) => {
+    try {
+        const { paymentIds } = req.body;
+        if (!Array.isArray(paymentIds) || !paymentIds.length)
+            return sendError(res, "paymentIds array required", 400);
+        const count = await bulkUnverifyPayments(req.user!.userId, paymentIds);
+        return sendSuccess(res, { count }, `${count} payment(s) unverified`);
+    } catch (error: any) { return sendError(res, error.message, 500); }
+};
+
+export const handleBulkDelete = async (req: Request, res: Response) => {
+    try {
+        const { paymentIds } = req.body;
+        if (!Array.isArray(paymentIds) || !paymentIds.length)
+            return sendError(res, "paymentIds array required", 400);
+        const count = await bulkDeletePayments(paymentIds);
+        return sendSuccess(res, { count }, `${count} payment(s) deleted`);
+    } catch (error: any) { return sendError(res, error.message, 500); }
 };

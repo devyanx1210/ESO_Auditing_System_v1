@@ -57,6 +57,7 @@ export interface StudentObligationItem {
     dueDate: string | null;
     isOverdue: boolean;
     status: "unpaid" | "pending_verification" | "paid" | "waived";
+    proofImage: string | null;
     latestPayment: LatestPayment | null;
 }
 

@@ -554,8 +554,8 @@ export default function StudentDashboard() {
                                                 <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                                                     {o.requiresPayment
                                                         ? <span className="font-semibold text-gray-700">₱{Number(o.amount).toFixed(2)}</span>
-                                                        : <span className="text-blue-600 font-semibold flex items-center gap-1">
-                                                            <FiCamera className="w-3 h-3" /> Proof Required
+                                                        : <span className="text-orange-600 font-semibold flex items-center gap-1">
+                                                            <FiCamera className="w-3 h-3" /> Proof of Compliance
                                                           </span>
                                                     }
                                                     {o.dueDate && (
@@ -588,7 +588,7 @@ export default function StudentDashboard() {
                                                 <button
                                                     onClick={() => openPayModal(o)}
                                                     className={`flex-shrink-0 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm ${
-                                                        isRejected ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
+                                                        isRejected ? "bg-red-500 hover:bg-red-600" : "bg-orange-500 hover:bg-orange-600"
                                                     }`}
                                                 >
                                                     <FiCamera className="w-3 h-3" />
@@ -647,10 +647,10 @@ export default function StudentDashboard() {
             {/* ── PAYMENT / PROOF MODAL ── */}
             {payModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="anim-slide-up bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                    <div className="anim-slide-up bg-white w-full max-w-xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
                         {/* Header */}
-                        <div className={`px-6 py-5 flex items-center justify-between shrink-0 ${isPaymentModal ? "bg-orange-500" : "bg-blue-600"}`}>
+                        <div className="px-6 py-5 flex items-center justify-between shrink-0 bg-orange-500">
                             <div className="flex items-center gap-3">
                                 {isPaymentModal
                                     ? <FiCreditCard className="w-5 h-5 text-white" />
@@ -658,7 +658,7 @@ export default function StudentDashboard() {
                                 }
                                 <div>
                                     <p className="font-bold text-white text-base leading-tight">
-                                        {isPaymentModal ? "Submit Payment" : "Submit Proof of Participation"}
+                                        {isPaymentModal ? "Submit Payment" : "Submit Proof of Compliance"}
                                     </p>
                                     <p className="text-xs text-white/70 mt-0.5">{payModal.obligationName}</p>
                                 </div>
@@ -674,7 +674,7 @@ export default function StudentDashboard() {
                         <form onSubmit={handlePaySubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
 
                             {/* Obligation summary card */}
-                            <div className={`rounded-xl p-4 ${isPaymentModal ? "bg-orange-50 border border-orange-100" : "bg-blue-50 border border-blue-100"}`}>
+                            <div className="rounded-xl p-4 bg-orange-50 border border-orange-100">
                                 <p className="font-bold text-gray-900 text-base">{payModal.obligationName}</p>
                                 {payModal.description && (
                                     <p className="text-xs text-gray-500 mt-1">{payModal.description}</p>
@@ -684,8 +684,8 @@ export default function StudentDashboard() {
                                         ₱{Number(payModal.amount).toFixed(2)}
                                     </p>
                                 ) : (
-                                    <p className="text-xs text-blue-600 font-semibold mt-2 flex items-center gap-1">
-                                        <FiCamera className="w-3.5 h-3.5" /> Photo / attendance proof required
+                                    <p className="text-xs text-orange-600 font-semibold mt-2 flex items-center gap-1">
+                                        <FiCamera className="w-3.5 h-3.5" /> Proof of compliance required
                                     </p>
                                 )}
                                 {payModal.dueDate && (
@@ -721,25 +721,25 @@ export default function StudentDashboard() {
 
                             {/* Instructions */}
                             {isPaymentModal ? (
-                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 space-y-1">
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-800 space-y-1">
                                     <p className="font-semibold">Payment Instructions:</p>
                                     <p>1. Scan the GCash QR above or send to the ESO GCash number</p>
                                     <p>2. Take a screenshot of your GCash receipt showing the transaction</p>
                                     <p>3. Upload the screenshot below</p>
                                 </div>
                             ) : (
-                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 space-y-1">
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-800 space-y-1">
                                     <p className="font-semibold">Proof Submission Instructions:</p>
-                                    <p>1. Take a clear selfie or photo at the event / activity</p>
-                                    <p>2. Make sure your face and the event background are visible</p>
-                                    <p>3. Upload the photo below</p>
+                                    <p>1. Prepare a clear screenshot or photo as proof of compliance</p>
+                                    <p>2. Make sure the proof clearly shows your participation or completion</p>
+                                    <p>3. Upload the file below</p>
                                 </div>
                             )}
 
                             {/* File upload */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    {isPaymentModal ? "GCash Receipt / Payment Screenshot" : "Proof Photo / Event Selfie"} *
+                                    {isPaymentModal ? "GCash Receipt / Payment Screenshot" : "Proof of Compliance (screenshot or photo)"} *
                                 </label>
 
                                 {/* Image preview */}
@@ -760,19 +760,15 @@ export default function StudentDashboard() {
                                     </div>
                                 )}
 
-                                <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition ${
-                                    isPaymentModal
-                                        ? "border-orange-300 bg-orange-50 hover:bg-orange-100"
-                                        : "border-blue-300 bg-blue-50 hover:bg-blue-100"
-                                }`}>
+                                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer transition border-gray-300 bg-gray-50 hover:bg-gray-100">
                                     {receiptFile && !filePreview ? (
                                         <div className="flex items-center gap-2 text-sm text-gray-700 font-medium px-4 text-center">
-                                            <FiFileText className={`w-5 h-5 ${isPaymentModal ? "text-orange-500" : "text-blue-500"}`} />
+                                            <FiFileText className="w-5 h-5 text-orange-500" />
                                             <span className="truncate max-w-xs">{receiptFile.name}</span>
                                         </div>
                                     ) : !receiptFile ? (
                                         <div className="flex flex-col items-center pointer-events-none">
-                                            <FiUpload className={`w-6 h-6 mb-2 ${isPaymentModal ? "text-orange-400" : "text-blue-400"}`} />
+                                            <FiUpload className="w-6 h-6 mb-2 text-orange-400" />
                                             <p className="text-sm font-medium text-gray-600">Click to upload</p>
                                             <p className="text-xs text-gray-400 mt-0.5">JPG, PNG or PDF · Max 5MB</p>
                                         </div>
@@ -806,9 +802,7 @@ export default function StudentDashboard() {
                             <button
                                 type="submit"
                                 disabled={paying || !receiptFile}
-                                className={`w-full disabled:opacity-50 text-white font-bold py-3.5 rounded-xl transition text-sm ${
-                                    isPaymentModal ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"
-                                }`}
+                                className="w-full disabled:opacity-50 text-white font-bold py-3.5 rounded-xl transition text-sm bg-orange-500 hover:bg-orange-600"
                             >
                                 {paying ? "Submitting..." : isPaymentModal ? "Submit Receipt" : "Submit Proof"}
                             </button>
@@ -859,7 +853,9 @@ export default function StudentDashboard() {
 /* ── Status Badge ── */
 function StatusBadge({ obligation: o }: { obligation: StudentObligationItem }) {
     if (o.status === "paid" || o.status === "waived") {
-        return <span className="text-xs font-semibold text-white dark:text-green-300 bg-green-500 dark:bg-green-900/60 px-2 py-0.5 rounded-full">{o.status === "waived" ? "Waived" : "Paid"}</span>;
+        // Proof-only: no paid/unpaid label, just show "Submitted"
+        if (!o.requiresPayment) return <span className="text-xs font-semibold text-white dark:text-green-300 bg-green-500 dark:bg-green-900/60 px-2 py-0.5 rounded-full">{o.status === "waived" ? "Waived" : "Submitted"}</span>;
+        return <span className="text-xs font-semibold text-white dark:text-green-300 bg-green-500 dark:bg-green-900/60 px-2 py-0.5 rounded-full">Paid</span>;
     }
     if (o.status === "pending_verification") {
         return <span className="text-xs font-semibold text-white dark:text-yellow-300 bg-yellow-500 dark:bg-yellow-900/60 px-2 py-0.5 rounded-full">Pending Verification</span>;
@@ -867,6 +863,8 @@ function StatusBadge({ obligation: o }: { obligation: StudentObligationItem }) {
     if (o.isOverdue) {
         return <span className="text-xs font-semibold text-white dark:text-red-300 bg-red-500 dark:bg-red-900/60 px-2 py-0.5 rounded-full">Overdue</span>;
     }
+    // Proof-only: no "Unpaid" label
+    if (!o.requiresPayment) return null;
     return <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-200 dark:bg-[#2a2a2a] px-2 py-0.5 rounded-full">Unpaid</span>;
 }
 
@@ -879,10 +877,10 @@ const STAT_ICONS = {
 };
 
 const ACTIVE_BG = {
-    orange: "bg-orange-500",
-    green:  "bg-green-600",
-    yellow: "bg-yellow-500",
-    red:    "bg-red-500",
+    orange: "bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.45)]",
+    green:  "bg-gradient-to-br from-green-500 to-green-700 shadow-[0_12px_32px_rgba(22,163,74,0.35)]",
+    yellow: "bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_12px_32px_rgba(202,138,4,0.35)]",
+    red:    "bg-gradient-to-br from-red-500 to-red-700 shadow-[0_12px_32px_rgba(220,38,38,0.35)]",
 };
 
 function StatCard({
@@ -895,19 +893,19 @@ function StatCard({
     return (
         <button
             onClick={onClick}
-            className={`rounded-xl p-4 text-left transition cursor-pointer w-full h-full flex flex-col justify-between relative overflow-hidden ${
+            className={`rounded-2xl p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer w-full h-full flex flex-col gap-2 sm:gap-3 relative overflow-hidden ${
                 active
-                    ? `${ACTIVE_BG[color]} shadow-xl`
-                    : "bg-white dark:bg-[#1a1a1a] dark:border dark:border-[#2a2a2a] shadow-lg hover:shadow-xl"
+                    ? `${ACTIVE_BG[color]}`
+                    : "bg-white dark:bg-[#1a1a1a] dark:border dark:border-[#2a2a2a] shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]"
             }`}
         >
             {/* Top row: label + icon */}
             <div className="flex items-start justify-between gap-2">
-                <p className={`text-xs font-semibold leading-tight ${active ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>{label}</p>
+                <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wide leading-snug ${active ? "text-white/75" : "text-gray-500 dark:text-gray-400"}`}>{label}</p>
                 <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${active ? "text-white/60" : "text-orange-400"}`} />
             </div>
             {/* Number */}
-            <p className={`text-2xl font-extrabold mt-2 ${active ? "text-white" : "text-gray-800 dark:text-white"}`}>{value}</p>
+            <p className={`text-2xl sm:text-[1.75rem] font-black tracking-tight leading-tight ${active ? "text-white" : "text-gray-800 dark:text-white"}`}>{value}</p>
         </button>
     );
 }

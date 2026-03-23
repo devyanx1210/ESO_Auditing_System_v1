@@ -87,6 +87,7 @@ const Obligations = () => {
         setEditing(null);
         setForm(BLANK_FORM);
         setRequiresPayment(false);
+
         setQrFile(null);
         setQrPreview(null);
         setFormError("");
@@ -110,6 +111,7 @@ const Obligations = () => {
             gcashQrPath: o.gcashQrPath,
         });
         setRequiresPayment(o.requiresPayment);
+
         setQrFile(null);
         setQrPreview(o.gcashQrPath ? qrUrl(o.gcashQrPath) : null);
         setFormError("");
@@ -190,6 +192,19 @@ const Obligations = () => {
     if (sortOption === "az") filtered = [...filtered].sort((a, b) => a.obligationName.localeCompare(b.obligationName));
     if (sortOption === "newest") filtered = [...filtered].sort((a, b) => b.obligationId - a.obligationId);
 
+    async function handleBulkDelete() {
+        if (!accessToken || !selectedObIds.size) return;
+        if (!window.confirm(`Delete ${selectedObIds.size} obligation(s)? This cannot be undone.`)) return;
+        const ids = [...selectedObIds];
+        for (const id of ids) {
+            try {
+                await obligationService.remove(accessToken, id);
+            } catch { /* skip errors */ }
+        }
+        setObligations(prev => prev.filter(o => !ids.includes(o.obligationId)));
+        setSelectedObIds(new Set());
+    }
+
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-orange-500" />
@@ -198,24 +213,32 @@ const Obligations = () => {
 
     return (
         <div className="p-4 sm:p-6 md:p-10 bg-gray-50 min-h-screen">
+            <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
             <h1 className="font-bold text-gray-800 text-2xl sm:text-4xl mb-4">Obligations</h1>
 
             {/* TOP BAR */}
             <div className="flex flex-col sm:flex-row justify-between gap-3 mb-6">
                 <input
-                    className="border rounded-lg px-3 py-2 w-full sm:w-1/2 text-sm"
+                    className="border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 w-full sm:w-1/2 text-sm bg-white shadow-sm"
                     placeholder="Search obligations..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
                 <div className="flex gap-2 flex-wrap items-center">
-                    <button onClick={openAdd} className="bg-primary text-white px-4 py-2 rounded-lg text-sm">
+                    {selectedObIds.size > 0 && (
+                        <button onClick={handleBulkDelete}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
+                            <FiTrash2 className="w-3.5 h-3.5" />
+                            Delete Selected ({selectedObIds.size})
+                        </button>
+                    )}
+                    <button onClick={openAdd} className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition">
                         + Add Obligation
                     </button>
                     <select
                         value={sortOption}
                         onChange={e => setSortOption(e.target.value)}
-                        className="border px-3 py-2 rounded-lg bg-white text-sm outline-none"
+                        className="border-2 border-gray-200 focus:border-orange-400 focus:outline-none px-3 py-2 rounded-xl bg-white text-sm"
                     >
                         <option value="newest">Newest</option>
                         <option value="az">Name A–Z</option>
@@ -231,11 +254,17 @@ const Obligations = () => {
                     <p className="text-lg font-semibold">No obligations yet — add one to get started.</p>
                 </div>
             ) : (
-                <div className="bg-white border border-gray-200 overflow-hidden shadow-sm">
-                    <table className="w-full text-sm border-collapse">
+                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px] text-sm border-collapse">
                         <thead className="bg-gray-100 text-gray-500">
                             <tr className="border-b border-gray-200">
-                                <th className="pl-4 pr-2 py-3 w-8"></th>
+                                <th className="pl-4 pr-2 py-3 w-8">
+                                    <input type="checkbox"
+                                        checked={filtered.length > 0 && selectedObIds.size === filtered.length}
+                                        onChange={toggleObSelectAll}
+                                        className="w-4 h-4 accent-orange-500 cursor-pointer" />
+                                </th>
                                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide">Name</th>
                                 <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide">Payment</th>
                                 <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide">Scope</th>
@@ -251,7 +280,9 @@ const Obligations = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {filtered.map((o, i) => (
-                                <tr key={o.obligationId} className={`transition-colors hover:bg-orange-50 ${selectedObIds.has(o.obligationId) ? "bg-orange-50" : i % 2 === 0 ? "bg-white" : "bg-yellow-50/60"}`}>
+                                <tr key={o.obligationId}
+                                    style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.05}s` }}
+                                    className={`transition-colors hover:bg-orange-50 ${selectedObIds.has(o.obligationId) ? "bg-orange-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50/70"}`}>
                                     <td className="pl-4 pr-2 py-3 w-8" onClick={e => e.stopPropagation()}>
                                         <input type="checkbox" checked={selectedObIds.has(o.obligationId)}
                                             onChange={() => toggleObSelect(o.obligationId)}
@@ -301,14 +332,15 @@ const Obligations = () => {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             )}
 
             {/* ADD / EDIT MODAL */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
+                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ animation: 'fadeInUp 0.2s ease both' }}>
+                        <div className="flex items-center justify-between px-6 pt-6 pb-4">
                             <h2 className="font-bold text-xl text-gray-800">{editing ? "Edit Obligation" : "Add Obligation"}</h2>
                             <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
                         </div>
@@ -354,6 +386,7 @@ const Obligations = () => {
                                         <span className="text-sm font-medium text-gray-700">Payment Required</span>
                                     </label>
                                 </div>
+
 
                                 {/* Amount + QR (shown only when payment required) */}
                                 {requiresPayment && (

@@ -12,6 +12,8 @@ export interface JwtAccessPayload {
     email: string;
     role: UserRole;
     programId: number | null;
+    yearLevel?: number | null;
+    section?: string | null;
 }
 
 export interface JwtRefreshPayload {
@@ -27,6 +29,7 @@ export interface RegisterInput {
     firstName: string;
     lastName: string;
     middleName?: string;
+    suffix?: string;
     email: string;
     password: string;
     studentNo: string;
@@ -50,4 +53,6 @@ export interface AuthenticatedUser {
     role: UserRole;
     programId: number | null;
     status: string;
+    yearLevel?: number | null;
+    section?: string | null;
 }

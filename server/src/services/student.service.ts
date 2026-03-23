@@ -86,6 +86,7 @@ export interface StudentObligationItem {
     dueDate: string | null;
     isOverdue: boolean;
     status: "unpaid" | "pending_verification" | "paid" | "waived";
+    proofImage: string | null;
     latestPayment: {
         paymentId: number;
         receiptPath: string;
@@ -200,8 +201,9 @@ export const getStudentObligations = async (
             o.gcash_qr_path        AS gcashQrPath,
             o.due_date,
             so.status,
+            so.proof_image,
             ps.payment_id,
-            ps.receipt_path,
+            ps.payment_receipt_path,
             ps.amount_paid,
             ps.payment_status,
             ps.submitted_at,
@@ -249,9 +251,10 @@ export const getStudentObligations = async (
             dueDate,
             isOverdue,
             status:              r.status,
+            proofImage:          r.proof_image ?? null,
             latestPayment: r.payment_id ? {
                 paymentId:     r.payment_id,
-                receiptPath:   r.receipt_path,
+                receiptPath:   r.payment_receipt_path,
                 amountPaid:    Number(r.amount_paid),
                 paymentStatus: r.payment_status,
                 submittedAt:   r.submitted_at,

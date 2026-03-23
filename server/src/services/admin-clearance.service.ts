@@ -306,6 +306,30 @@ export const getClearanceHistory = async (
     return rows;
 };
 
+// ─── Unapprove clearances (set back to pending) ───────────────────────────────
+
+export const unapproveHistoryClearances = async (clearanceIds: number[]): Promise<number> => {
+    if (!clearanceIds.length) return 0;
+    const placeholders = clearanceIds.map(() => "?").join(",");
+    const [result]: any = await pool.execute(
+        `UPDATE clearances SET clearance_status = 'pending', current_step = 1, signed_at = NULL, updated_at = NOW() WHERE clearance_id IN (${placeholders})`,
+        clearanceIds
+    );
+    return result.affectedRows;
+};
+
+// ─── Delete clearance records ─────────────────────────────────────────────────
+
+export const deleteHistoryClearances = async (clearanceIds: number[]): Promise<number> => {
+    if (!clearanceIds.length) return 0;
+    const placeholders = clearanceIds.map(() => "?").join(",");
+    const [result]: any = await pool.execute(
+        `DELETE FROM clearances WHERE clearance_id IN (${placeholders})`,
+        clearanceIds
+    );
+    return result.affectedRows;
+};
+
 // ─── Sign all eligible students ───────────────────────────────────────────────
 
 export const signAllClearance = async (userId: number, role: string): Promise<number> => {

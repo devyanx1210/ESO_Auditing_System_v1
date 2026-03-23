@@ -5,6 +5,7 @@ import {
     refreshAccessToken,
     logoutUser,
     changePassword,
+    verifyPassword,
 } from "../services/auth.service.js";
 import { sendSuccess, sendError } from "../utils/response.js";
 
@@ -79,6 +80,20 @@ export const updatePassword = async (req: Request, res: Response) => {
         return sendSuccess(res, null, "Password changed successfully");
     } catch (error: any) {
         return sendError(res, error.message, 400);
+    }
+};
+
+export const checkPassword = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) return sendError(res, "Unauthorized", 401);
+        const { password } = req.body;
+        if (!password) return sendError(res, "Password is required", 400);
+        const valid = await verifyPassword(userId, password);
+        if (!valid) return sendError(res, "Incorrect password", 401);
+        return sendSuccess(res, null, "Password verified");
+    } catch (error: any) {
+        return sendError(res, error.message, 500);
     }
 };
 

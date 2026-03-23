@@ -50,4 +50,10 @@ export const authService = {
 
     getMe: (accessToken: string) =>
         apiFetch<AuthenticatedUser>("/auth/me", {}, accessToken),
+
+    verifyPassword: (accessToken: string, password: string) =>
+        apiFetch<null>("/auth/verify-password", {
+            method: "POST",
+            body: JSON.stringify({ password }),
+        }, accessToken),
 };

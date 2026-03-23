@@ -32,4 +32,23 @@ export const paymentService = {
         if (!res.ok) throw new Error(json.message || "Failed to submit payment");
         return json.data;
     },
+
+    submitProof: async (
+        token: string,
+        studentObligationId: number,
+        proof: File
+    ): Promise<{ studentObligationId: number; obligationName: string; status: string }> => {
+        const form = new FormData();
+        form.append("proof", proof);
+        form.append("studentObligationId", String(studentObligationId));
+
+        const res = await fetch(`${BASE_URL}/payments/proof`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: form,
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || "Failed to submit proof");
+        return json.data;
+    },
 };

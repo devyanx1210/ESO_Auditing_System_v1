@@ -7,6 +7,8 @@ import {
     listClearanceHistory,
     handleSignClearance,
     handleSignAll,
+    handleUnapproveHistory,
+    handleDeleteClearanceHistory,
 } from "../controllers/admin-clearance.controller.js";
 
 const router = Router();
@@ -16,6 +18,8 @@ const clearanceRoles: UserRole[] = ["system_admin", "eso_officer", "program_head
 router.get("/pending",             authenticate, authorize(...clearanceRoles), listPendingClearance);
 router.get("/history",             authenticate, authorize(...clearanceRoles), listClearanceHistory);
 router.post("/sign-all",           authenticate, authorize(...clearanceRoles), handleSignAll);
+router.post("/unapprove",          authenticate, authorize(...clearanceRoles), handleUnapproveHistory);
+router.post("/delete",             authenticate, authorize(...clearanceRoles), handleDeleteClearanceHistory);
 router.post("/:studentId/sign",    authenticate, authorize(...clearanceRoles), handleSignClearance);
 
 export default router;
