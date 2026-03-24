@@ -3,7 +3,7 @@ import { FiRefreshCw, FiSearch, FiFilter, FiChevronDown, FiChevronUp, FiChevronR
 import { receiptUrl } from "../../services/admin-student.service";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { useTheme } from "../../hooks/useTheme";
+
 import { adminStudentService } from "../../services/admin-student.service";
 import type { AdminStudentItem, AdminObligationItem } from "../../services/admin-student.service";
 
@@ -524,7 +524,7 @@ const SECTIONS = ["A","B","C","D","E","F","G","H"];
 
 const StudentObligationList = () => {
     const { accessToken, user } = useAuth();
-    const { darkMode } = useTheme();
+    const darkMode = false;
     const location = useLocation();
     const navigate = useNavigate();
     const [students,   setStudents]   = useState<AdminStudentItem[]>([]);

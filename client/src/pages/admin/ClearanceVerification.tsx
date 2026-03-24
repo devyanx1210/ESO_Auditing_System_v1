@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { FiRefreshCw, FiCheckSquare, FiClock, FiSearch, FiFilter, FiChevronDown, FiChevronUp, FiPrinter } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { useTheme } from "../../hooks/useTheme";
+
 import { adminStudentService } from "../../services/admin-student.service";
 import type { PendingClearanceItem, ClearanceHistoryItem } from "../../services/admin-student.service";
 
@@ -166,7 +166,7 @@ const CLEARANCE_ROLES = ["eso_officer", "program_head", "signatory", "dean", "sy
 
 const ClearanceVerification = () => {
     const { accessToken, user } = useAuth();
-    const { darkMode } = useTheme();
+    const darkMode = false;
     const location = useLocation();
 
     const [clearance,          setClearance]          = useState<PendingClearanceItem[]>([]);

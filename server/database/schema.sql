@@ -76,11 +76,12 @@ CREATE TABLE users (
         REFERENCES departments(department_id) ON DELETE SET NULL
 );
 
+-- Password: SysAdmin@2026  (run server/database/seed-sysadmin.ts to generate real hash)
 INSERT INTO users (first_name, last_name, email, password_hash, role_id, department_id, status)
 VALUES (
     'System', 'Admin',
-    'admin@eso.edu.ph',
-    '$2b$10$placeholder_hash_change_this_immediately',
+    'sysadmin@eso.edu.ph',
+    '$2b$10$placeholder_change_via_seed_script',
     (SELECT role_id FROM roles WHERE role_name = 'system_admin'),
     NULL,
     'active'
@@ -335,6 +336,26 @@ CREATE TABLE audit_logs (
     INDEX idx_audit_action (action),
     INDEX idx_audit_target (target_type, target_id)
 );
+
+
+-- ============================================================
+-- 14. SYSTEM SETTINGS  (single-row config)
+-- ============================================================
+CREATE TABLE system_settings (
+    setting_id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    maintenance_mode  TINYINT(1)   NOT NULL DEFAULT 0,
+    maintenance_msg   VARCHAR(500) NOT NULL DEFAULT 'System is currently under maintenance. Please try again later.',
+    school_year       VARCHAR(10)  NOT NULL DEFAULT '2025-2026',
+    current_semester  ENUM('1st','2nd','Summer') NOT NULL DEFAULT '2nd',
+    updated_by        INT UNSIGNED NULL,
+    updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_settings_user FOREIGN KEY (updated_by)
+        REFERENCES users(user_id) ON DELETE SET NULL
+    -- Note: add this table to your actual DB via: ALTER TABLE or fresh schema
+);
+
+INSERT INTO system_settings (maintenance_mode, school_year, current_semester) VALUES (0, '2025-2026', '2nd');
 
 
 -- ============================================================

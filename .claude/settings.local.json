@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(node fix-paths.mjs)"
+      "Bash(node fix-paths.mjs)",
+      "Bash(npx tsx:*)",
+      "Bash(sed -i \"s/import { useTheme } from \"\"..\\\\/..\\\\/hooks\\\\/useTheme\"\";//\" AdminDashboard.tsx)",
+      "Bash(sed -i \"s/const { darkMode } = useTheme\\(\\);/const darkMode = false;/\" AdminDashboard.tsx)",
+      "Read(//c/Users/Ian/.claude/projects/c--Users-Ian-OneDrive-Documents-OJT-Project-ESO-Auditing-System-v1/memory/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Ian\\.claude\\projects\\c--Users-Ian-OneDrive-Documents-OJT-Project-ESO-Auditing-System-v1\\memory"
     ]
   }
 }

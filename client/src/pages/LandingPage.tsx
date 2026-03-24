@@ -43,7 +43,9 @@ const LandingPage = () => {
         try {
             const user = await login({ email, password });
             dispatch({ type: "RESET_SIGNIN" });
-            navigate(user.role === "student" ? "/student/dashboard" : "/dashboard/home");
+            if (user.role === "student")       navigate("/student/dashboard");
+            else if (user.role === "system_admin") navigate("/sysadmin/home");
+            else                                navigate("/dashboard/home");
         } catch (error) {
             setSigninError(error instanceof Error ? error.message : "Login failed. Please try again.");
         } finally {
@@ -57,15 +59,15 @@ const LandingPage = () => {
     }, []);
 
     return (
-        <div className="landing-page relative h-screen w-screen bg-black overflow-auto">
+        <div className="landing-page relative min-h-screen w-screen bg-black overflow-x-hidden">
 
             <div
-                className="landing-bg absolute md:fixed inset-0 bg-cover bg-center z-0 min-h-screen"
+                className="landing-bg fixed inset-0 bg-cover bg-center z-0"
                 style={{ backgroundImage: `url(${MarSU_BG})`, filter: "blur(2px) brightness(0.55)", transform: "scale(1.04)" }}
             />
-            <div className="landing-overlay absolute md:fixed inset-0 bg-black bg-opacity-75 z-0" />
+            <div className="landing-overlay fixed inset-0 bg-black bg-opacity-75 z-0" />
             {/* Subtle orange glow accent */}
-            <div className="absolute md:fixed inset-0 z-0 pointer-events-none"
+            <div className="fixed inset-0 z-0 pointer-events-none"
                 style={{ background: "radial-gradient(ellipse 60% 50% at 18% 8%, rgba(234,88,12,0.18) 0%, transparent 60%)" }} />
 
             <header className="landing-header relative z-10 flex h-[72px] w-full items-center justify-between px-6 text-white"

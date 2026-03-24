@@ -19,11 +19,10 @@ function currentSchoolYear() {
     return new Date().getMonth() >= 7 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
 }
 
-function currentSemester(): "1st" | "2nd" | "Summer" {
+function currentSemester(): "1st" | "2nd" {
     const m = new Date().getMonth() + 1;
     if (m >= 8 && m <= 12) return "1st";
-    if (m >= 1 && m <= 5)  return "2nd";
-    return "Summer";
+    return "2nd";
 }
 
 const BLANK_FORM: CreateObligationInput = {
@@ -106,7 +105,7 @@ const Obligations = () => {
             yearLevel: o.yearLevel,
             section: o.section,
             schoolYear: o.schoolYear,
-            semester: o.semester as "1st" | "2nd" | "Summer",
+            semester: o.semester as "1st" | "2nd",
             dueDate: o.dueDate,
             gcashQrPath: o.gcashQrPath,
         });
@@ -463,11 +462,10 @@ const Obligations = () => {
                                     <select
                                         className="border-2 border-gray-300 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white transition-colors"
                                         value={form.semester}
-                                        onChange={e => setForm({ ...form, semester: e.target.value as "1st" | "2nd" | "Summer" })}
+                                        onChange={e => setForm({ ...form, semester: e.target.value as "1st" | "2nd" })}
                                     >
                                         <option value="1st">1st</option>
                                         <option value="2nd">2nd</option>
-                                        <option value="Summer">Summer</option>
                                     </select>
                                 </div>
 

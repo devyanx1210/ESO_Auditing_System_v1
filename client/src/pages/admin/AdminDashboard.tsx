@@ -21,7 +21,7 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { useAuth } from "../../hooks/useAuth";
-import { useTheme } from "../../hooks/useTheme";
+
 import { dashboardService } from "../../services/dashboard.service";
 import type { DashboardStats } from "../../services/dashboard.service";
 
@@ -179,7 +179,7 @@ function StatCard({ title, value, subtitle, icon, active, darkMode, animDelay = 
 
 export default function AdminDashboard() {
     const { user, accessToken } = useAuth();
-    const { darkMode } = useTheme();
+    const darkMode = false;
     const navigate = useNavigate();
 
     const [loading, setLoading]                       = useState(true);
@@ -242,8 +242,7 @@ export default function AdminDashboard() {
                 label: "Registered Students",
                 data: chartTotalValues,
                 backgroundColor: darkMode ? "#4B5563" : "#CBD5E1",
-                borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 6, bottomRight: 6 },
-                borderSkipped: false,
+                borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
                 maxBarThickness: 56,
                 categoryPercentage: 0.75,
                 barPercentage: 0.85,
@@ -261,8 +260,7 @@ export default function AdminDashboard() {
                     gradient.addColorStop(1, "#c2410c");
                     return gradient;
                 },
-                borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 6, bottomRight: 6 },
-                borderSkipped: false,
+                borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
                 maxBarThickness: 56,
                 categoryPercentage: 0.75,
                 barPercentage: 0.85,
@@ -390,8 +388,8 @@ export default function AdminDashboard() {
                 <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">{error}</div>
             )}
 
-            {/* ── Stat cards: 1 col phone, 2 col tablet, 4 col desktop ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
+            {/* ── Stat cards: 2 col phone, 4 col desktop ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
                 <StatCard
                     cardKey="registered"
                     title="Total Registered Students"

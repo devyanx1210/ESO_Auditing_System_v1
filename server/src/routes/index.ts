@@ -9,6 +9,7 @@ import paymentRoutes       from "./payment.routes.js";
 import adminStudentRoutes   from "./admin-student.routes.js";
 import adminPaymentRoutes   from "./admin-payment.routes.js";
 import adminClearanceRoutes from "./admin-clearance.routes.js";
+import sysadminRoutes       from "./sysadmin.routes.js";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use("/payments",       paymentRoutes);
 router.use("/admin/students",  adminStudentRoutes);
 router.use("/admin/payments",  adminPaymentRoutes);
 router.use("/admin/clearance", adminClearanceRoutes);
+router.use("/sysadmin",        sysadminRoutes);
 
 export default router;

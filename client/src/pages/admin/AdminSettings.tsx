@@ -25,7 +25,6 @@ function UserAvatar({ size = "md" }: { size?: "sm" | "md" }) {
 }
 
 const ROLES: { value: CreateAdminInput["role"]; label: string }[] = [
-    { value: "eso_officer",   label: "ESO Officer" },
     { value: "class_officer", label: "Class Officer" },
     { value: "program_head",  label: "Program Head" },
     { value: "signatory",     label: "Signatory" },

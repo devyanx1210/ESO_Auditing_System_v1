@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { FiRefreshCw, FiCheckSquare, FiClock, FiSearch, FiFilter, FiChevronDown, FiChevronUp, FiTrash2 } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { useTheme } from "../../hooks/useTheme";
+
 import { adminStudentService, receiptUrl } from "../../services/admin-student.service";
 import type { PendingPaymentItem, PaymentHistoryItem } from "../../services/admin-student.service";
 
@@ -259,7 +259,7 @@ const PAYMENT_ROLES = ["system_admin", "eso_officer", "class_officer", "program_
 
 const PaymentVerification = () => {
     const { accessToken, user } = useAuth();
-    const { darkMode } = useTheme();
+    const darkMode = false;
     const location = useLocation();
 
     const [pending,      setPending]      = useState<PendingPaymentItem[]>([]);
