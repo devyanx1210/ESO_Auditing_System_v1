@@ -16,6 +16,7 @@ export interface AdminStudentItem {
     obligationsPaid: number;
     obligationsPending: number;
     clearanceStatus: string | null;
+    avatarPath: string | null;
 }
 
 export interface AdminObligationItem {
@@ -51,10 +52,14 @@ export interface PendingPaymentItem {
     receiptPath: string;
     notes: string | null;
     submittedAt: string;
+    avatarPath: string | null;
 }
 
 // Cloudinary URLs are already absolute; legacy local paths get the uploads prefix
 export const receiptUrl = (p: string) =>
+    p.startsWith("http") ? p : `http://localhost:5000/uploads/${p}`;
+
+export const avatarUrl = (p: string) =>
     p.startsWith("http") ? p : `http://localhost:5000/uploads/${p}`;
 
 export const adminStudentService = {
@@ -153,6 +158,7 @@ export interface PaymentHistoryItem {
     verifiedByName: string | null;
     verifiedByRole: string | null;
     remarks: string | null;
+    avatarPath: string | null;
 }
 
 export interface ClearanceHistoryItem {
@@ -169,6 +175,7 @@ export interface ClearanceHistoryItem {
     clearanceStatus: string;
     signedAt: string;
     remarks: string | null;
+    avatarPath: string | null;
 }
 
 export interface PendingClearanceItem {
@@ -187,4 +194,5 @@ export interface PendingClearanceItem {
     currentStep: number | null;
     obligationsTotal: number;
     obligationsPaid: number;
+    avatarPath: string | null;
 }

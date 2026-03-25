@@ -11,6 +11,7 @@ export interface AdminUserItem {
     position: string;
     status: string;
     createdAt: string;
+    avatarPath: string | null;
 }
 
 export interface CreateAdminInput {
@@ -18,8 +19,10 @@ export interface CreateAdminInput {
     lastName: string;
     email: string;
     password: string;
-    role: "eso_officer" | "class_officer" | "program_head" | "signatory" | "dean";
+    role: "eso_officer" | "class_officer" | "program_officer" | "program_head" | "signatory" | "dean";
     programId?: number | null;
+    yearLevel?: number | null;
+    section?: string | null;
     position: string;
 }
 

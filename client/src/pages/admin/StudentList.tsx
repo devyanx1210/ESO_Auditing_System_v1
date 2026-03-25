@@ -61,16 +61,18 @@ function yearLabel(y: number) {
 
 function obligationsCell(paid: number, total: number) {
     if (total === 0) return <span className="text-xs text-gray-400">—</span>;
-    return <span className="text-xs font-semibold text-gray-600 hover:underline">{paid}/{total} Completed</span>;
+    return <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 hover:underline">{paid}/{total} Completed</span>;
 }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
-function UserAvatar({ size = "md" }: { size?: "sm" | "md" }) {
+function UserAvatar({ size = "md", src }: { size?: "sm" | "md"; src?: string | null }) {
     const sz = size === "md" ? "w-9 h-9" : "w-8 h-8";
     return (
         <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
-            <DefaultAvatarSvg />
+            {src
+                ? <img src={src.startsWith("http") ? src : src.startsWith("/") ? `http://localhost:5000${src}` : `http://localhost:5000/uploads/${src}`} alt="" className="w-full h-full object-cover" />
+                : <DefaultAvatarSvg />}
         </div>
     );
 }
@@ -90,12 +92,10 @@ function DefaultAvatarSvg() {
 interface StudentRowProps {
     student: AdminStudentItem;
     index: number;
-    selected: boolean;
-    onSelect: (id: number) => void;
 }
-function StudentRow({ student, index, selected, onSelect }: StudentRowProps) {
+function StudentRow({ student, index }: StudentRowProps) {
     const navigate = useNavigate();
-    const rowBg = selected ? "bg-gray-100" : index % 2 === 0 ? "bg-white" : "bg-gray-50/70";
+    const rowBg = index % 2 === 0 ? "bg-white dark:bg-[#1a1a1a]" : "bg-gray-50/70 dark:bg-[#222]";
     const animStyle = { animation: 'fadeInUp 0.3s ease both', animationDelay: `${index * 0.05}s` };
 
     function goToObligations() {
@@ -108,26 +108,21 @@ function StudentRow({ student, index, selected, onSelect }: StudentRowProps) {
     return (
         <>
             <tr className={`${rowBg}`} style={animStyle}>
-                <td className="pl-4 pr-2 py-2.5 w-8">
-                    <input type="checkbox" checked={selected}
-                        onChange={() => onSelect(student.studentId)}
-                        className="w-4 h-4 accent-orange-500 cursor-pointer" />
-                </td>
                 <td className="px-3 py-2.5">
                     <div className="flex items-center gap-3">
-                        <UserAvatar />
-                        <div className="font-semibold text-gray-800 text-xs leading-tight">
+                        <UserAvatar src={student.avatarPath} />
+                        <div className="font-semibold text-gray-800 dark:text-gray-100 text-xs leading-tight">
                             {student.firstName} {student.lastName}
                         </div>
                     </div>
                 </td>
                 <td className="px-3 py-2.5 text-center">
-                    <span className="text-xs font-mono text-gray-500">{student.studentNo}</span>
+                    <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{student.studentNo}</span>
                 </td>
                 <td className="px-3 py-2.5 text-center">
-                    <span className="text-xs font-medium text-gray-600">{student.programName}</span>
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{student.programName}</span>
                 </td>
-                <td className="px-3 py-2.5 text-center text-xs text-gray-600">
+                <td className="px-3 py-2.5 text-center text-xs text-gray-600 dark:text-gray-300">
                     {yearLabel(student.yearLevel)} · Section {student.section}
                 </td>
                 <td className="px-3 py-2.5 text-center">
@@ -177,23 +172,6 @@ const StudentList = () => {
         if (showFilters) document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showFilters]);
-
-    const [selectedIds,  setSelectedIds]  = useState<Set<number>>(new Set());
-
-    function toggleSelect(id: number) {
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-    }
-    function toggleSelectAll() {
-        if (selectedIds.size === filtered.length) {
-            setSelectedIds(new Set());
-        } else {
-            setSelectedIds(new Set(filtered.map(s => s.studentId)));
-        }
-    }
 
     const isRestricted = ["class_officer", "program_head"].includes(user?.role ?? "");
 
@@ -249,18 +227,18 @@ const StudentList = () => {
     ].filter(Boolean).length;
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center justify-center min-h-screen dark:bg-[#111111]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-orange-500" />
         </div>
     );
 
     return (
-        <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
+        <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-[#111111] min-h-screen">
             <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
             {/* ── Page Header ── */}
             <div className="mb-6 flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="font-bold text-gray-800 text-lg sm:text-xl">
+                    <h1 className="font-bold text-gray-800 dark:text-gray-100 text-lg sm:text-xl">
                         Students
                     </h1>
                     <p className="text-sm text-gray-400 mt-1">
@@ -284,7 +262,7 @@ const StudentList = () => {
                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     <input type="text" placeholder="Search by name or student no..."
                         value={search} onChange={e => setSearch(e.target.value)}
-                        className="border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl pl-9 pr-3 py-2 text-sm w-full bg-white shadow-sm" />
+                        className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl pl-9 pr-3 py-2 text-sm w-full bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500 shadow-sm" />
                 </div>
 
                 {/* Filter dropdown */}
@@ -305,14 +283,14 @@ const StudentList = () => {
 
                     {/* Floating dropdown panel */}
                     {showFilters && (
-                        <div className="absolute right-0 top-full mt-2 z-30 bg-white border border-gray-200 rounded-2xl shadow-2xl ring-1 ring-black/5 p-4 w-72 flex flex-col gap-3">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Sort &amp; Filter</p>
+                        <div className="absolute right-0 top-full mt-2 z-30 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl ring-1 ring-black/5 p-4 w-72 flex flex-col gap-3">
+                            <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Sort &amp; Filter</p>
 
                             {/* Sort */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1">Sort by</label>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Sort by</label>
                                 <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}
-                                    className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
+                                    className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
                                     <option value="name">Name (A–Z)</option>
                                     <option value="section">Section</option>
                                     <option value="year">Year Level</option>
@@ -325,9 +303,9 @@ const StudentList = () => {
                             {/* Program */}
                             {!isRestricted && (
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-500 mb-1">Program</label>
+                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Program</label>
                                     <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
-                                        className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
+                                        className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
                                         <option value="all">All Programs</option>
                                         {PROGRAMS_LIST.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
                                     </select>
@@ -336,9 +314,9 @@ const StudentList = () => {
 
                             {/* Year Level */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1">Year Level</label>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Year Level</label>
                                 <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
-                                    className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
+                                    className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
                                     <option value="all">All Year Levels</option>
                                     <option value="1">1st Year</option>
                                     <option value="2">2nd Year</option>
@@ -349,9 +327,9 @@ const StudentList = () => {
 
                             {/* Section */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1">Section</label>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Section</label>
                                 <select value={sectionFilter} onChange={e => setSectionFilter(e.target.value)}
-                                    className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
+                                    className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
                                     <option value="all">All Sections</option>
                                     {SECTIONS.map(s => <option key={s} value={s}>Section {s}</option>)}
                                 </select>
@@ -359,9 +337,9 @@ const StudentList = () => {
 
                             {/* Status */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Status</label>
                                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                                    className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
+                                    className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
                                     <option value="all">All Status</option>
                                     <option value="all_paid">All Cleared</option>
                                     <option value="has_pending">Has Pending Verification</option>
@@ -377,7 +355,7 @@ const StudentList = () => {
                                         setSectionFilter("all"); setStatusFilter("all");
                                         setSortKey("name");
                                     }}
-                                    className="w-full text-xs text-red-500 hover:text-red-600 font-semibold py-1.5 border border-red-200 rounded-xl hover:bg-red-50 transition">
+                                    className="w-full text-xs text-red-500 hover:text-red-600 font-semibold py-1.5 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition">
                                     Clear all filters
                                 </button>
                             )}
@@ -386,28 +364,22 @@ const StudentList = () => {
                 </div>
 
                 {/* Results count */}
-                <span className="hidden sm:flex items-center text-xs font-medium text-gray-400 bg-white border border-gray-200 px-2.5 py-2 rounded-xl whitespace-nowrap shadow-sm">
+                <span className="hidden sm:flex items-center text-xs font-medium text-gray-400 dark:text-gray-500 bg-white dark:bg-[#2a2a2a] px-2.5 py-2 rounded-xl whitespace-nowrap shadow-sm">
                     {filtered.length} result{filtered.length !== 1 ? "s" : ""}
                 </span>
             </div>
 
             {/* ── Student Table ── */}
             {filtered.length === 0 ? (
-                <div className="bg-white rounded-2xl border-2 border-gray-200 p-10 text-center text-gray-400 text-sm">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-10 text-center text-gray-400 text-sm">
                     No students found.
                 </div>
             ) : (
-                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
                     <div className="overflow-x-auto">
                     <table className="w-full min-w-[650px] border-collapse">
-                        <thead className="bg-gray-100 text-gray-500">
-                            <tr className="border-b border-gray-200">
-                                <th className="pl-4 pr-2 py-2 w-8">
-                                    <input type="checkbox"
-                                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
-                                        onChange={toggleSelectAll}
-                                        className="w-4 h-4 accent-orange-500 cursor-pointer" />
-                                </th>
+                        <thead className="bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400">
+                            <tr>
                                 <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student Name</th>
                                 <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Student No.</th>
                                 <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Program</th>
@@ -416,11 +388,9 @@ const StudentList = () => {
                                 <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Clearance</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody>
                             {filtered.map((s, i) => (
-                                <StudentRow key={s.studentId} student={s} index={i}
-                                    selected={selectedIds.has(s.studentId)}
-                                    onSelect={toggleSelect} />
+                                <StudentRow key={s.studentId} student={s} index={i} />
                             ))}
                         </tbody>
                     </table>

@@ -6,8 +6,10 @@ export interface CreateAdminInput {
     lastName: string;
     email: string;
     password: string;
-    role: "eso_officer" | "class_officer" | "program_head" | "signatory" | "dean";
+    role: "eso_officer" | "class_officer" | "program_officer" | "program_head" | "signatory" | "dean";
     programId?: number | null;
+    yearLevel?: number | null;
+    section?: string | null;
     position: string;
 }
 
@@ -22,6 +24,7 @@ export interface AdminUserItem {
     position: string;
     status: string;
     createdAt: string;
+    avatarPath: string | null;
 }
 
 export const createAdminUser = async (input: CreateAdminInput): Promise<AdminUserItem> => {
@@ -57,15 +60,21 @@ export const createAdminUser = async (input: CreateAdminInput): Promise<AdminUse
     const userId = result.insertId;
 
     await pool.execute(
-        "INSERT INTO admins (user_id, position, program_id, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-        [userId, input.position.trim(), input.programId ?? null]
+        "INSERT INTO admins (user_id, position, program_id, year_level, section, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())",
+        [
+            userId,
+            input.position.trim(),
+            input.programId ?? null,
+            input.role === "class_officer" ? (input.yearLevel ?? null) : null,
+            input.role === "class_officer" ? (input.section ?? null) : null,
+        ]
     );
 
     const [created]: any = await pool.execute(
         `SELECT u.user_id, u.first_name, u.last_name, u.email, u.status, u.created_at,
                 r.role_name, r.role_label,
                 d.name AS programName,
-                a.position
+                a.position, a.avatar_path
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
          LEFT JOIN programs d ON u.program_id = d.program_id
@@ -75,16 +84,17 @@ export const createAdminUser = async (input: CreateAdminInput): Promise<AdminUse
     );
     const u = created[0];
     return {
-        userId:         u.user_id,
-        firstName:      u.first_name,
-        lastName:       u.last_name,
-        email:          u.email,
-        role:           u.role_name,
-        roleLabel:      u.role_label,
+        userId:      u.user_id,
+        firstName:   u.first_name,
+        lastName:    u.last_name,
+        email:       u.email,
+        role:        u.role_name,
+        roleLabel:   u.role_label,
         programName: u.programName,
-        position:       u.position,
-        status:         u.status,
-        createdAt:      u.created_at,
+        position:    u.position,
+        status:      u.status,
+        createdAt:   u.created_at,
+        avatarPath:  u.avatar_path ?? null,
     };
 };
 
@@ -120,7 +130,7 @@ export const getAdminUsers = async (): Promise<AdminUserItem[]> => {
         `SELECT u.user_id, u.first_name, u.last_name, u.email, u.status, u.created_at,
                 r.role_name, r.role_label,
                 d.name AS programName,
-                a.position
+                a.position, a.avatar_path
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
          LEFT JOIN programs d ON u.program_id = d.program_id
@@ -129,15 +139,16 @@ export const getAdminUsers = async (): Promise<AdminUserItem[]> => {
          ORDER BY r.role_name, u.last_name`
     );
     return rows.map((u: any) => ({
-        userId:         u.user_id,
-        firstName:      u.first_name,
-        lastName:       u.last_name,
-        email:          u.email,
-        role:           u.role_name,
-        roleLabel:      u.role_label,
+        userId:      u.user_id,
+        firstName:   u.first_name,
+        lastName:    u.last_name,
+        email:       u.email,
+        role:        u.role_name,
+        roleLabel:   u.role_label,
         programName: u.programName,
-        position:       u.position,
-        status:         u.status,
-        createdAt:      u.created_at,
+        position:    u.position,
+        status:      u.status,
+        createdAt:   u.created_at,
+        avatarPath:  u.avatar_path ?? null,
     }));
 };

@@ -101,8 +101,10 @@ export default function StudentLayout() {
 
             {/* Logout Modal */}
             {showLogoutModal && (
-                <div className="logout-modal fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-                    <div className="anim-slide-up rounded-xl shadow-2xl w-[90%] sm:w-[400px] p-6 relative bg-white dark:bg-[#1a1a1a] dark:border dark:border-[#2a2a2a]">
+                <div className="logout-modal fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50"
+                    onClick={() => setShowLogoutModal(false)}>
+                    <div className="anim-slide-up rounded-xl shadow-2xl w-[90%] sm:w-[400px] p-6 relative bg-white dark:bg-[#1a1a1a] dark:border dark:border-[#2a2a2a]"
+                        onClick={e => e.stopPropagation()}>
                         <button
                             onClick={() => setShowLogoutModal(false)}
                             className="close-icon absolute top-3 right-3"

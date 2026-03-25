@@ -75,6 +75,7 @@ const router = createBrowserRouter([
                 role={[
                     "eso_officer",
                     "class_officer",
+                    "program_officer",
                     "program_head",
                     "signatory",
                     "dean",

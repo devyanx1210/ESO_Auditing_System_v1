@@ -57,14 +57,15 @@ export const getDashboardStats = async (
     section?: string | null
 ): Promise<DashboardStats> => {
     const isClassOfficer = role === "class_officer";
-    const isProgramHead = role === "program_head";
-    const isAllRoles = ["eso_officer", "dean", "signatory", "system_admin"].includes(role ?? "");
+    const isProgramOfficer = role === "program_officer";
+    const isProgramHead = false; // program_head now sees all programs
+    const isAllRoles = ["eso_officer", "dean", "signatory", "system_admin", "program_head"].includes(role ?? "");
 
     // ─── Build program stats query ───────────────────────────────────────────────
     const studentFilter = isClassOfficer
         ? "AND s.year_level = ? AND s.section = ?"
         : "";
-    const programWhere = isProgramHead ? "WHERE p.program_id = ?" : "";
+    const programWhere = isProgramOfficer ? "WHERE p.program_id = ?" : "";
 
     const programSql = `
         SELECT
@@ -86,8 +87,8 @@ export const getDashboardStats = async (
     `;
 
     const programParams: any[] = [];
-    if (isClassOfficer) programParams.push(yearLevel ?? null, section ?? null);
-    if (isProgramHead)  programParams.push(programId ?? null);
+    if (isClassOfficer)  programParams.push(yearLevel ?? null, section ?? null);
+    if (isProgramOfficer) programParams.push(programId ?? null);
 
     const [programRows]: any = await pool.execute(programSql, programParams);
 
@@ -98,7 +99,7 @@ export const getDashboardStats = async (
     if (isClassOfficer) {
         paymentConditions.push("s.year_level = ?", "s.section = ?");
         paymentParams.push(yearLevel ?? null, section ?? null);
-    } else if (isProgramHead && programId) {
+    } else if (isProgramOfficer && programId) {
         paymentConditions.push("s.program_id = ?");
         paymentParams.push(programId);
     }
@@ -123,7 +124,7 @@ export const getDashboardStats = async (
     if (isClassOfficer) {
         ylConditions.push("s.year_level = ?", "s.section = ?");
         ylParams.push(yearLevel ?? null, section ?? null);
-    } else if (isProgramHead && programId) {
+    } else if (isProgramOfficer && programId) {
         ylConditions.push("s.program_id = ?");
         ylParams.push(programId);
     }
@@ -185,8 +186,8 @@ export const getDashboardStats = async (
             s.section
         FROM obligations o
         LEFT JOIN programs d ON o.program_id = d.program_id
-        JOIN student_obligations so ON o.obligation_id = so.obligation_id
-        JOIN students s ON so.student_id = s.student_id
+        LEFT JOIN student_obligations so ON o.obligation_id = so.obligation_id
+        LEFT JOIN students s ON so.student_id = s.student_id
     `;
 
     const obligationParams: any[] = [];
@@ -224,6 +225,8 @@ export const getDashboardStats = async (
                 students:       [],
             });
         }
+        // LEFT JOIN rows with no students have null student_id — skip student data
+        if (r.student_id == null) continue;
         const ob = obligationMap.get(id)!;
         ob.totalStudents++;
         if (r.so_status === "paid") ob.paidCount++;

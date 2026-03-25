@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 
-const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean"];
+const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean", "program_head"];
 
 async function getAdminDeptId(userId: number): Promise<number | null> {
     const [rows]: any = await pool.execute(
@@ -28,12 +28,15 @@ export interface AdminStudentItem {
     obligationsPaid: number;
     obligationsPending: number;
     clearanceStatus: string | null;
+    avatarPath: string | null;
 }
 
 export const listStudents = async (
     userId: number,
     role: string,
-    userDeptId?: number | null
+    userDeptId?: number | null,
+    yearLevel?: number | null,
+    section?: string | null
 ): Promise<AdminStudentItem[]> => {
     const deptId = ALL_DEPT_ROLES.includes(role)
         ? null
@@ -55,7 +58,8 @@ export const listStudents = async (
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
             SUM(so.status IN ('paid','waived'))                     AS obligationsPaid,
             SUM(so.status = 'pending_verification')                 AS obligationsPending,
-            cl.clearance_status AS clearanceStatus
+            cl.clearance_status AS clearanceStatus,
+            s.avatar_path       AS avatarPath
         FROM students s
         JOIN users u       ON u.user_id       = s.user_id
         JOIN programs d ON d.program_id = s.program_id
@@ -72,6 +76,11 @@ export const listStudents = async (
         sql += " AND s.program_id = ?";
         params.push(deptId);
     }
+    if (role === "class_officer") {
+        if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
+        if (section)           { sql += " AND s.section = ?";    params.push(section); }
+    }
+    // program_officer is already filtered by program via deptId above
 
     sql += " GROUP BY s.student_id ORDER BY s.last_name, s.first_name";
 

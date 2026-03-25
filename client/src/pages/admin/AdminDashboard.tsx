@@ -24,6 +24,7 @@ import { useAuth } from "../../hooks/useAuth";
 
 import { dashboardService } from "../../services/dashboard.service";
 import type { DashboardStats } from "../../services/dashboard.service";
+import { useTheme } from "../../hooks/useTheme";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -75,7 +76,7 @@ function ProgramDropdown({ programs, value, onChange, darkMode }: ProgramDropdow
                     ${open
                         ? "bg-orange-500 text-white shadow-[0_4px_16px_rgba(234,88,12,0.4)]"
                         : darkMode
-                            ? "bg-gray-800 border border-gray-700 text-white hover:border-orange-500"
+                            ? "bg-[#1a1a1a] border border-gray-700 text-white hover:border-orange-500"
                             : "bg-white border border-gray-200 text-gray-700 hover:border-orange-400"
                     }
                 `}
@@ -89,7 +90,7 @@ function ProgramDropdown({ programs, value, onChange, darkMode }: ProgramDropdow
                 absolute right-0 top-full mt-2 z-30
                 w-48 sm:w-auto sm:min-w-[220px] sm:max-w-[300px]
                 rounded-2xl overflow-hidden
-                ${darkMode ? "bg-gray-800 shadow-[0_16px_48px_rgba(0,0,0,0.6)]" : "bg-white shadow-[0_16px_48px_rgba(0,0,0,0.18)]"}
+                ${darkMode ? "bg-[#1a1a1a] shadow-[0_16px_48px_rgba(0,0,0,0.6)]" : "bg-white shadow-[0_16px_48px_rgba(0,0,0,0.18)]"}
                 transition-all duration-200 origin-top-right
                 ${open ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}
             `}>
@@ -107,7 +108,7 @@ function ProgramDropdown({ programs, value, onChange, darkMode }: ProgramDropdow
                                 transition-colors duration-150
                                 ${opt.id === value
                                     ? "bg-orange-500 text-white font-semibold"
-                                    : darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-orange-50"}
+                                    : darkMode ? "text-gray-200 hover:bg-[#222]" : "text-gray-700 hover:bg-orange-50"}
                             `}
                         >
                             <span className="truncate">{opt.name}</span>
@@ -145,7 +146,7 @@ function StatCard({ title, value, subtitle, icon, active, darkMode, animDelay = 
                 ${active
                     ? "bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.50)] text-white"
                     : `shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]
-                       ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"}`
+                       ${darkMode ? "bg-[#1a1a1a] text-white" : "bg-white text-gray-800"}`
                 }
             `}
         >
@@ -179,7 +180,7 @@ function StatCard({ title, value, subtitle, icon, active, darkMode, animDelay = 
 
 export default function AdminDashboard() {
     const { user, accessToken } = useAuth();
-    const darkMode = false;
+    const { darkMode } = useTheme();
     const navigate = useNavigate();
 
     const [loading, setLoading]                       = useState(true);
@@ -369,7 +370,7 @@ export default function AdminDashboard() {
     })();
 
     return (
-        <div className={`p-3 sm:p-5 lg:p-8 min-h-screen ${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-800"}`}>
+        <div className={`p-3 sm:p-5 lg:p-8 min-h-screen ${darkMode ? "bg-[#111111] text-white" : "bg-gray-50 text-gray-800"}`}>
 
             {/* ── Header ── */}
             <div className="flex flex-row items-center justify-between gap-3 mb-5 sm:mb-6">
@@ -467,7 +468,7 @@ export default function AdminDashboard() {
             <div
                 style={{ animationDelay: "360ms" }}
                 className={`anim-section rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden
-                    ${darkMode ? "bg-gray-800" : "bg-white"}`}
+                    ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
             >
                 {/* Two-column body: stacks on mobile, side-by-side on lg+ */}
                 <div className="flex flex-col lg:flex-row">
@@ -513,7 +514,7 @@ export default function AdminDashboard() {
                                 Obligation Status
                             </h2>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full
-                                ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-500"}`}>
+                                ${darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-500"}`}>
                                 {isClassOfficer
                                     ? (stats?.obligations.filter(o => o.scope !== "all").length ?? 0)
                                     : (stats?.obligations.length ?? 0)}
@@ -544,7 +545,7 @@ export default function AdminDashboard() {
                                                 anim-card-pop w-full text-left rounded-xl border px-3 py-2.5 transition
                                                 hover:shadow-md cursor-pointer
                                                 ${darkMode
-                                                    ? "bg-gray-700 border-gray-600 hover:bg-gray-600"
+                                                    ? "bg-[#222] border-gray-600 hover:bg-[#2a2a2a]"
                                                     : "bg-gray-50 border-gray-200 hover:bg-white"}
                                             `}
                                         >
@@ -567,7 +568,7 @@ export default function AdminDashboard() {
                                                     {ob.paidCount}/{ob.totalStudents}
                                                 </span>
                                             </div>
-                                            <div className={`w-full rounded-full h-1.5 overflow-hidden ${darkMode ? "bg-gray-600" : "bg-gray-200"}`}>
+                                            <div className={`w-full rounded-full h-1.5 overflow-hidden ${darkMode ? "bg-[#2a2a2a]" : "bg-gray-200"}`}>
                                                 <div
                                                     className="h-1.5 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-500"
                                                     style={{ width: `${paidPct}%` }}

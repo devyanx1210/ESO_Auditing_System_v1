@@ -13,7 +13,7 @@ import {
 
 export const listPendingPayments = async (req: Request, res: Response) => {
     try {
-        const payments = await getPendingPayments(req.user!.userId, req.user!.role);
+        const payments = await getPendingPayments(req.user!.userId, req.user!.role, req.user!.yearLevel, req.user!.section);
         return sendSuccess(res, payments);
     } catch (err: any) {
         return sendError(res, err.message, 400);
@@ -61,7 +61,7 @@ export const handleVerifyAll = async (req: Request, res: Response) => {
 
 export const listPaymentHistory = async (req: Request, res: Response) => {
     try {
-        const items = await getPaymentHistory(req.user!.userId, req.user!.role);
+        const items = await getPaymentHistory(req.user!.userId, req.user!.role, req.user!.yearLevel, req.user!.section);
         return sendSuccess(res, items);
     } catch (err: any) {
         return sendError(res, err.message, 400);

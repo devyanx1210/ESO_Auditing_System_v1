@@ -4,7 +4,7 @@ import { listStudents, getStudentObligationsForAdmin, verifyProofObligation } fr
 
 export const handleListStudents = async (req: Request, res: Response) => {
     try {
-        const students = await listStudents(req.user!.userId, req.user!.role, req.user!.programId);
+        const students = await listStudents(req.user!.userId, req.user!.role, req.user!.programId, req.user!.yearLevel, req.user!.section);
         return sendSuccess(res, students);
     } catch (err: any) {
         return sendError(res, err.message, 400);

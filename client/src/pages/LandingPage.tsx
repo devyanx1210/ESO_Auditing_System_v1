@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import { IoEyeOutline, IoEyeOffOutline } from "react-icons/io5";
 
 import logo from "../assets/ESO_Logo.png";
-import MarSU_BG from "../assets/MarSU_BG.png";
+import MarSU_BG from "../assets/CENG_BG.png";
 
 interface SigninState { email: string; password: string; }
 export type FormAction =
@@ -18,17 +18,17 @@ const initialState: SigninState = { email: "", password: "" };
 function signinReducer(state: SigninState, action: FormAction): SigninState {
     switch (action.type) {
         case "SIGNIN_CHANGE": return { ...state, [action.field]: action.value };
-        case "RESET_SIGNIN":  return initialState;
-        default:              return state;
+        case "RESET_SIGNIN": return initialState;
+        default: return state;
     }
 }
 
 const LandingPage = () => {
-    const [showSignup,   setShowSignup]   = useState(false);
-    const [state,        dispatch]        = useReducer(signinReducer, initialState);
-    const [signinError,  setSigninError]  = useState("");
+    const [showSignup, setShowSignup] = useState(false);
+    const [state, dispatch] = useReducer(signinReducer, initialState);
+    const [signinError, setSigninError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [loading,      setLoading]      = useState(true);
+    const [loading, setLoading] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
 
     const navigate = useNavigate();
@@ -43,9 +43,9 @@ const LandingPage = () => {
         try {
             const user = await login({ email, password });
             dispatch({ type: "RESET_SIGNIN" });
-            if (user.role === "student")       navigate("/student/dashboard");
+            if (user.role === "student") navigate("/student/dashboard");
             else if (user.role === "system_admin") navigate("/sysadmin/home");
-            else                                navigate("/dashboard/home");
+            else navigate("/dashboard/home");
         } catch (error) {
             setSigninError(error instanceof Error ? error.message : "Login failed. Please try again.");
         } finally {

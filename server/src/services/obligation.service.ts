@@ -18,6 +18,7 @@ export interface ObligationData {
     dueDate: string | null;
     isActive: boolean;
     createdAt: string;
+    createdByName: string | null;
 }
 
 export interface CreateObligationInput {
@@ -57,6 +58,7 @@ function mapRow(r: any): ObligationData {
         dueDate,
         isActive:        Boolean(r.isActive),
         createdAt:       r.createdAt,
+        createdByName:   r.createdByName ?? null,
     };
 }
 
@@ -83,9 +85,12 @@ export const getObligations = async (role?: string, programId?: number | null): 
             o.semester,
             o.due_date        AS dueDate,
             o.is_active       AS isActive,
-            o.created_at      AS createdAt
+            o.created_at      AS createdAt,
+            CONCAT(u.first_name, ' ', u.last_name) AS createdByName
         FROM obligations o
         LEFT JOIN programs d ON o.program_id = d.program_id
+        LEFT JOIN admins a ON o.created_by = a.admin_id
+        LEFT JOIN users u ON a.user_id = u.user_id
         ${isRestricted ? "WHERE (o.program_id IS NULL OR o.program_id = ?)" : ""}
         ORDER BY o.created_at DESC
     `, params);
@@ -125,15 +130,15 @@ export const createObligation = async (
         );
         const obligationId = result.insertId;
 
-        // Find matching students — match by school_year only so students
-        // registered in any semester of the year receive the obligation
+        // Find matching enrolled students — school_year is a label on the obligation,
+        // not a filter; assign to all enrolled students that match the scope
         let studentQuery = `
             SELECT s.student_id, u.user_id
             FROM students s
             JOIN users u ON s.user_id = u.user_id
-            WHERE s.school_year = ? AND s.is_enrolled = 1
+            WHERE s.is_enrolled = 1
         `;
-        const params: any[] = [input.schoolYear];
+        const params: any[] = [];
 
         if (input.scope === "department" && input.programId) {
             studentQuery += " AND s.program_id = ?";
@@ -247,14 +252,14 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
         if (!obs.length) throw new Error("Obligation not found");
         const ob = obs[0];
 
-        // Build student query matching the obligation's scope
+        // Build student query matching the obligation's scope (school_year is a label, not a filter)
         let studentQuery = `
             SELECT s.student_id, u.user_id
             FROM students s
             JOIN users u ON s.user_id = u.user_id
-            WHERE s.school_year = ? AND s.is_enrolled = 1
+            WHERE s.is_enrolled = 1
         `;
-        const params: any[] = [ob.school_year];
+        const params: any[] = [];
 
         if (ob.scope === "department" && ob.program_id) {
             studentQuery += " AND s.program_id = ?";

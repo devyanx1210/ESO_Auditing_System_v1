@@ -68,14 +68,14 @@ export const loginUser = async (
         }
         throw new Error("Invalid email or password");
     }
-    const isClassOfficer = user.role_name === "class_officer";
+    const isOfficer = ["class_officer", "program_officer"].includes(user.role_name);
     const payload: JwtAccessPayload = {
         userId: user.user_id,
         email: user.email,
         role: user.role_name,
         programId: user.program_id,
-        yearLevel: isClassOfficer ? (user.admin_year_level ?? null) : null,
-        section: isClassOfficer ? (user.admin_section ?? null) : null,
+        yearLevel: isOfficer ? (user.admin_year_level ?? null) : null,
+        section: isOfficer ? (user.admin_section ?? null) : null,
     };
     const tokens = generateTokens(payload);
     const refreshExpiry = new Date();
@@ -99,8 +99,8 @@ export const loginUser = async (
         role: user.role_name,
         programId: user.program_id,
         status: user.status,
-        yearLevel: isClassOfficer ? (user.admin_year_level ?? null) : null,
-        section: isClassOfficer ? (user.admin_section ?? null) : null,
+        yearLevel: isOfficer ? (user.admin_year_level ?? null) : null,
+        section: isOfficer ? (user.admin_section ?? null) : null,
     };
     return { user: authenticatedUser, tokens };
 };
@@ -126,14 +126,14 @@ export const refreshAccessToken = async (
         if (user.refresh_token_expires_at && new Date() > new Date(user.refresh_token_expires_at)) {
             throw new Error("Refresh token expired. Please login again.");
         }
-        const isClassOfficer = user.role_name === "class_officer";
+        const isOfficer = ["class_officer", "program_officer"].includes(user.role_name);
         const payload: JwtAccessPayload = {
             userId: user.user_id,
             email: user.email,
             role: user.role_name,
             programId: user.program_id,
-            yearLevel: isClassOfficer ? (user.admin_year_level ?? null) : null,
-            section: isClassOfficer ? (user.admin_section ?? null) : null,
+            yearLevel: isOfficer ? (user.admin_year_level ?? null) : null,
+            section: isOfficer ? (user.admin_section ?? null) : null,
         };
         const newAccessToken = jwt.sign(payload, jwtConfig.accessSecret, {
             expiresIn: jwtConfig.accessExpiresIn,

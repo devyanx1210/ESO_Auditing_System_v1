@@ -6,7 +6,7 @@ import { handleListStudents, handleGetStudentObligations, handleVerifyProof } fr
 
 const router = Router();
 
-const adminRoles: UserRole[] = ["system_admin", "eso_officer", "class_officer", "program_head", "signatory", "dean"];
+const adminRoles: UserRole[] = ["system_admin", "eso_officer", "class_officer", "program_officer", "program_head", "signatory", "dean"];
 
 router.get("/",                            authenticate, authorize(...adminRoles), handleListStudents);
 router.get("/:studentId/obligations",      authenticate, authorize(...adminRoles), handleGetStudentObligations);

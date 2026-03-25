@@ -138,20 +138,20 @@ export default function AuditLogsPage() {
             <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
                 style={{ animation: "fadeInUp 0.42s ease both 0.08s" }}>
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[720px] text-sm">
+                    <table className="w-full min-w-[720px] text-xs">
                         <thead>
-                            <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                                <th className="px-4 py-3 w-10">
+                            <tr className="bg-gray-50 text-gray-500">
+                                <th className="px-3 py-2 w-10">
                                     <input type="checkbox"
                                         checked={allSelected}
                                         onChange={toggleAll}
                                         className="rounded border-gray-300 accent-orange-500 cursor-pointer" />
                                 </th>
-                                <th className="px-4 py-3 text-left font-semibold">Date & Time</th>
-                                <th className="px-4 py-3 text-left font-semibold">Performed By</th>
-                                <th className="px-4 py-3 text-left font-semibold">Action</th>
-                                <th className="px-4 py-3 text-left font-semibold">Target</th>
-                                <th className="px-4 py-3 text-left font-semibold">IP Address</th>
+                                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Date & Time</th>
+                                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Performed By</th>
+                                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Action</th>
+                                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Target</th>
+                                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">IP Address</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -163,26 +163,26 @@ export default function AuditLogsPage() {
                                 <tr key={l.audit_id}
                                     style={{ animation: "fadeInUp 0.3s ease both", animationDelay: `${i * 0.03}s` }}
                                     className={`transition-colors ${selected.has(l.audit_id) ? "bg-orange-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}>
-                                    <td className="px-4 py-3">
+                                    <td className="px-3 py-2.5">
                                         <input type="checkbox"
                                             checked={selected.has(l.audit_id)}
                                             onChange={() => toggleOne(l.audit_id)}
                                             className="rounded border-gray-300 accent-orange-500 cursor-pointer" />
                                     </td>
-                                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                                    <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap">
                                         {fmtDate(l.created_at)}
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-3 py-2.5">
                                         <p className="text-gray-800 text-xs font-medium whitespace-nowrap">{l.performed_by_name}</p>
                                         <p className="text-gray-400 text-[11px]">{l.performed_by_role}</p>
                                     </td>
-                                    <td className={`px-4 py-3 text-xs font-semibold whitespace-nowrap ${actionColor(l.action)}`}>
+                                    <td className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap ${actionColor(l.action)}`}>
                                         {l.action}
                                     </td>
-                                    <td className="px-4 py-3 text-gray-500 text-xs">
+                                    <td className="px-3 py-2.5 text-gray-500 text-xs">
                                         {l.target_type ? `${l.target_type}${l.target_id ? ` #${l.target_id}` : ""}` : ""}
                                     </td>
-                                    <td className="px-4 py-3 text-gray-400 text-xs">
+                                    <td className="px-3 py-2.5 text-gray-400 text-xs">
                                         {l.ip_address ?? ""}
                                     </td>
                                 </tr>

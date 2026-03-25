@@ -87,8 +87,10 @@ export default function SysAdminLayout() {
 
             {/* Logout Modal */}
             {showLogoutModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50">
-                    <div className="rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-[90%] sm:w-[400px] p-6 relative bg-white text-gray-800">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50"
+                    onClick={() => setShowLogoutModal(false)}>
+                    <div className="rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-[90%] sm:w-[400px] p-6 relative bg-white text-gray-800"
+                        onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowLogoutModal(false)} className="absolute top-3 right-3">
                             <FaTimes size={18} color="#FE8901" />
                         </button>

@@ -42,6 +42,7 @@ export interface PendingClearanceItem {
     currentStep: number | null;
     obligationsTotal: number;
     obligationsPaid: number;
+    avatarPath: string | null;
 }
 
 // Shared SELECT columns for clearance queries
@@ -61,7 +62,8 @@ const CLEARANCE_SELECT = `
         cl.clearance_status AS clearanceStatus,
         cl.current_step     AS currentStep,
         COUNT(so.student_obligation_id)          AS obligationsTotal,
-        SUM(so.status IN ('paid','waived'))       AS obligationsPaid
+        SUM(so.status IN ('paid','waived'))       AS obligationsPaid,
+        s.avatar_path                            AS avatarPath
     FROM students s
     JOIN users u       ON u.user_id       = s.user_id
     JOIN programs d ON d.program_id = s.program_id
@@ -70,18 +72,20 @@ const CLEARANCE_SELECT = `
 
 export const getPendingClearance = async (
     userId: number,
-    role: string
+    role: string,
+    yearLevel?: number | null,
+    section?: string | null
 ): Promise<PendingClearanceItem[]> => {
     const { clearanceStep, programId } = await getAdminClearanceStep(userId);
 
-    // class_officer has no clearance step and no view
-    if (!clearanceStep && role === "class_officer") return [];
+    // class_officer and program_officer have no clearance role
+    if (["class_officer", "program_officer"].includes(role)) return [];
 
     let sql: string;
     const params: any[] = [];
 
     if (!clearanceStep) {
-        // system_admin: show all students with all obligations paid and no clearance yet (step-1 view)
+        // system_admin: students with all obligations paid, no clearance yet (step-1 view)
         sql = CLEARANCE_SELECT + `
             LEFT JOIN clearances cl
                 ON cl.student_id = s.student_id
@@ -90,6 +94,8 @@ export const getPendingClearance = async (
             WHERE u.status = 'active'
               AND (cl.clearance_id IS NULL OR cl.current_step = 1)
               AND (cl.clearance_status IS NULL OR cl.clearance_status != 'cleared')
+        `;
+        sql += `
             GROUP BY s.student_id
             HAVING (obligationsTotal = 0 OR obligationsTotal = obligationsPaid)
             ORDER BY s.last_name, s.first_name
@@ -264,6 +270,7 @@ export interface ClearanceHistoryItem {
     clearanceStatus: string;
     signedAt: string;
     remarks: string | null;
+    avatarPath: string | null;
 }
 
 export const getClearanceHistory = async (
@@ -287,7 +294,8 @@ export const getClearanceHistory = async (
             s.semester,
             cl.clearance_status AS clearanceStatus,
             cv.verified_at      AS signedAt,
-            cv.remarks
+            cv.remarks,
+            s.avatar_path       AS avatarPath
         FROM clearance_verifications cv
         JOIN clearances cl  ON cl.clearance_id  = cv.clearance_id
         JOIN students s     ON s.student_id      = cl.student_id

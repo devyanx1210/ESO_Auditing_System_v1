@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { FiRefreshCw, FiCheckSquare, FiClock, FiSearch, FiFilter, FiChevronDown, FiChevronUp, FiTrash2 } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useTheme } from "../../hooks/useTheme";
 
 import { adminStudentService, receiptUrl } from "../../services/admin-student.service";
 import type { PendingPaymentItem, PaymentHistoryItem } from "../../services/admin-student.service";
@@ -40,11 +41,13 @@ function DefaultAvatarSvg() {
     );
 }
 
-function UserAvatar({ size = "md" }: { size?: "sm" | "md" }) {
+function UserAvatar({ size = "md", src }: { size?: "sm" | "md"; src?: string | null }) {
     const sz = size === "md" ? "w-9 h-9" : "w-8 h-8";
     return (
         <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
-            <DefaultAvatarSvg />
+            {src
+                ? <img src={src.startsWith("http") ? src : src.startsWith("/") ? `http://localhost:5000${src}` : `http://localhost:5000/uploads/${src}`} alt="" className="w-full h-full object-cover" />
+                : <DefaultAvatarSvg />}
         </div>
     );
 }
@@ -61,13 +64,13 @@ interface SubTabsProps {
 }
 function SubTabs({ active, onChange, reviewCount, historyCount, reviewLabel = "For Review", historyLabel = "History" }: SubTabsProps) {
     return (
-        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit mb-5">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1 w-fit mb-5">
             <button
                 onClick={() => onChange("review")}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
                     active === "review"
-                        ? "bg-white text-orange-600 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                        ? "bg-white dark:bg-[#1a1a1a] text-orange-600 shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}>
                 <FiCheckSquare className="w-4 h-4" />
                 {reviewLabel}
@@ -79,13 +82,13 @@ function SubTabs({ active, onChange, reviewCount, historyCount, reviewLabel = "F
                 onClick={() => onChange("history")}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
                     active === "history"
-                        ? "bg-white text-orange-600 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                        ? "bg-white dark:bg-[#1a1a1a] text-orange-600 shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}>
                 <FiClock className="w-4 h-4" />
                 {historyLabel}
                 {historyCount > 0 && (
-                    <span className="bg-gray-400 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{historyCount}</span>
+                    <span className="bg-gray-400 dark:bg-gray-600 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{historyCount}</span>
                 )}
             </button>
         </div>
@@ -259,7 +262,7 @@ const PAYMENT_ROLES = ["system_admin", "eso_officer", "class_officer", "program_
 
 const PaymentVerification = () => {
     const { accessToken, user } = useAuth();
-    const darkMode = false;
+    const { darkMode } = useTheme();
     const location = useLocation();
 
     const [pending,      setPending]      = useState<PendingPaymentItem[]>([]);
@@ -378,7 +381,7 @@ const PaymentVerification = () => {
         finally { setDeleting(false); }
     }
 
-    const bg = darkMode ? "bg-gray-950 text-gray-100" : "bg-gray-50 text-gray-900";
+    const bg = darkMode ? "bg-[#111111] text-gray-100" : "bg-gray-50 text-gray-900";
 
     function applyPaySearch<T extends { studentName: string; obligationName: string }>(items: T[]) {
         return search ? items.filter(i =>
@@ -465,7 +468,7 @@ const PaymentVerification = () => {
                     </p>
                 </div>
                 <button onClick={load} disabled={loading} title="Refresh"
-                    className={`p-2 border-2 rounded-xl transition shadow-sm disabled:opacity-50 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "bg-white border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}>
+                    className={`p-2 border-2 rounded-xl transition shadow-sm disabled:opacity-50 ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "bg-white border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}>
                     <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                 </button>
             </div>
@@ -479,7 +482,7 @@ const PaymentVerification = () => {
                     <input type="text" placeholder="Search by student name or obligation..."
                         value={search} onChange={e => setSearch(e.target.value)}
                         className={`border-2 focus:border-orange-400 focus:outline-none rounded-xl pl-9 pr-3 py-2 text-sm w-full shadow-sm
-                            ${darkMode ? "bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-500" : "bg-white border-gray-200 text-gray-900"}`} />
+                            ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100 placeholder-gray-500" : "bg-white border-gray-200 text-gray-900"}`} />
                 </div>
 
                 {/* Sort & Filter */}
@@ -498,7 +501,7 @@ const PaymentVerification = () => {
                     {showFilters && (
                         <div className={`absolute right-0 top-full mt-2 z-30 rounded-2xl p-4 w-72 flex flex-col gap-3
                             ${darkMode
-                                ? "bg-gray-900 border border-gray-700 shadow-[0_8px_32px_rgba(0,0,0,0.6)] ring-1 ring-white/5"
+                                ? "bg-[#1a1a1a] shadow-[0_8px_32px_rgba(0,0,0,0.6)] ring-1 ring-white/5"
                                 : "bg-white border border-gray-300 shadow-[0_8px_32px_rgba(0,0,0,0.18)] ring-1 ring-black/5"}`}>
                             <p className={`text-xs font-bold uppercase tracking-wide ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Sort &amp; Filter</p>
 
@@ -506,7 +509,7 @@ const PaymentVerification = () => {
                                 <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Sort by</label>
                                 <select value={sortKey} onChange={e => setSortKey(e.target.value as PaySortKey)}
                                     className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
-                                        ${darkMode ? "bg-gray-800 border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
+                                        ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
                                     <option value="date">Date Submitted (Newest)</option>
                                     <option value="name">Name (A–Z)</option>
                                     <option value="amount">Amount (Highest)</option>
@@ -517,7 +520,7 @@ const PaymentVerification = () => {
                                 <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Program</label>
                                 <select value={programFilter} onChange={e => setProgramFilter(e.target.value)}
                                     className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
-                                        ${darkMode ? "bg-gray-800 border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
+                                        ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
                                     <option value="all">All Programs</option>
                                     {PROGRAMS_LIST.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
                                 </select>
@@ -527,7 +530,7 @@ const PaymentVerification = () => {
                                 <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>History Status</label>
                                 <select value={historyStatusFilter} onChange={e => setHistoryStatusFilter(e.target.value)}
                                     className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
-                                        ${darkMode ? "bg-gray-800 border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
+                                        ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
                                     <option value="all">All</option>
                                     <option value="verified">Verified</option>
                                     <option value="unverified">Unverified</option>
@@ -541,7 +544,7 @@ const PaymentVerification = () => {
                                     <input type="text" placeholder="Search verifier name..."
                                         value={verifiedByFilter} onChange={e => setVerifiedByFilter(e.target.value)}
                                         className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl pl-8 pr-3 py-2 text-sm
-                                            ${darkMode ? "bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-500" : "bg-gray-50 border-gray-200 text-gray-800"}`} />
+                                            ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100 placeholder-gray-500" : "bg-gray-50 border-gray-200 text-gray-800"}`} />
                                 </div>
                             </div>
 
@@ -557,7 +560,7 @@ const PaymentVerification = () => {
 
                 {/* Results count */}
                 <span className={`hidden sm:flex items-center text-xs font-medium px-2.5 py-2 rounded-xl whitespace-nowrap shadow-sm border
-                    ${darkMode ? "bg-gray-800 border-gray-700 text-gray-400" : "bg-white border-gray-200 text-gray-400"}`}>
+                    ${darkMode ? "bg-[#1a1a1a] border-gray-700 text-gray-400" : "bg-white border-gray-200 text-gray-400"}`}>
                     {activeResultCount} result{activeResultCount !== 1 ? "s" : ""}
                 </span>
             </div>
@@ -589,29 +592,19 @@ const PaymentVerification = () => {
                             {verifyAllMsg && <p className="text-sm text-green-600">{verifyAllMsg}</p>}
                             {selectedPending.size > 0 && (
                                 <button onClick={handleBulkVerify} disabled={bulkVerifying}
-                                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-60 transition">
-                                    {bulkVerifying ? "Verifying..." : `Verify Selected (${selectedPending.size})`}
-                                </button>
-                            )}
-                            {filteredPending.length > 0 && (
-                                <button onClick={handleVerifyAll} disabled={verifyingAll}
                                     className="px-4 py-2 text-sm bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 disabled:opacity-60 transition">
-                                    {verifyingAll ? "Processing..." : `Verify All (${filteredPending.length})`}
+                                    {bulkVerifying ? "Verifying..." : `Verify Selected (${selectedPending.size})`}
                                 </button>
                             )}
                         </div>
                     </div>
 
-                    {filteredPending.length === 0 ? (
-                        <div className={`rounded-2xl border-2 p-10 text-center text-sm ${darkMode ? "bg-gray-800 border-gray-700 text-gray-400" : "bg-white border-gray-200 text-gray-400"}`}>
-                            No pending submissions.
-                        </div>
-                    ) : (
+                    {filteredPending.length > 0 && (
                         <>
-                            <div className={`rounded-2xl overflow-hidden border shadow-sm ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
+                            <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                                 <div className="overflow-x-auto">
                                 <table className="w-full min-w-[700px] border-collapse">
-                                    <thead className={`${darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+                                    <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
                                         <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
                                             <th className="px-3 py-2 text-center w-10">
                                                 <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
@@ -627,7 +620,7 @@ const PaymentVerification = () => {
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody className={`divide-y ${darkMode ? "divide-gray-700" : "divide-gray-200"}`}>
+                                    <tbody className="">
                                         {filteredPending.map((p, i) => (
                                             <tr key={p.paymentId}
                                                 onClick={() => togglePending(p.paymentId, !selectedPending.has(p.paymentId))}
@@ -636,8 +629,8 @@ const PaymentVerification = () => {
                                                     ${selectedPending.has(p.paymentId)
                                                         ? darkMode ? "bg-orange-900/30" : "bg-orange-50"
                                                         : i % 2 === 0
-                                                            ? darkMode ? "bg-gray-800 hover:bg-gray-750" : "bg-white hover:bg-gray-50"
-                                                            : darkMode ? "bg-gray-800/60 hover:bg-gray-750" : "bg-gray-50/70 hover:bg-gray-100/50"
+                                                            ? darkMode ? "bg-[#1a1a1a] hover:bg-[#2a2a2a]" : "bg-white hover:bg-gray-50"
+                                                            : darkMode ? "bg-[#1a1a1a]/60 hover:bg-[#2a2a2a]" : "bg-gray-50/70 hover:bg-gray-100/50"
                                                     }`}>
                                                 <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
                                                     <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
@@ -646,7 +639,7 @@ const PaymentVerification = () => {
                                                 </td>
                                                 <td className="px-3 py-2.5">
                                                     <div className="flex items-center gap-3">
-                                                        <UserAvatar size="sm" />
+                                                        <UserAvatar size="sm" src={p.avatarPath} />
                                                         <div>
                                                             <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
                                                             <div className={`text-xs font-mono mt-0.5 ${darkMode ? "text-gray-400" : "text-gray-400"}`}>{p.studentNo}</div>
@@ -654,7 +647,7 @@ const PaymentVerification = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-3 py-2.5 text-center">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>{programLabel(p.programCode)}</span>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-600"}`}>{programLabel(p.programCode)}</span>
                                                 </td>
                                                 <td className={`px-3 py-2.5 text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
                                                 <td className={`px-3 py-2.5 text-right font-semibold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>PHP {Number(p.amountPaid).toFixed(2)}</td>
@@ -712,15 +705,15 @@ const PaymentVerification = () => {
                     </div>
 
                     {filteredHistory.length === 0 ? (
-                        <div className={`rounded-2xl border-2 p-10 text-center text-sm ${darkMode ? "bg-gray-800 border-gray-700 text-gray-400" : "bg-white border-gray-200 text-gray-400"}`}>
+                        <div className={`rounded-2xl p-10 text-center text-sm shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a] text-gray-400" : "bg-white text-gray-400"}`}>
                             No reviewed submissions yet.
                         </div>
                     ) : (
                         <>
-                            <div className={`rounded-2xl overflow-hidden border shadow-sm ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
+                            <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                                 <div className="overflow-x-auto">
                                 <table className="w-full min-w-[700px] border-collapse">
-                                    <thead className={`${darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+                                    <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
                                         <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
                                             <th className="px-3 py-2 text-center w-10">
                                                 <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
@@ -737,7 +730,7 @@ const PaymentVerification = () => {
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-24">Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody className={`divide-y ${darkMode ? "divide-gray-700" : "divide-gray-200"}`}>
+                                    <tbody className="">
                                         {filteredHistory.map((h, i) => (
                                             <tr key={h.paymentId}
                                                 onClick={() => toggleHistory(h.paymentId, !selectedHistory.has(h.paymentId))}
@@ -746,8 +739,8 @@ const PaymentVerification = () => {
                                                     ${selectedHistory.has(h.paymentId)
                                                         ? darkMode ? "bg-orange-900/30" : "bg-orange-50"
                                                         : i % 2 === 0
-                                                            ? darkMode ? "bg-gray-800 hover:bg-gray-750" : "bg-white hover:bg-gray-50"
-                                                            : darkMode ? "bg-gray-800/60 hover:bg-gray-750" : "bg-gray-50/70 hover:bg-gray-100/50"
+                                                            ? darkMode ? "bg-[#1a1a1a] hover:bg-[#2a2a2a]" : "bg-white hover:bg-gray-50"
+                                                            : darkMode ? "bg-[#1a1a1a]/60 hover:bg-[#2a2a2a]" : "bg-gray-50/70 hover:bg-gray-100/50"
                                                     }`}>
                                                 <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
                                                     <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
@@ -756,7 +749,7 @@ const PaymentVerification = () => {
                                                 </td>
                                                 <td className="px-3 py-2.5">
                                                     <div className="flex items-center gap-3">
-                                                        <UserAvatar size="sm" />
+                                                        <UserAvatar size="sm" src={h.avatarPath} />
                                                         <div>
                                                             <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{h.studentName}</div>
                                                             <div className={`text-xs font-mono mt-0.5 ${darkMode ? "text-gray-400" : "text-gray-400"}`}>{h.studentNo}</div>
@@ -764,7 +757,7 @@ const PaymentVerification = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-3 py-2.5">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>{programLabel(h.programCode)}</span>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-600"}`}>{programLabel(h.programCode)}</span>
                                                 </td>
                                                 <td className={`px-3 py-2.5 text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{h.obligationName}</td>
                                                 <td className={`px-3 py-2.5 text-right font-semibold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>PHP {Number(h.amountPaid).toFixed(2)}</td>

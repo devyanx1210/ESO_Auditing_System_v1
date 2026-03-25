@@ -20,6 +20,7 @@ export interface ObligationData {
     dueDate: string | null;
     isActive: boolean;
     createdAt: string;
+    createdByName: string | null;
 }
 
 export interface CreateObligationInput {

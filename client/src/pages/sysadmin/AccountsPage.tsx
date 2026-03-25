@@ -65,8 +65,8 @@ const BLANK = {
     yearLevel: "", section: "",
 };
 
-const thCls    = "px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide";
-const thCtrCls = "px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide";
+const thCls    = "px-3 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wide";
+const thCtrCls = "px-3 py-2 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wide";
 
 // ─── Suspend Modal ────────────────────────────────────────────────────────────
 
@@ -415,10 +415,10 @@ export default function AccountsPage() {
                 <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
                     style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[860px] text-sm">
+                        <table className="w-full min-w-[860px] text-xs">
                             <thead>
                                 <tr className="bg-gray-50 text-gray-500">
-                                    <th className="px-4 py-3 w-10">
+                                    <th className="px-3 py-2 w-10">
                                         <input type="checkbox" checked={allSelected} onChange={toggleAll}
                                             className="rounded border-gray-300 accent-orange-500 cursor-pointer" />
                                     </th>
@@ -436,30 +436,30 @@ export default function AccountsPage() {
                                     <tr key={a.user_id}
                                         style={{ animation: "fadeInUp 0.3s ease both", animationDelay: `${i * 0.04}s` }}
                                         className={`transition-colors hover:bg-orange-50 ${selected.has(a.user_id) ? "bg-orange-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50/70"}`}>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-2.5">
                                             {a.role_name !== "system_admin" && (
                                                 <input type="checkbox" checked={selected.has(a.user_id)} onChange={() => toggleOne(a.user_id)}
                                                     className="rounded border-gray-300 accent-orange-500 cursor-pointer" />
                                             )}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-2.5">
                                             <div className="flex items-center gap-2.5">
                                                 <UserAvatar />
                                                 <span className="font-medium text-gray-800 whitespace-nowrap">{a.last_name}, {a.first_name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-500 text-xs">{a.email}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-2.5 text-gray-500 text-xs">{a.email}</td>
+                                        <td className="px-3 py-2.5">
                                             <span className="px-2.5 py-1 rounded-full text-xs bg-orange-100 text-orange-700 font-semibold whitespace-nowrap">{a.role_label}</span>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-600 text-sm">{a.program_name ?? <span className="text-gray-300">—</span>}</td>
-                                        <td className="px-4 py-3 text-gray-600 text-sm">{a.position ?? <span className="text-gray-300">—</span>}</td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-3 py-2.5 text-gray-600 text-xs">{a.program_name ?? <span className="text-gray-300">—</span>}</td>
+                                        <td className="px-3 py-2.5 text-gray-600 text-xs">{a.position ?? <span className="text-gray-300">—</span>}</td>
+                                        <td className="px-3 py-2.5 text-center">
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500 text-white">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-white/70" />Active
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-2.5">
                                             <div className="flex items-center justify-center gap-2">
                                                 {a.role_name !== "system_admin" && (
                                                     <>
@@ -495,10 +495,10 @@ export default function AccountsPage() {
                     <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
                         style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[780px] text-sm">
+                            <table className="w-full min-w-[780px] text-xs">
                                 <thead>
                                     <tr className="bg-gray-50 text-gray-500">
-                                        <th className="px-4 py-3 w-10">
+                                        <th className="px-3 py-2 w-10">
                                             <input type="checkbox" checked={allSelected} onChange={toggleAll}
                                                 className="rounded border-gray-300 accent-orange-500 cursor-pointer" />
                                         </th>
@@ -515,23 +515,23 @@ export default function AccountsPage() {
                                         <tr key={a.user_id}
                                             style={{ animation: "fadeInUp 0.3s ease both", animationDelay: `${i * 0.04}s` }}
                                             className={`transition-colors ${i % 2 === 0 ? "bg-white" : "bg-gray-50/70"}`}>
-                                            <td className="px-4 py-3">
+                                            <td className="px-3 py-2.5">
                                                 <input type="checkbox" checked={selected.has(a.user_id)} onChange={() => toggleOne(a.user_id)}
                                                     className="rounded border-gray-300 accent-orange-500 cursor-pointer" />
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-3 py-2.5">
                                                 <div className="flex items-center gap-2.5">
                                                     <UserAvatar />
                                                     <span className="font-medium text-gray-500 whitespace-nowrap">{a.last_name}, {a.first_name}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-gray-400 text-xs">{a.email}</td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-3 py-2.5 text-gray-400 text-xs">{a.email}</td>
+                                            <td className="px-3 py-2.5">
                                                 <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-500 font-semibold whitespace-nowrap">{a.role_label}</span>
                                             </td>
-                                            <td className="px-4 py-3 text-gray-400 text-sm">{a.program_name ?? <span className="text-gray-300">—</span>}</td>
-                                            <td className="px-4 py-3 text-gray-400 text-sm">{a.position ?? <span className="text-gray-300">—</span>}</td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-3 py-2.5 text-gray-400 text-xs">{a.program_name ?? <span className="text-gray-300">—</span>}</td>
+                                            <td className="px-3 py-2.5 text-gray-400 text-xs">{a.position ?? <span className="text-gray-300">—</span>}</td>
+                                            <td className="px-3 py-2.5">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button onClick={() => handleStatus(a.user_id, "active")}
                                                         className="px-3 py-1.5 text-xs rounded-lg font-semibold bg-green-600 text-white hover:bg-green-700 transition">

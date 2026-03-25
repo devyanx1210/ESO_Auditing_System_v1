@@ -10,6 +10,7 @@ import adminStudentRoutes   from "./admin-student.routes.js";
 import adminPaymentRoutes   from "./admin-payment.routes.js";
 import adminClearanceRoutes from "./admin-clearance.routes.js";
 import sysadminRoutes       from "./sysadmin.routes.js";
+import adminProfileRoutes   from "./admin-profile.routes.js";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use("/admin/students",  adminStudentRoutes);
 router.use("/admin/payments",  adminPaymentRoutes);
 router.use("/admin/clearance", adminClearanceRoutes);
 router.use("/sysadmin",        sysadminRoutes);
+router.use("/admin/profile",   adminProfileRoutes);
 
 export default router;

@@ -98,6 +98,7 @@ CREATE TABLE admins (
     department_id   INT UNSIGNED NULL,
     year_level      TINYINT UNSIGNED NULL,
     section         VARCHAR(10) NULL,
+    avatar_path     VARCHAR(500) NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

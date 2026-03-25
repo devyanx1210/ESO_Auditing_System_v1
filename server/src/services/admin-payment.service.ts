@@ -21,7 +21,7 @@ async function getAdminRecord(userId: number): Promise<{ adminId: number; progra
 }
 
 // Roles that can see all departments
-const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean"];
+const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean", "program_head"];
 
 // ─── Pending GCash payments for admin review ──────────────────────────────────
 
@@ -36,11 +36,14 @@ export interface PendingPaymentItem {
     receiptPath: string;
     notes: string | null;
     submittedAt: string;
+    avatarPath: string | null;
 }
 
 export const getPendingPayments = async (
     userId: number,
-    role: string
+    role: string,
+    yearLevel?: number | null,
+    section?: string | null
 ): Promise<PendingPaymentItem[]> => {
     const { programId } = await getAdminRecord(userId);
 
@@ -55,7 +58,8 @@ export const getPendingPayments = async (
             ps.amount_paid                  AS amountPaid,
             ps.payment_receipt_path                 AS receiptPath,
             ps.notes,
-            ps.submitted_at                 AS submittedAt
+            ps.submitted_at                 AS submittedAt,
+            s.avatar_path                   AS avatarPath
         FROM payment_submissions ps
         JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
         JOIN students s  ON s.student_id  = ps.student_id
@@ -70,6 +74,10 @@ export const getPendingPayments = async (
     if (!ALL_DEPT_ROLES.includes(role) && programId) {
         sql += " AND s.program_id = ?";
         params.push(programId);
+    }
+    if (role === "class_officer") {
+        if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
+        if (section)           { sql += " AND s.section = ?";    params.push(section); }
     }
 
     sql += " ORDER BY ps.submitted_at ASC";
@@ -243,11 +251,14 @@ export interface PaymentHistoryItem {
     verifiedByName: string | null;
     verifiedByRole: string | null;
     remarks: string | null;
+    avatarPath: string | null;
 }
 
 export const getPaymentHistory = async (
     userId: number,
-    role: string
+    role: string,
+    yearLevel?: number | null,
+    section?: string | null
 ): Promise<PaymentHistoryItem[]> => {
     const { programId } = await getAdminRecord(userId);
 
@@ -266,7 +277,8 @@ export const getPaymentHistory = async (
             pv.verified_at                             AS verifiedAt,
             CONCAT(vu.first_name, ' ', vu.last_name)   AS verifiedByName,
             vr.role_label                              AS verifiedByRole,
-            pv.remarks
+            pv.remarks,
+            s.avatar_path                              AS avatarPath
         FROM payment_submissions ps
         JOIN students s    ON s.student_id    = ps.student_id
         JOIN obligations o ON o.obligation_id = ps.obligation_id
@@ -282,6 +294,10 @@ export const getPaymentHistory = async (
     if (!ALL_DEPT_ROLES.includes(role) && programId) {
         sql += " AND s.program_id = ?";
         params.push(programId);
+    }
+    if (role === "class_officer") {
+        if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
+        if (section)           { sql += " AND s.section = ?";    params.push(section); }
     }
 
     sql += " ORDER BY ps.updated_at DESC LIMIT 200";
