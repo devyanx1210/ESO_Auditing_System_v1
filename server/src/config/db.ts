@@ -10,8 +10,9 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
+    // 25 per worker × up to 4 workers = 100 total — stays under MySQL's default 151 max_connections
+    connectionLimit: Number(process.env.DB_POOL_LIMIT) || 25,
+    queueLimit: 200,       // reject after 200 queued (prevents unbounded memory growth)
     timezone: "+08:00",
 });
 

@@ -17,6 +17,13 @@ export interface AdminStudentItem {
     obligationsPending: number;
     clearanceStatus: string | null;
     avatarPath: string | null;
+    address: string | null;
+    contactNumber: string | null;
+    guardianName: string | null;
+    emergencyContact: string | null;
+    shirtSize: string | null;
+    email: string | null;
+    userStatus: "active" | "inactive" | "suspended";
 }
 
 export interface AdminObligationItem {

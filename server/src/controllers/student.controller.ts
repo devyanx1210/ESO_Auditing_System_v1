@@ -43,19 +43,26 @@ export const getMyObligations = async (req: Request, res: Response) => {
 
 export const updateMyProfile = async (req: Request, res: Response) => {
     try {
-        const { firstName, lastName, yearLevel, section, schoolYear, semester } = req.body;
+        const {
+            firstName, lastName, yearLevel, section, schoolYear, semester,
+            address, contactNumber, guardianName, emergencyContact, shirtSize,
+        } = req.body;
         if (!firstName || !lastName || !yearLevel || !section || !schoolYear || !semester)
             return sendError(res, "firstName, lastName, yearLevel, section, schoolYear, and semester are required", 400);
 
-        // If an avatar file was uploaded, build its relative path
         const avatarPath = req.file
             ? `/uploads/avatars/${req.file.filename}`
             : undefined;
 
         const profile = await updateStudentProfile(req.user!.userId, {
             firstName, lastName,
-            yearLevel: Number(yearLevel),
-            section, schoolYear, semester,
+            yearLevel:        Number(yearLevel),
+            section,          schoolYear, semester,
+            address:          address          ?? "",
+            contactNumber:    contactNumber    ?? "",
+            guardianName:     guardianName     ?? "",
+            emergencyContact: emergencyContact ?? "",
+            shirtSize:        shirtSize        ?? "",
             avatarPath,
         });
         return sendSuccess(res, profile, "Profile updated");

@@ -1,5 +1,5 @@
 import {
-    MdDashboard, MdPeople, MdSettings, MdArticle,
+    MdDashboard, MdPeople, MdSettings, MdArticle, MdUploadFile,
 } from "react-icons/md";
 import { FaSignOutAlt, FaTimes } from "react-icons/fa";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -8,10 +8,11 @@ import logo from "../assets/ESO_Logo.png";
 import { useAuth } from "../hooks/useAuth";
 
 const navItems = [
-    { path: "/sysadmin/home",     label: "Dashboard",  icon: <MdDashboard /> },
-    { path: "/sysadmin/accounts", label: "Accounts",   icon: <MdPeople /> },
-    { path: "/sysadmin/settings", label: "System Settings", icon: <MdSettings /> },
-    { path: "/sysadmin/audit",    label: "Audit Logs", icon: <MdArticle /> },
+    { path: "/sysadmin/home",     label: "Dashboard",      icon: <MdDashboard /> },
+    { path: "/sysadmin/accounts", label: "Accounts",       icon: <MdPeople /> },
+    { path: "/sysadmin/import",   label: "Import Students",icon: <MdUploadFile /> },
+    { path: "/sysadmin/settings", label: "System Settings",icon: <MdSettings /> },
+    { path: "/sysadmin/audit",    label: "Audit Logs",     icon: <MdArticle /> },
 ];
 
 // Always force light mode for admin panel

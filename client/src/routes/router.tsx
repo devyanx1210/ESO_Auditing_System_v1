@@ -32,6 +32,7 @@ import SysAdminDashboard  from "../pages/sysadmin/SysAdminDashboard";
 import AccountsPage       from "../pages/sysadmin/AccountsPage";
 import SystemSettingsPage from "../pages/sysadmin/SystemSettingsPage";
 import AuditLogsPage      from "../pages/sysadmin/AuditLogsPage";
+import StudentImportPage  from "../pages/sysadmin/StudentImportPage";
 
 /* Protected Route */
 import ProtectedRoute from "./ProtectedRoute";
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
             { path: "accounts", element: <AccountsPage /> },
             { path: "settings", element: <SystemSettingsPage /> },
             { path: "audit",    element: <AuditLogsPage /> },
+            { path: "import",   element: <StudentImportPage /> },
         ],
     },
 

@@ -63,6 +63,23 @@ export const handleUpdateAccountStatus = async (req: Request, res: Response) => 
     } catch (e: any) { sendError(res, e.message); }
 };
 
+export const handleUpdateAccount = async (req: Request, res: Response) => {
+    try {
+        const userId = Number(req.params.userId);
+        const { firstName, lastName, email, roleId, programId, position, password } = req.body;
+        if (!firstName || !lastName || !email || !roleId)
+            return sendError(res, "firstName, lastName, email and roleId are required", 400);
+        await svc.updateAdminAccount(userId, {
+            firstName, lastName, email,
+            roleId:    Number(roleId),
+            programId: programId ? Number(programId) : null,
+            position:  position ?? "",
+            password,
+        });
+        sendSuccess(res, null, "Account updated");
+    } catch (e: any) { sendError(res, e.message); }
+};
+
 export const handleDeleteAccount = async (req: Request, res: Response) => {
     try {
         const userId = Number(req.params.userId);
@@ -93,5 +110,12 @@ export const handleGetAuditLogs = async (req: Request, res: Response) => {
         const limit = Number(req.query.limit) || 50;
         const data  = await svc.getAuditLogs(page, limit);
         sendSuccess(res, data);
+    } catch (e: any) { sendError(res, e.message); }
+};
+
+export const handleGetPrograms = async (_req: Request, res: Response) => {
+    try {
+        const programs = await svc.getAllPrograms();
+        sendSuccess(res, programs);
     } catch (e: any) { sendError(res, e.message); }
 };

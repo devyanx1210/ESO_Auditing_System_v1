@@ -26,12 +26,25 @@ app.use(cors({
     credentials: true,
 }));
 
+// General API limit — generous because students share school WiFi (shared IP)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: process.env.NODE_ENV === "production" ? 300 : 2000,
+    max: process.env.NODE_ENV === "production" ? 2000 : 10000,
     message: "Too many requests, please try again later.",
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 app.use("/api", limiter);
+
+// Stricter limit on auth endpoints only (brute force protection)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    message: "Too many login attempts, please try again later.",
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use("/api/v1/auth/login", authLimiter);
 
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));

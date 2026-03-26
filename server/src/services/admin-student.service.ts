@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 
-const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean", "program_head"];
+// Roles that see ALL students across every program (no program filter)
+const ALL_PROGRAMS_ROLES = ["system_admin", "eso_officer", "signatory", "dean"];
 
 async function getAdminDeptId(userId: number): Promise<number | null> {
     const [rows]: any = await pool.execute(
@@ -29,6 +30,13 @@ export interface AdminStudentItem {
     obligationsPending: number;
     clearanceStatus: string | null;
     avatarPath: string | null;
+    email: string | null;
+    address: string | null;
+    contactNumber: string | null;
+    guardianName: string | null;
+    emergencyContact: string | null;
+    shirtSize: string | null;
+    userStatus: "active" | "inactive" | "suspended";
 }
 
 export const listStudents = async (
@@ -38,7 +46,9 @@ export const listStudents = async (
     yearLevel?: number | null,
     section?: string | null
 ): Promise<AdminStudentItem[]> => {
-    const deptId = ALL_DEPT_ROLES.includes(role)
+    // system_admin / eso_officer / signatory / dean → no program filter (see all)
+    // program_head / program_officer / class_officer → filtered to their program
+    const deptId = ALL_PROGRAMS_ROLES.includes(role)
         ? null
         : (await getAdminDeptId(userId)) ?? userDeptId ?? null;
 
@@ -53,13 +63,20 @@ export const listStudents = async (
             s.section,
             s.school_year       AS schoolYear,
             s.semester,
+            s.avatar_path       AS avatarPath,
+            s.address,
+            s.contact_number    AS contactNumber,
+            s.guardian_name     AS guardianName,
+            s.emergency_contact AS emergencyContact,
+            s.shirt_size        AS shirtSize,
+            u.email,
+            u.status            AS userStatus,
             d.name              AS programName,
             d.code              AS programCode,
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
             SUM(so.status IN ('paid','waived'))                     AS obligationsPaid,
             SUM(so.status = 'pending_verification')                 AS obligationsPending,
-            cl.clearance_status AS clearanceStatus,
-            s.avatar_path       AS avatarPath
+            cl.clearance_status AS clearanceStatus
         FROM students s
         JOIN users u       ON u.user_id       = s.user_id
         JOIN programs d ON d.program_id = s.program_id
@@ -68,7 +85,7 @@ export const listStudents = async (
             ON cl.student_id = s.student_id
             AND cl.school_year = s.school_year
             AND cl.semester   = s.semester
-        WHERE u.status = 'active'
+        WHERE u.deleted_at IS NULL
     `;
     const params: any[] = [];
 
@@ -76,11 +93,11 @@ export const listStudents = async (
         sql += " AND s.program_id = ?";
         params.push(deptId);
     }
+    // class_officer: further restrict to their specific year + section (deptId already filters program)
     if (role === "class_officer") {
         if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
         if (section)           { sql += " AND s.section = ?";    params.push(section); }
     }
-    // program_officer is already filtered by program via deptId above
 
     sql += " GROUP BY s.student_id ORDER BY s.last_name, s.first_name";
 

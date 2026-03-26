@@ -19,17 +19,22 @@ export interface StudentListItem {
 }
 
 export interface StudentProfile {
-    studentId:   number;
-    studentNo:   string;
-    firstName:   string;
-    lastName:    string;
-    programCode: string;
-    programName: string;
-    yearLevel:   number;
-    section:     string;
-    schoolYear:  string;
-    semester:    string;
-    avatarPath:  string | null;
+    studentId:        number;
+    studentNo:        string;
+    firstName:        string;
+    lastName:         string;
+    programCode:      string;
+    programName:      string;
+    yearLevel:        number;
+    section:          string;
+    schoolYear:       string;
+    semester:         string;
+    avatarPath:       string | null;
+    address:          string | null;
+    contactNumber:    string | null;
+    guardianName:     string | null;
+    emergencyContact: string | null;
+    shirtSize:        string | null;
 }
 
 export function avatarUrl(p: string | null | undefined): string | null {
@@ -89,16 +94,28 @@ export const studentService = {
 
     updateProfile: (
         token: string,
-        data: { firstName: string; lastName: string; yearLevel: number; section: string; schoolYear: string; semester: string },
+        data: {
+            firstName: string; lastName: string;
+            yearLevel: number; section: string;
+            schoolYear: string; semester: string;
+            address: string; contactNumber: string;
+            guardianName: string; emergencyContact: string;
+            shirtSize: string;
+        },
         avatarFile?: File | null,
     ) => {
         const form = new FormData();
-        form.append("firstName",  data.firstName);
-        form.append("lastName",   data.lastName);
-        form.append("yearLevel",  String(data.yearLevel));
-        form.append("section",    data.section);
-        form.append("schoolYear", data.schoolYear);
-        form.append("semester",   data.semester);
+        form.append("firstName",        data.firstName);
+        form.append("lastName",         data.lastName);
+        form.append("yearLevel",        String(data.yearLevel));
+        form.append("section",          data.section);
+        form.append("schoolYear",       data.schoolYear);
+        form.append("semester",         data.semester);
+        form.append("address",          data.address);
+        form.append("contactNumber",    data.contactNumber);
+        form.append("guardianName",     data.guardianName);
+        form.append("emergencyContact", data.emergencyContact);
+        form.append("shirtSize",        data.shirtSize);
         if (avatarFile) form.append("avatar", avatarFile);
         return apiFetch<StudentProfile>("/students/me/profile", {
             method: "PATCH",

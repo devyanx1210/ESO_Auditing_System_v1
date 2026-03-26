@@ -15,15 +15,20 @@ const StudentSettings = () => {
     const inp  = dk ? "bg-[#252525] border-[#3a3a3a] text-gray-100 focus:border-orange-500" : "border-gray-300 focus:border-orange-400 text-gray-800";
 
     // Profile state
-    const [profile,    setProfile]    = useState<StudentProfile | null>(null);
-    const [loading,    setLoading]    = useState(true);
-    const [profileErr, setProfileErr] = useState("");
-    const [firstName,  setFirstName]  = useState("");
-    const [lastName,   setLastName]   = useState("");
-    const [yearLevel,  setYearLevel]  = useState("");
-    const [section,    setSection]    = useState("");
-    const [schoolYear, setSchoolYear] = useState("");
-    const [semester,   setSemester]   = useState("");
+    const [profile,          setProfile]          = useState<StudentProfile | null>(null);
+    const [loading,          setLoading]          = useState(true);
+    const [profileErr,       setProfileErr]       = useState("");
+    const [firstName,        setFirstName]        = useState("");
+    const [lastName,         setLastName]         = useState("");
+    const [yearLevel,        setYearLevel]        = useState("");
+    const [section,          setSection]          = useState("");
+    const [schoolYear,       setSchoolYear]       = useState("");
+    const [semester,         setSemester]         = useState("");
+    const [address,          setAddress]          = useState("");
+    const [contactNumber,    setContactNumber]    = useState("");
+    const [guardianName,     setGuardianName]     = useState("");
+    const [emergencyContact, setEmergencyContact] = useState("");
+    const [shirtSize,        setShirtSize]        = useState("");
 
     // Avatar state
     const [avatarFile,     setAvatarFile]     = useState<File | null>(null);
@@ -55,6 +60,11 @@ const StudentSettings = () => {
                 setSection(p.section);
                 setSchoolYear(p.schoolYear);
                 setSemester(p.semester);
+                setAddress(p.address          ?? "");
+                setContactNumber(p.contactNumber    ?? "");
+                setGuardianName(p.guardianName     ?? "");
+                setEmergencyContact(p.emergencyContact ?? "");
+                setShirtSize(p.shirtSize        ?? "");
                 if (p.avatarPath) setAvatarPreview(avatarUrl(p.avatarPath));
             })
             .catch(e => setProfileErr(e.message))
@@ -79,6 +89,11 @@ const StudentSettings = () => {
             setSection(profile.section);
             setSchoolYear(profile.schoolYear);
             setSemester(profile.semester);
+            setAddress(profile.address          ?? "");
+            setContactNumber(profile.contactNumber    ?? "");
+            setGuardianName(profile.guardianName     ?? "");
+            setEmergencyContact(profile.emergencyContact ?? "");
+            setShirtSize(profile.shirtSize        ?? "");
         }
         setPw(BLANK_PW);
         setPwError("");
@@ -107,12 +122,17 @@ const StudentSettings = () => {
         setSaving(true);
         try {
             const updated = await studentService.updateProfile(accessToken, {
-                firstName:  firstName.trim(),
-                lastName:   lastName.trim(),
-                yearLevel:  Number(yearLevel),
-                section:    section.trim(),
-                schoolYear: schoolYear.trim(),
+                firstName:        firstName.trim(),
+                lastName:         lastName.trim(),
+                yearLevel:        Number(yearLevel),
+                section:          section.trim(),
+                schoolYear:       schoolYear.trim(),
                 semester,
+                address:          address.trim(),
+                contactNumber:    contactNumber.trim(),
+                guardianName:     guardianName.trim(),
+                emergencyContact: emergencyContact.trim(),
+                shirtSize:        shirtSize.trim(),
             }, avatarFile);
             setAvatarFile(null);
             if (updated.avatarPath) setAvatarPreview(avatarUrl(updated.avatarPath));
@@ -301,6 +321,60 @@ const StudentSettings = () => {
                                         {profile.studentNo}
                                     </div>
                                 </Field>
+                            </div>
+
+                            {/* ── Contact & Guardian ── */}
+                            <div className={`mt-6 pt-5 border-t ${dk ? "border-[#2a2a2a]" : "border-gray-100"}`}>
+                                <p className={`text-xs font-bold uppercase tracking-wide mb-4 ${sub}`}>Contact &amp; Guardian Information</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <Field label="Contact Number">
+                                        <input
+                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                            value={contactNumber}
+                                            onChange={e => setContactNumber(e.target.value)}
+                                            placeholder="e.g. 09XXXXXXXXX"
+                                        />
+                                    </Field>
+                                    <Field label="Guardian Name">
+                                        <input
+                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                            value={guardianName}
+                                            onChange={e => setGuardianName(e.target.value)}
+                                            placeholder="Guardian's full name"
+                                        />
+                                    </Field>
+                                    <Field label="Emergency Contact Number">
+                                        <input
+                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                            value={emergencyContact}
+                                            onChange={e => setEmergencyContact(e.target.value)}
+                                            placeholder="e.g. 09XXXXXXXXX"
+                                        />
+                                    </Field>
+                                    <Field label="Shirt Size">
+                                        <select
+                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                            value={shirtSize}
+                                            onChange={e => setShirtSize(e.target.value)}
+                                        >
+                                            <option value="">— select —</option>
+                                            <option value="XS">XS</option>
+                                            <option value="S">S</option>
+                                            <option value="M">M</option>
+                                            <option value="L">L</option>
+                                            <option value="XL">XL</option>
+                                            <option value="XXL">XXL</option>
+                                        </select>
+                                    </Field>
+                                    <Field label="Address">
+                                        <input
+                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525] sm:col-span-2"
+                                            value={address}
+                                            onChange={e => setAddress(e.target.value)}
+                                            placeholder="Complete address"
+                                        />
+                                    </Field>
+                                </div>
                             </div>
                         </>
                     )}

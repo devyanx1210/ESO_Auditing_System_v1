@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
     FiTrash2, FiPlus, FiCheck, FiUsers, FiArchive, FiFilter,
-    FiChevronDown, FiChevronUp, FiSearch,
+    FiChevronDown, FiChevronUp, FiSearch, FiEdit2,
 } from "react-icons/fi";
 import { MdClose, MdBlock, MdDeleteOutline } from "react-icons/md";
 import { useAuth } from "../../hooks/useAuth";
@@ -9,15 +10,18 @@ import { sysadminService } from "../../services/sysadmin.service";
 import { authService } from "../../services/auth.service";
 
 interface Account {
-    user_id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    role_name: string;
-    role_label: string;
+    user_id:      number;
+    first_name:   string;
+    last_name:    string;
+    email:        string;
+    role_id:      number;
+    role_name:    string;
+    role_label:   string;
+    program_id:   number | null;
     program_name: string | null;
-    position: string | null;
-    status: string;
+    position:     string | null;
+    avatar_path:  string | null;
+    status:       string;
 }
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
@@ -37,12 +41,13 @@ function UserAvatar() {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+// value = role_name, roleId = roles.role_id in DB
 const ROLES = [
-    { value: "eso_officer",   label: "ESO Officer" },
-    { value: "class_officer", label: "Class Officer" },
-    { value: "program_head",  label: "Program Head" },
-    { value: "signatory",     label: "Signatory" },
-    { value: "dean",          label: "Dean" },
+    { value: "eso_officer",   roleId: 2, label: "ESO Officer" },
+    { value: "class_officer", roleId: 3, label: "Class Officer" },
+    { value: "program_head",  roleId: 4, label: "Program Head" },
+    { value: "signatory",     roleId: 5, label: "Signatory" },
+    { value: "dean",          roleId: 6, label: "Dean" },
 ];
 
 const DEPARTMENTS = [
@@ -109,10 +114,13 @@ function SuspendModal({ targets, onConfirm, onClose }: { targets: Account[]; onC
 export default function AccountsPage() {
     const { accessToken } = useAuth();
     const [accounts,       setAccounts]       = useState<Account[]>([]);
+    const [programs,       setPrograms]       = useState<{ program_id: number; name: string; code: string }[]>([]);
     const [loading,        setLoading]        = useState(true);
     const [tab,            setTab]            = useState<"active" | "archived">("active");
     const [search,         setSearch]         = useState("");
     const [roleFilter,     setRoleFilter]     = useState("all");
+    const [programFilter,  setProgramFilter]  = useState("all");
+    const [statusFilter,   setStatusFilter]   = useState("all");
     const [sortKey,        setSortKey]        = useState<SortKey>("name");
     const [showFilters,    setShowFilters]    = useState(false);
     const [showCreate,     setShowCreate]     = useState(false);
@@ -129,13 +137,27 @@ export default function AccountsPage() {
     const [deleteErr,      setDeleteErr]      = useState("");
     const [deleting,       setDeleting]       = useState(false);
 
-    const filterRef = useRef<HTMLDivElement>(null);
+    // Edit
+    const [editTarget,  setEditTarget]  = useState<Account | null>(null);
+    const [editForm,    setEditForm]    = useState({ firstName: "", lastName: "", email: "", roleId: "", programId: "", position: "", password: "" });
+    const [editSaving,  setEditSaving]  = useState(false);
+    const [editError,   setEditError]   = useState("");
+
+    const filterRef   = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const showToast = (t: string) => { setToast(t); setTimeout(() => setToast(""), 3000); };
 
     const load = async () => {
         if (!accessToken) return;
         setLoading(true); setSelected(new Set());
-        try { setAccounts(await sysadminService.getAccounts(accessToken)); }
+        try {
+            const [accs, progs] = await Promise.all([
+                sysadminService.getAccounts(accessToken),
+                sysadminService.getPrograms(accessToken),
+            ]);
+            setAccounts(accs);
+            setPrograms(progs);
+        }
         finally { setLoading(false); }
     };
 
@@ -143,7 +165,10 @@ export default function AccountsPage() {
 
     useEffect(() => {
         function handler(e: MouseEvent) {
-            if (filterRef.current && !filterRef.current.contains(e.target as Node)) setShowFilters(false);
+            const target = e.target as Node;
+            const insideButton   = filterRef.current?.contains(target);
+            const insideDropdown = dropdownRef.current?.contains(target);
+            if (!insideButton && !insideDropdown) setShowFilters(false);
         }
         if (showFilters) document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
@@ -154,23 +179,25 @@ export default function AccountsPage() {
     const activeAccounts   = accounts.filter(a => a.status === "active");
     const archivedAccounts = accounts.filter(a => a.status !== "active");
 
+    const PROGRAM_OPTIONS = programs;
+
     function filterAndSort(list: Account[]) {
         let r = [...list];
         if (search.trim()) {
             const q = search.toLowerCase();
             r = r.filter(a => `${a.first_name} ${a.last_name} ${a.email} ${a.program_name ?? ""}`.toLowerCase().includes(q));
         }
-        if (roleFilter !== "all") r = r.filter(a => a.role_name === roleFilter);
+        if (roleFilter    !== "all") r = r.filter(a => a.role_name === roleFilter);
+        if (programFilter !== "all") r = r.filter(a => (a.program_name ?? "") === programFilter);
+        if (statusFilter  !== "all") r = r.filter(a => a.status === statusFilter);
         if (sortKey === "name")    r.sort((a, b) => a.last_name.localeCompare(b.last_name));
         if (sortKey === "program") r.sort((a, b) => (a.program_name ?? "").localeCompare(b.program_name ?? ""));
         if (sortKey === "role")    r.sort((a, b) => (a.role_label ?? "").localeCompare(b.role_label ?? ""));
         return r;
     }
 
-    const filteredActive   = filterAndSort(activeAccounts);
-    const filteredArchived = filterAndSort(archivedAccounts);
-    const displayed        = tab === "active" ? filteredActive : filteredArchived;
-    const activeFilterCount = [search.trim() !== "", roleFilter !== "all", sortKey !== "name"].filter(Boolean).length;
+    const displayed = filterAndSort(tab === "active" ? activeAccounts : archivedAccounts);
+    const activeFilterCount = [search.trim() !== "", roleFilter !== "all", programFilter !== "all", statusFilter !== "all", sortKey !== "name"].filter(Boolean).length;
 
     // ─── Selection ────────────────────────────────────────────────────────────
 
@@ -248,6 +275,47 @@ export default function AccountsPage() {
             showToast(`${suspendTargets.length > 1 ? `${suspendTargets.length} accounts` : "Account"} suspended.`);
             setSuspendTargets([]); setSelected(new Set()); load();
         } catch (e: any) { showToast(e.message); }
+    };
+
+    const openEdit = (a: Account) => {
+        setEditTarget(a);
+        setEditError("");
+        setEditForm({
+            firstName: a.first_name,
+            lastName:  a.last_name,
+            email:     a.email,
+            roleId:    String(a.role_id),
+            programId: a.program_id ? String(a.program_id) : "",
+            position:  a.position ?? "",
+            password:  "",
+        });
+    };
+
+    const handleEditSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editTarget || !accessToken) return;
+        setEditError("");
+        if (!editForm.firstName.trim() || !editForm.lastName.trim()) { setEditError("First and last name are required."); return; }
+        if (!editForm.email.trim()) { setEditError("Email is required."); return; }
+        if (!editForm.roleId) { setEditError("Role is required."); return; }
+        if (editForm.password && editForm.password.length < 8) { setEditError("Password must be at least 8 characters."); return; }
+        setEditSaving(true);
+        try {
+            await sysadminService.updateAccount(accessToken, editTarget.user_id, {
+                firstName: editForm.firstName.trim(),
+                lastName:  editForm.lastName.trim(),
+                email:     editForm.email.trim(),
+                roleId:    Number(editForm.roleId),
+                programId: editForm.programId ? Number(editForm.programId) : null,
+                position:  editForm.position.trim(),
+                password:  editForm.password || undefined,
+            });
+            setEditTarget(null);
+            showToast(`${editForm.firstName} ${editForm.lastName} updated.`);
+            load();
+        } catch (err: any) {
+            setEditError(err.message ?? "Failed to update.");
+        } finally { setEditSaving(false); }
     };
 
     const handleBulkArchive = async () => {
@@ -340,9 +408,15 @@ export default function AccountsPage() {
                             )}
                             {showFilters ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
                         </button>
-                        {showFilters && (
-                            <div className="absolute right-0 top-full mt-2 z-30 bg-white rounded-2xl shadow-2xl p-4 w-64 flex flex-col gap-3"
-                                style={{ animation: "slideDown 0.2s ease both" }}>
+                        {showFilters && createPortal(
+                            <div ref={dropdownRef} className="fixed z-[9999] bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] p-4 w-64 flex flex-col gap-3"
+                                style={{
+                                    animation: "slideDown 0.2s ease both",
+                                    top: filterRef.current
+                                        ? filterRef.current.getBoundingClientRect().bottom + 8
+                                        : 0,
+                                    right: window.innerWidth - (filterRef.current?.getBoundingClientRect().right ?? 0),
+                                }}>
                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Sort &amp; Filter</p>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 mb-1">Sort by</label>
@@ -362,13 +436,32 @@ export default function AccountsPage() {
                                         <option value="system_admin">System Admin</option>
                                     </select>
                                 </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 mb-1">Program</label>
+                                    <select value={programFilter} onChange={e => setProgramFilter(e.target.value)}
+                                        className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
+                                        <option value="all">All Programs</option>
+                                        {PROGRAM_OPTIONS.map(p => <option key={p.program_id} value={p.name}>{p.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                                        className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
+                                        <option value="all">All Statuses</option>
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="suspended">Suspended</option>
+                                    </select>
+                                </div>
                                 {activeFilterCount > 0 && (
-                                    <button onClick={() => { setSearch(""); setRoleFilter("all"); setSortKey("name"); }}
-                                        className="w-full text-xs text-red-500 hover:text-red-600 font-semibold py-1.5 border border-red-200 rounded-xl hover:bg-red-50 transition">
+                                    <button onClick={() => { setSearch(""); setRoleFilter("all"); setProgramFilter("all"); setStatusFilter("all"); setSortKey("name"); }}
+                                        className="w-full text-xs text-red-500 hover:text-red-600 font-semibold py-1.5 rounded-xl hover:bg-red-50 transition">
                                         Clear all filters
                                     </button>
                                 )}
-                            </div>
+                            </div>,
+                            document.body
                         )}
                     </div>
                     <span className="hidden sm:flex items-center text-xs font-medium text-gray-400 bg-white px-2.5 py-2 rounded-xl whitespace-nowrap shadow-sm">
@@ -425,14 +518,14 @@ export default function AccountsPage() {
                                     <th className={thCls}>Name</th>
                                     <th className={thCls}>Email</th>
                                     <th className={thCls}>Role</th>
-                                    <th className={thCls}>Program / Dept</th>
+                                    <th className={thCls}>Program</th>
                                     <th className={thCls}>Position</th>
                                     <th className={thCtrCls}>Status</th>
                                     <th className={thCtrCls}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredActive.map((a, i) => (
+                                {filterAndSort(accounts.filter(a => a.status === "active")).map((a, i) => (
                                     <tr key={a.user_id}
                                         style={{ animation: "fadeInUp 0.3s ease both", animationDelay: `${i * 0.04}s` }}
                                         className={`transition-colors hover:bg-orange-50 ${selected.has(a.user_id) ? "bg-orange-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50/70"}`}>
@@ -460,16 +553,21 @@ export default function AccountsPage() {
                                             </span>
                                         </td>
                                         <td className="px-3 py-2.5">
-                                            <div className="flex items-center justify-center gap-2">
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button onClick={() => openEdit(a)}
+                                                    className="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                    title="Edit account">
+                                                    <FiEdit2 className="w-3.5 h-3.5" />
+                                                </button>
                                                 {a.role_name !== "system_admin" && (
                                                     <>
                                                         <button onClick={() => setSuspendTargets([a])}
-                                                            className="px-3 py-1.5 text-xs rounded-lg font-semibold bg-yellow-500 text-white hover:bg-yellow-600 transition">
+                                                            className="px-2.5 py-1.5 text-xs rounded-lg font-semibold bg-yellow-500 text-white hover:bg-yellow-600 transition">
                                                             Suspend
                                                         </button>
                                                         <button onClick={() => setArchiveTarget(a)}
                                                             className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
-                                                            <FiTrash2 className="w-4 h-4" />
+                                                            <FiTrash2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     </>
                                                 )}
@@ -505,13 +603,13 @@ export default function AccountsPage() {
                                         <th className={thCls}>Name</th>
                                         <th className={thCls}>Email</th>
                                         <th className={thCls}>Role</th>
-                                        <th className={thCls}>Program / Dept</th>
+                                        <th className={thCls}>Program</th>
                                         <th className={thCls}>Position</th>
                                         <th className={thCtrCls}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredArchived.map((a, i) => (
+                                    {filterAndSort(accounts.filter(a => a.status !== "active")).map((a, i) => (
                                         <tr key={a.user_id}
                                             style={{ animation: "fadeInUp 0.3s ease both", animationDelay: `${i * 0.04}s` }}
                                             className={`transition-colors ${i % 2 === 0 ? "bg-white" : "bg-gray-50/70"}`}>
@@ -550,6 +648,89 @@ export default function AccountsPage() {
                         </div>
                     </div>
                 )
+            )}
+
+            {/* ── Edit Account Modal ──────────────────────────────────────────── */}
+            {editTarget && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+                    onClick={() => { if (!editSaving) setEditTarget(null); }}
+                    style={{ animation: "fadeInScrim 0.2s ease both" }}>
+                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
+                        onClick={e => e.stopPropagation()}
+                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}>
+                        <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-100">
+                            <h2 className="font-semibold text-gray-800 text-lg">Edit Account</h2>
+                            <button onClick={() => setEditTarget(null)} disabled={editSaving}
+                                className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
+                        </div>
+                        {editError && <p className="text-red-500 text-sm mb-4">{editError}</p>}
+                        <form onSubmit={handleEditSave} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                                    <input className={inputCls} value={editForm.firstName}
+                                        onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                                    <input className={inputCls} value={editForm.lastName}
+                                        onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                                    <input type="email" className={inputCls} value={editForm.email}
+                                        onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                                    <select className={inputCls} value={editForm.roleId}
+                                        onChange={e => setEditForm(f => ({ ...f, roleId: e.target.value, programId: "" }))}
+                                        disabled={editTarget.role_name === "system_admin"}>
+                                        {editTarget.role_name === "system_admin" && (
+                                            <option value={editForm.roleId}>System Admin</option>
+                                        )}
+                                        {ROLES.map(r => (
+                                            <option key={r.value} value={r.roleId}>{r.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
+                                    <select className={inputCls} value={editForm.programId}
+                                        onChange={e => setEditForm(f => ({ ...f, programId: e.target.value }))}>
+                                        <option value="">— none —</option>
+                                        {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        {COLLEGES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                                    <input className={inputCls} value={editForm.position}
+                                        onChange={e => setEditForm(f => ({ ...f, position: e.target.value }))}
+                                        placeholder="e.g. ESO Director" />
+                                </div>
+                                <div className="sm:col-span-2 lg:col-span-3">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        New Password <span className="text-gray-400 font-normal">(leave blank to keep current)</span>
+                                    </label>
+                                    <input type="password" className={inputCls} value={editForm.password}
+                                        onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                                        placeholder="Min. 8 characters" />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                                <button type="button" onClick={() => setEditTarget(null)} disabled={editSaving}
+                                    className="px-5 py-2 rounded-xl border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={editSaving}
+                                    className="px-5 py-2 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50 flex items-center gap-2">
+                                    {editSaving ? <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />Saving...</> : "Save Changes"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
 
             {/* ── Create Account Modal ─────────────────────────────────────────── */}

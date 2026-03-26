@@ -51,9 +51,11 @@ export const getMaintenanceStatus = async (): Promise<{ maintenance_mode: boolea
 export const getAllAccounts = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT u.user_id, u.first_name, u.last_name, u.email,
-                r.role_name, r.role_label,
+                r.role_id, r.role_name, r.role_label,
+                u.program_id,
                 d.name AS program_name,
                 COALESCE(a.position, '') AS position,
+                a.avatar_path,
                 u.status, u.created_at
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
@@ -69,6 +71,46 @@ export const updateAccountStatus = async (userId: number, status: "active" | "in
     await pool.execute(
         `UPDATE users SET status = ? WHERE user_id = ?`,
         [status, userId]
+    );
+};
+
+export const updateAdminAccount = async (
+    userId: number,
+    data: {
+        firstName:  string;
+        lastName:   string;
+        email:      string;
+        roleId:     number;
+        programId:  number | null;
+        position:   string;
+        password?:  string;
+    }
+) => {
+    const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
+
+    // Update users row
+    await pool.execute(
+        `UPDATE users
+            SET first_name = ?, last_name = ?, email = ?,
+                role_id = ?, program_id = ?, updated_at = NOW()
+          WHERE user_id = ?`,
+        [data.firstName.trim(), data.lastName.trim(), data.email.trim(),
+         data.roleId, data.programId, userId]
+    );
+
+    // Update password if provided
+    if (data.password && data.password.length >= 8) {
+        const hash = await bcrypt.hash(data.password, saltRounds);
+        await pool.execute(
+            `UPDATE users SET password_hash = ?, password_changed_at = NOW() WHERE user_id = ?`,
+            [hash, userId]
+        );
+    }
+
+    // Update admins row (position)
+    await pool.execute(
+        `UPDATE admins SET position = ?, updated_at = NOW() WHERE user_id = ?`,
+        [data.position.trim() || null, userId]
     );
 };
 
@@ -177,6 +219,15 @@ export const executeYearAdvancement = async (newSchoolYear: string, updatedBy: n
     } finally {
         conn.release();
     }
+};
+
+// ─── Programs ────────────────────────────────────────────────────────────────
+
+export const getAllPrograms = async () => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT program_id, name, code FROM programs ORDER BY name ASC`
+    );
+    return rows;
 };
 
 // ─── Audit Logs ──────────────────────────────────────────────────────────────

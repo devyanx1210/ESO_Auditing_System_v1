@@ -45,6 +45,15 @@ export const sysadminService = {
             body: JSON.stringify(data),
         }, token),
 
+    updateAccount: (token: string, userId: number, data: {
+        firstName: string; lastName: string; email: string;
+        roleId: number; programId?: number | null; position: string; password?: string;
+    }) =>
+        apiFetch(`/sysadmin/accounts/${userId}`, {
+            method: "PATCH",
+            body: JSON.stringify(data),
+        }, token),
+
     updateAccountStatus: (token: string, userId: number, status: string) =>
         apiFetch(`/sysadmin/accounts/${userId}/status`, {
             method: "PATCH",
@@ -67,4 +76,8 @@ export const sysadminService = {
     // Audit Logs
     getAuditLogs: (token: string, page = 1, limit = 50) =>
         apiFetch(`/sysadmin/audit-logs?page=${page}&limit=${limit}`, {}, token),
+
+    // Programs
+    getPrograms: (token: string) =>
+        apiFetch<{ program_id: number; name: string; code: string }[]>("/sysadmin/programs", {}, token),
 };
