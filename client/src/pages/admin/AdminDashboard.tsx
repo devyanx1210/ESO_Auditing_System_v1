@@ -355,16 +355,19 @@ export default function AdminDashboard() {
         );
     }
 
-    const scopeLabel: Record<string, string> = {
-        all: "All Programs", department: "Per Program", year_level: "Per Year Level", section: "Per Section",
+    const scopeLabel: Record<number, string> = {
+        0: "All Programs",
+        1: "Per Program",
+        2: "Per Year Level",
+        3: "Per Section",
     };
 
     const allObs = stats?.obligations ?? [];
     const visibleObs = (() => {
-        let obs = isClassOfficer ? allObs.filter(ob => ob.scope !== "all") : allObs;
+        let obs = isClassOfficer ? allObs.filter(ob => ob.scope !== 0) : allObs;
         if (selectedProgram !== "") {
-            // Show "all" scope obligations + per-program obligations for this specific program
-            obs = obs.filter(ob => ob.scope === "all" || ob.programId === selectedProgram);
+            // Show "all" scope (0) obligations + per-program obligations for this specific program
+            obs = obs.filter(ob => ob.scope === 0 || ob.programId === selectedProgram);
         }
         return obs;
     })();
@@ -516,7 +519,7 @@ export default function AdminDashboard() {
                             <span className={`text-[10px] px-2 py-0.5 rounded-full
                                 ${darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-500"}`}>
                                 {isClassOfficer
-                                    ? (stats?.obligations.filter(o => o.scope !== "all").length ?? 0)
+                                    ? (stats?.obligations.filter(o => o.scope !== 0).length ?? 0)
                                     : (stats?.obligations.length ?? 0)}
                             </span>
                         </div>
@@ -560,9 +563,9 @@ export default function AdminDashboard() {
                                                     px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide
                                                     ${darkMode ? "bg-orange-900/60 text-orange-300" : "bg-orange-100 text-orange-600"}
                                                 `}>
-                                                    {ob.scope === "department" && ob.programName
+                                                    {ob.scope === 1 && ob.programName
                                                         ? ob.programName
-                                                        : scopeLabel[ob.scope] ?? ob.scope.replace("_", " ")}
+                                                        : scopeLabel[ob.scope] ?? String(ob.scope)}
                                                 </span>
                                                 <span className={`text-[10px] font-semibold ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                                                     {ob.paidCount}/{ob.totalStudents}

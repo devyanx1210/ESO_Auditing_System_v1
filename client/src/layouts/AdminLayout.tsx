@@ -10,6 +10,9 @@ import {
     FaExclamationCircle,
     FaMoneyBillWave,
     FaStamp,
+    FaFileAlt,
+    FaFileUpload,
+    FaChartBar,
 } from "react-icons/fa";
 
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -20,6 +23,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
 
 const ALL_STUDENT_SUB_ITEMS = [
+    { path: "/dashboard/students/import",           label: "Import Students",     icon: <FaFileUpload className="text-[11px]" />,     roles: ["eso_officer"] },
     { path: "/dashboard/students/list",             label: "Student List",        icon: <FaListUl className="text-[11px]" />,         roles: ["system_admin","eso_officer","class_officer","program_officer","program_head","signatory","dean"] },
     { path: "/dashboard/students/obligations-list", label: "Student Obligations", icon: <FaExclamationCircle className="text-[11px]" />, roles: ["system_admin","eso_officer","class_officer","program_officer"] },
     { path: "/dashboard/students/payments",         label: "Submission Review",   icon: <FaMoneyBillWave className="text-[11px]" />,  roles: ["system_admin","eso_officer","class_officer","program_officer"] },
@@ -123,6 +127,24 @@ const AdminLayout = () => {
                         </NavLink>
                     )}
 
+                    {/* Documents — eso_officer and system_admin */}
+                    {["system_admin", "eso_officer"].includes(role) && (
+                        <NavLink to="/dashboard/documents"
+                            className={({ isActive }) => `${navBase} ${isActive ? navActive : navInactive}`}>
+                            <FaFileAlt className="shrink-0" />
+                            <span>Documents</span>
+                        </NavLink>
+                    )}
+
+                    {/* Audit — eso_officer and system_admin */}
+                    {["system_admin", "eso_officer"].includes(role) && (
+                        <NavLink to="/dashboard/audit"
+                            className={({ isActive }) => `${navBase} ${isActive ? navActive : navInactive}`}>
+                            <FaChartBar className="shrink-0" />
+                            <span>Audit</span>
+                        </NavLink>
+                    )}
+
                     {/* Settings — all admin roles */}
                     <NavLink to="/dashboard/settings"
                         className={({ isActive }) => `${navBase} ${isActive ? navActive : navInactive}`}>
@@ -194,6 +216,16 @@ const AdminLayout = () => {
                             ${isActive ? "text-orange-500 font-bold" : "text-gray-500 dark:text-gray-400"}`}>
                         <FaClipboardList className="text-lg" />
                         <span className="text-[10px] mt-0.5">Obligations</span>
+                    </NavLink>
+                )}
+
+                {["system_admin", "eso_officer"].includes(role) && (
+                    <NavLink to="/dashboard/audit"
+                        className={({ isActive }) =>
+                            `flex flex-col items-center justify-center text-xs gap-0.5
+                            ${isActive ? "text-orange-500 font-bold" : "text-gray-500 dark:text-gray-400"}`}>
+                        <FaChartBar className="text-lg" />
+                        <span className="text-[10px] mt-0.5">Audit</span>
                     </NavLink>
                 )}
 

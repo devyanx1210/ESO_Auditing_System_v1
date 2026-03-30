@@ -10,13 +10,13 @@ export interface ObligationData {
     requiresPayment: boolean;
     gcashQrPath: string | null;
     isRequired: boolean;
-    scope: "all" | "department" | "year_level" | "section";
+    scope: number;
     programId: number | null;
     programName: string | null;
     yearLevel: number | null;
     section: string | null;
     schoolYear: string;
-    semester: string;
+    semester: number;
     dueDate: string | null;
     isActive: boolean;
     createdAt: string;
@@ -29,12 +29,12 @@ export interface CreateObligationInput {
     amount: number;
     gcashQrPath?: string | null;
     isRequired?: boolean;
-    scope: "all" | "department" | "year_level" | "section";
+    scope: number;
     programId?: number | null;
     yearLevel?: number | null;
     section?: string | null;
     schoolYear: string;
-    semester: "1st" | "2nd" | "Summer";
+    semester: number;
     dueDate?: string | null;
 }
 
@@ -42,9 +42,9 @@ function buildFormData(data: CreateObligationInput, qrFile?: File | null): FormD
     const fd = new FormData();
     fd.append("obligationName", data.obligationName);
     fd.append("amount", String(data.amount));
-    fd.append("scope", data.scope);
+    fd.append("scope", String(data.scope));
     fd.append("schoolYear", data.schoolYear);
-    fd.append("semester", data.semester);
+    fd.append("semester", String(data.semester));
     if (data.description) fd.append("description", data.description);
     if (data.isRequired !== undefined) fd.append("isRequired", String(data.isRequired));
     if (data.programId != null) fd.append("programId", String(data.programId));

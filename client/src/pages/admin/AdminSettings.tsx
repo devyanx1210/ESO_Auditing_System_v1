@@ -431,6 +431,11 @@ const AdminSettings = () => {
                                         placeholder="e.g. ESO President"
                                     />
                                 </Field>
+                                <Field label="Email">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500">
+                                        {profile.email}
+                                    </div>
+                                </Field>
                                 <Field label="Role">
                                     <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
                                         {profile.roleLabel}
@@ -626,7 +631,7 @@ const AdminSettings = () => {
                             </div>
                         ) : (
                             <div className="overflow-x-auto rounded-2xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-                                <table className="w-full min-w-[1100px] text-xs">
+                                <table className="eso-table w-full min-w-[1100px] text-xs">
                                     <thead>
                                         <tr className="bg-gray-50 dark:bg-[#222]">
                                             <th className={thCls}>Name</th>
@@ -688,7 +693,7 @@ const AdminSettings = () => {
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto rounded-2xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-                                    <table className="w-full min-w-[1000px] text-xs">
+                                    <table className="eso-table w-full min-w-[1000px] text-xs">
                                         <thead>
                                             <tr className="bg-gray-50 dark:bg-[#222]">
                                                 <th className={thCls}>Name</th>

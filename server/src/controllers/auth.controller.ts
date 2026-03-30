@@ -34,8 +34,8 @@ export const refresh = async (req: Request, res: Response) => {
             return sendError(res, "Refresh token is required", 400);
         }
 
-        const accessToken = await refreshAccessToken(refreshToken);
-        return sendSuccess(res, { accessToken }, "Token refreshed");
+        const { accessToken, user } = await refreshAccessToken(refreshToken);
+        return sendSuccess(res, { accessToken, user }, "Token refreshed");
     } catch (error: any) {
         return sendError(res, error.message, 401);
     }
@@ -125,8 +125,9 @@ export const register = async (req: Request, res: Response) => {
             return sendError(res, "Year level must be between 1 and 5", 400);
         }
 
-        if (!["1st", "2nd", "Summer"].includes(semester)) {
-            return sendError(res, "Semester must be 1st, 2nd, or Summer", 400);
+        const semesterNum = Number(semester);
+        if (![1, 2, 3].includes(semesterNum)) {
+            return sendError(res, "Semester must be 1 (1st), 2 (2nd), or 3 (Summer)", 400);
         }
 
         const { user, tokens } = await registerUser({
@@ -140,7 +141,7 @@ export const register = async (req: Request, res: Response) => {
             yearLevel,
             section,
             schoolYear,
-            semester,
+            semester: semesterNum,
         });
 
         return sendSuccess(res, { user, tokens }, "Registration successful", 201);

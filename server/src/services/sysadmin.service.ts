@@ -24,7 +24,7 @@ export const updateMaintenance = async (
 
 export const updateSemesterSettings = async (
     schoolYear: string,
-    semester: string,
+    semester: number,
     updatedBy: number
 ) => {
     await pool.execute(
@@ -72,6 +72,20 @@ export const updateAccountStatus = async (userId: number, status: "active" | "in
         `UPDATE users SET status = ? WHERE user_id = ?`,
         [status, userId]
     );
+
+    const title = status === "suspended" ? "Account Suspended"
+        : status === "inactive"  ? "Account Deactivated"
+        : "Account Reactivated";
+    const message = status === "suspended"
+        ? "Your account has been suspended. Please contact the administrator."
+        : status === "inactive"
+        ? "Your account has been deactivated."
+        : "Your account has been reactivated. You can now log in.";
+    await pool.execute(
+        `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+         VALUES (?, ?, ?, 9, ?, 'user', 0, NOW())`,
+        [userId, title, message, userId]
+    );
 };
 
 export const updateAdminAccount = async (
@@ -111,6 +125,12 @@ export const updateAdminAccount = async (
     await pool.execute(
         `UPDATE admins SET position = ?, updated_at = NOW() WHERE user_id = ?`,
         [data.position.trim() || null, userId]
+    );
+
+    // If the account is a student, sync name to students table too
+    await pool.execute(
+        `UPDATE students SET first_name = ?, last_name = ?, updated_at = NOW() WHERE user_id = ?`,
+        [data.firstName.trim(), data.lastName.trim(), userId]
     );
 };
 
@@ -156,7 +176,7 @@ export const previewYearAdvancement = async () => {
                 s.year_level, d.name AS department_name
          FROM students s
          JOIN users u ON u.user_id = s.user_id
-         JOIN departments d ON d.department_id = s.department_id
+         JOIN programs d ON d.program_id = s.program_id
          WHERE s.is_enrolled = 1 AND u.status = 'active'
          ORDER BY s.year_level ASC, s.last_name ASC`
     );
@@ -176,7 +196,7 @@ export const executeYearAdvancement = async (newSchoolYear: string, updatedBy: n
              JOIN users u ON u.user_id = s.user_id
              SET s.year_level = s.year_level + 1,
                  s.school_year = ?,
-                 s.semester = '1st',
+                 s.semester = 1,
                  s.updated_at = NOW()
              WHERE s.is_enrolled = 1 AND u.status = 'active' AND s.year_level < ?`,
             [newSchoolYear, MAX_YEAR]

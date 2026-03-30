@@ -10,31 +10,33 @@ export interface StudentListItem {
     yearLevel: number;
     section: string;
     schoolYear: string;
-    semester: string;
+    semester: number;
     programName: string;
     programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
-    clearanceStatus: string | null;
+    clearanceStatus: number | null;
 }
 
 export interface StudentProfile {
-    studentId:        number;
-    studentNo:        string;
-    firstName:        string;
-    lastName:         string;
-    programCode:      string;
-    programName:      string;
-    yearLevel:        number;
-    section:          string;
-    schoolYear:       string;
-    semester:         string;
-    avatarPath:       string | null;
-    address:          string | null;
-    contactNumber:    string | null;
-    guardianName:     string | null;
-    emergencyContact: string | null;
-    shirtSize:        string | null;
+    studentId:     number;
+    studentNo:     string;
+    firstName:     string;
+    lastName:      string;
+    middleName:    string | null;
+    email:         string;
+    programCode:   string;
+    programName:   string;
+    yearLevel:     number;
+    section:       string;
+    schoolYear:    string;
+    semester:      number;
+    gender:        number | null;
+    avatarPath:    string | null;
+    address:       string | null;
+    contactNumber: string | null;
+    guardianName:  string | null;
+    shirtSize:     string | null;
 }
 
 export function avatarUrl(p: string | null | undefined): string | null {
@@ -46,7 +48,7 @@ export interface LatestPayment {
     paymentId: number;
     receiptPath: string;
     amountPaid: number;
-    paymentStatus: "pending" | "approved" | "rejected";
+    paymentStatus: number;
     submittedAt: string;
     remarks: string | null;
 }
@@ -61,7 +63,7 @@ export interface StudentObligationItem {
     gcashQrPath: string | null;
     dueDate: string | null;
     isOverdue: boolean;
-    status: "unpaid" | "pending_verification" | "paid" | "waived";
+    status: number;
     proofImage: string | null;
     latestPayment: LatestPayment | null;
 }
@@ -69,14 +71,14 @@ export interface StudentObligationItem {
 export interface ClearanceStep {
     stepOrder: number;
     roleLabel: string;
-    status: "pending" | "signed" | "rejected";
+    status: number;
     verifiedAt: string | null;
     remarks: string | null;
 }
 
 export interface StudentClearance {
     clearanceId: number | null;
-    status: "pending" | "in_progress" | "cleared" | "rejected" | null;
+    status: number | null;
     currentStep: number;
     steps: ClearanceStep[];
 }
@@ -95,27 +97,28 @@ export const studentService = {
     updateProfile: (
         token: string,
         data: {
-            firstName: string; lastName: string;
+            firstName: string; lastName: string; middleName?: string;
             yearLevel: number; section: string;
-            schoolYear: string; semester: string;
+            schoolYear: string; semester: number;
+            gender?: number | null;
             address: string; contactNumber: string;
-            guardianName: string; emergencyContact: string;
-            shirtSize: string;
+            guardianName: string; shirtSize: string;
         },
         avatarFile?: File | null,
     ) => {
         const form = new FormData();
-        form.append("firstName",        data.firstName);
-        form.append("lastName",         data.lastName);
-        form.append("yearLevel",        String(data.yearLevel));
-        form.append("section",          data.section);
-        form.append("schoolYear",       data.schoolYear);
-        form.append("semester",         data.semester);
-        form.append("address",          data.address);
-        form.append("contactNumber",    data.contactNumber);
-        form.append("guardianName",     data.guardianName);
-        form.append("emergencyContact", data.emergencyContact);
-        form.append("shirtSize",        data.shirtSize);
+        form.append("firstName",     data.firstName);
+        form.append("lastName",      data.lastName);
+        if (data.middleName !== undefined) form.append("middleName", data.middleName);
+        form.append("yearLevel",     String(data.yearLevel));
+        form.append("section",       data.section);
+        form.append("schoolYear",    data.schoolYear);
+        form.append("semester",      String(data.semester));
+        if (data.gender !== undefined && data.gender !== null) form.append("gender", String(data.gender));
+        form.append("address",       data.address);
+        form.append("contactNumber", data.contactNumber);
+        form.append("guardianName",  data.guardianName);
+        form.append("shirtSize",     data.shirtSize);
         if (avatarFile) form.append("avatar", avatarFile);
         return apiFetch<StudentProfile>("/students/me/profile", {
             method: "PATCH",

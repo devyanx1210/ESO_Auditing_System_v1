@@ -30,7 +30,6 @@ export interface RegisterInput {
     firstName: string;
     lastName: string;
     middleName?: string;
-    suffix?: string;
     email: string;
     password: string;
     studentNo: string;
@@ -38,7 +37,7 @@ export interface RegisterInput {
     yearLevel: number;
     section: string;
     schoolYear: string;
-    semester: "1st" | "2nd" | "Summer";
+    semester: number;
 }
 
 export interface AuthTokens {

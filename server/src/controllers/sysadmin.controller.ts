@@ -29,8 +29,10 @@ export const handleUpdateMaintenance = async (req: Request, res: Response) => {
 export const handleUpdateSemesterSettings = async (req: Request, res: Response) => {
     try {
         const { school_year, current_semester } = req.body;
-        if (!school_year || !current_semester) return sendError(res, "school_year and current_semester are required", 400);
-        await svc.updateSemesterSettings(school_year, current_semester, req.user!.userId);
+        if (!school_year || current_semester === undefined || current_semester === null) return sendError(res, "school_year and current_semester are required", 400);
+        const semNum = Number(current_semester);
+        if (![1, 2, 3].includes(semNum)) return sendError(res, "current_semester must be 1 (1st), 2 (2nd), or 3 (Summer)", 400);
+        await svc.updateSemesterSettings(school_year, semNum, req.user!.userId);
         sendSuccess(res, { message: "Semester settings updated" });
     } catch (e: any) { sendError(res, e.message); }
 };

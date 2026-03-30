@@ -9,13 +9,15 @@ export interface AdminStudentItem {
     yearLevel: number;
     section: string;
     schoolYear: string;
-    semester: string;
+    semester: number;
     programName: string;
     programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
     obligationsPending: number;
-    clearanceStatus: string | null;
+    clearanceStatus: number | null;
+    totalPayable: number;
+    totalPaid: number;
     avatarPath: string | null;
     address: string | null;
     contactNumber: string | null;
@@ -34,13 +36,13 @@ export interface AdminObligationItem {
     requiresPayment: boolean;
     dueDate: string | null;
     isOverdue: boolean;
-    status: "unpaid" | "pending_verification" | "paid" | "waived";
+    status: number;
     proofImage: string | null;
-    paymentType: "gcash" | "cash" | null;
+    paymentType: number | null;
     paymentId: number | null;
     receiptPath: string | null;
     amountPaid: number | null;
-    paymentStatus: "pending" | "approved" | "rejected" | null;
+    paymentStatus: number | null;
     submittedAt: string | null;
     remarks: string | null;
     verifiedByName: string | null;
@@ -79,7 +81,7 @@ export const adminStudentService = {
     getPendingPayments: (token: string) =>
         apiFetch<PendingPaymentItem[]>("/admin/payments/pending", {}, token),
 
-    verifyPayment: (token: string, paymentId: number, status: "approved" | "rejected", remarks: string) =>
+    verifyPayment: (token: string, paymentId: number, status: number, remarks: string) =>
         apiFetch<null>(`/admin/payments/${paymentId}/verify`, {
             method: "PATCH",
             body: JSON.stringify({ status, remarks }),
@@ -131,7 +133,7 @@ export const adminStudentService = {
             body: JSON.stringify({ paymentIds }),
         }, token),
 
-    verifyProof: (token: string, studentObligationId: number, status: "paid" | "unpaid") =>
+    verifyProof: (token: string, studentObligationId: number, status: number) =>
         apiFetch<null>(`/admin/students/obligations/${studentObligationId}/verify-proof`, {
             method: "PATCH",
             body: JSON.stringify({ status }),
@@ -157,8 +159,8 @@ export interface PaymentHistoryItem {
     programCode: string;
     obligationName: string;
     amountPaid: number;
-    paymentType: "gcash" | "cash";
-    paymentStatus: "approved" | "rejected";
+    paymentType: number;
+    paymentStatus: number;
     notes: string | null;
     submittedAt: string;
     verifiedAt: string | null;
@@ -178,8 +180,8 @@ export interface ClearanceHistoryItem {
     yearLevel: number;
     section: string;
     schoolYear: string;
-    semester: string;
-    clearanceStatus: string;
+    semester: number;
+    clearanceStatus: number;
     signedAt: string;
     remarks: string | null;
     avatarPath: string | null;
@@ -195,9 +197,9 @@ export interface PendingClearanceItem {
     yearLevel: number;
     section: string;
     schoolYear: string;
-    semester: string;
+    semester: number;
     clearanceId: number | null;
-    clearanceStatus: string | null;
+    clearanceStatus: number | null;
     currentStep: number | null;
     obligationsTotal: number;
     obligationsPaid: number;

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FiUploadCloud, FiCheckCircle, FiAlertCircle, FiLock, FiClock, FiTrash2, FiInfo, FiX } from "react-icons/fi";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth }  from "../../hooks/useAuth";
+import { useTheme } from "../../hooks/useTheme";
 import { studentImportService } from "../../services/student-import.service";
 import type { ImportCheckResult, ImportResult, ImportSession } from "../../services/student-import.service";
 
@@ -53,6 +54,7 @@ function parseCSVPreview(text: string): { headers: string[]; rows: string[][] } 
 
 export default function StudentImportPage() {
     const { accessToken } = useAuth();
+    const { darkMode }    = useTheme();
 
     // ── Period selection ──────────────────────────────────────────────────────
     const [schoolYear, setSchoolYear] = useState("2025-2026");
@@ -172,16 +174,16 @@ export default function StudentImportPage() {
     }
 
     const isLocked  = checkResult?.exists === true;
-    const inputCls  = "w-full focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white text-gray-800 border-2 border-gray-200";
+    const inputCls  = `w-full focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm border-2 ${darkMode ? "bg-[#222] border-gray-600 text-gray-100 placeholder-gray-600" : "bg-white border-gray-200 text-gray-800"}`;
     const selectCls = inputCls;
 
     return (
-        <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
+        <div className={`p-4 sm:p-6 md:p-8 min-h-screen ${darkMode ? "bg-[#111111] text-gray-100" : "bg-gray-50 text-gray-900"}`}>
             <style>{`@keyframes fadeInUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }`}</style>
 
             {/* ── Header ── */}
             <div className="mb-6 flex items-center gap-3">
-                <h1 className="font-bold text-gray-800 text-2xl sm:text-3xl">Student CSV Import</h1>
+                <h1 className={`font-bold text-2xl sm:text-3xl ${darkMode ? "text-white" : "text-gray-800"}`}>Student CSV Import</h1>
                 <button
                     onClick={() => setShowInfo(true)}
                     className="flex items-center justify-center w-7 h-7 rounded-full bg-orange-100 text-orange-500 hover:bg-orange-200 transition shrink-0"
@@ -197,15 +199,15 @@ export default function StudentImportPage() {
                 <div className="flex flex-col gap-5">
 
                     {/* Period Selection */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6">
-                        <h2 className="font-semibold text-gray-800 text-base mb-4">1. Select School Year &amp; Semester</h2>
+                    <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
+                        <h2 className={`font-semibold text-base mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>1. Select School Year &amp; Semester</h2>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">School Year</label>
+                                <label className={`block text-xs font-semibold uppercase tracking-wide mb-1.5 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>School Year</label>
                                 <input value={schoolYear} onChange={e => setSchoolYear(e.target.value)} placeholder="2025-2026" className={inputCls} />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Semester</label>
+                                <label className={`block text-xs font-semibold uppercase tracking-wide mb-1.5 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Semester</label>
                                 <select value={semester} onChange={e => setSemester(e.target.value as any)} className={selectCls}>
                                     {SEMESTERS.map(s => <option key={s} value={s}>{s} Semester</option>)}
                                 </select>
@@ -244,8 +246,8 @@ export default function StudentImportPage() {
                     </div>
 
                     {/* File Upload */}
-                    <div className={`bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 ${isLocked ? "opacity-60 pointer-events-none" : ""}`}>
-                        <h2 className="font-semibold text-gray-800 text-base mb-4">
+                    <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"} ${isLocked ? "opacity-60 pointer-events-none" : ""}`}>
+                        <h2 className={`font-semibold text-base mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
                             2. Upload CSV File
                             {isLocked && <span className="ml-2 text-xs text-amber-600 font-normal">(locked — already imported)</span>}
                         </h2>
@@ -256,25 +258,25 @@ export default function StudentImportPage() {
                             onDrop={onDrop}
                             onClick={() => fileInputRef.current?.click()}
                             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
-                                ${isDragging ? "border-orange-400 bg-orange-50" : file ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-orange-300 hover:bg-orange-50/50"}`}
+                                ${isDragging ? "border-orange-400 bg-orange-50/20" : file ? "border-green-400 bg-green-50/20" : darkMode ? "border-gray-600 hover:border-orange-400 hover:bg-orange-900/10" : "border-gray-300 hover:border-orange-300 hover:bg-orange-50/50"}`}
                         >
                             <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
                                 onChange={e => handleFileChange(e.target.files?.[0] ?? null)} />
-                            <FiUploadCloud className={`w-10 h-10 mx-auto mb-3 ${file ? "text-green-500" : "text-gray-400"}`} />
+                            <FiUploadCloud className={`w-10 h-10 mx-auto mb-3 ${file ? "text-green-500" : darkMode ? "text-gray-500" : "text-gray-400"}`} />
                             {file ? (
                                 <>
-                                    <p className="font-semibold text-green-700 text-sm">{file.name}</p>
-                                    <p className="text-xs text-green-600 mt-1">{(file.size / 1024).toFixed(1)} KB — click to change</p>
+                                    <p className="font-semibold text-green-500 text-sm">{file.name}</p>
+                                    <p className="text-xs text-green-500/80 mt-1">{(file.size / 1024).toFixed(1)} KB — click to change</p>
                                 </>
                             ) : (
                                 <>
-                                    <p className="text-sm font-semibold text-gray-600">Drop your CSV here or click to browse</p>
-                                    <p className="text-xs text-gray-400 mt-1">Only .csv files accepted (max 10 MB)</p>
+                                    <p className={`text-sm font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Drop your CSV here or click to browse</p>
+                                    <p className={`text-xs mt-1 ${darkMode ? "text-gray-600" : "text-gray-400"}`}>Only .csv files accepted (max 10 MB)</p>
                                 </>
                             )}
                         </div>
 
-                        <p className="text-xs text-gray-400 mt-3 text-center font-mono text-[10px]">
+                        <p className={`text-xs mt-3 text-center font-mono text-[10px] ${darkMode ? "text-gray-600" : "text-gray-400"}`}>
                             {EXPECTED_HEADERS.join(", ")}
                         </p>
                     </div>
@@ -297,10 +299,10 @@ export default function StudentImportPage() {
 
                     {/* Import result */}
                     {importResult && (
-                        <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5" style={{ animation: "fadeInUp 0.3s ease both" }}>
+                        <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`} style={{ animation: "fadeInUp 0.3s ease both" }}>
                             <div className="flex items-center gap-2 mb-4">
                                 <FiCheckCircle className="w-5 h-5 text-green-500" />
-                                <h3 className="font-semibold text-gray-800">Import Complete</h3>
+                                <h3 className={`font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Import Complete</h3>
                             </div>
                             <div className="grid grid-cols-3 gap-3 mb-4">
                                 <div className="bg-green-50 rounded-xl p-3 text-center">
@@ -340,8 +342,8 @@ export default function StudentImportPage() {
 
                     {/* CSV Preview */}
                     {preview && (
-                        <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6" style={{ animation: "fadeInUp 0.25s ease both" }}>
-                            <h2 className="font-semibold text-gray-800 text-base mb-4">Preview (first 10 rows)</h2>
+                        <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`} style={{ animation: "fadeInUp 0.25s ease both" }}>
+                            <h2 className={`font-semibold text-base mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Preview (first 10 rows)</h2>
 
                             {preview.headers.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mb-4">
@@ -359,9 +361,9 @@ export default function StudentImportPage() {
                             )}
 
                             <div className="overflow-x-auto rounded-xl">
-                                <table className="w-full text-[11px] border-collapse">
+                                <table className="eso-table w-full text-[11px] border-collapse">
                                     <thead>
-                                        <tr className="bg-gray-100 text-gray-500">
+                                        <tr className={darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}>
                                             {preview.headers.map(h => (
                                                 <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">{h}</th>
                                             ))}
@@ -369,38 +371,38 @@ export default function StudentImportPage() {
                                     </thead>
                                     <tbody>
                                         {preview.rows.map((row, ri) => (
-                                            <tr key={ri} className={ri % 2 === 0 ? "bg-white" : "bg-gray-50/60"}>
+                                            <tr key={ri} className={ri % 2 === 0 ? (darkMode ? "bg-[#1a1a1a]" : "bg-white") : (darkMode ? "bg-white/[0.02]" : "bg-gray-50/60")}>
                                                 {row.map((cell, ci) => (
-                                                    <td key={ci} className="px-3 py-2 text-gray-700 whitespace-nowrap max-w-[160px] truncate">{cell}</td>
+                                                    <td key={ci} className={`px-3 py-2 whitespace-nowrap max-w-[160px] truncate ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{cell}</td>
                                                 ))}
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                            <p className="text-xs text-gray-400 mt-2">Showing up to 10 rows. All rows in the file will be processed on import.</p>
+                            <p className={`text-xs mt-2 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Showing up to 10 rows. All rows in the file will be processed on import.</p>
                         </div>
                     )}
 
                     {/* Import History */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6">
+                    <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                         <div className="flex items-center gap-2 mb-4">
                             <FiClock className="w-4 h-4 text-orange-500" />
-                            <h2 className="font-semibold text-gray-800 text-base">Import History</h2>
+                            <h2 className={`font-semibold text-base ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Import History</h2>
                         </div>
 
                         {sessionsLoading ? (
-                            <div className="flex items-center gap-2 text-gray-400 text-sm py-6 justify-center">
+                            <div className={`flex items-center gap-2 text-sm py-6 justify-center ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
                                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-orange-400 border-t-transparent" />
                                 Loading history...
                             </div>
                         ) : sessions.length === 0 ? (
-                            <p className="text-center text-gray-400 text-sm py-8">No imports yet.</p>
+                            <p className={`text-center text-sm py-8 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>No imports yet.</p>
                         ) : (
                             <div className="overflow-x-auto rounded-xl">
-                                <table className="w-full text-xs border-collapse min-w-[500px]">
+                                <table className="eso-table w-full text-xs border-collapse min-w-[500px]">
                                     <thead>
-                                        <tr className="bg-gray-50 text-gray-500">
+                                        <tr className={darkMode ? "bg-[#222] text-gray-400" : "bg-gray-50 text-gray-500"}>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">School Year</th>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Semester</th>
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Imported</th>
@@ -412,9 +414,9 @@ export default function StudentImportPage() {
                                     </thead>
                                     <tbody>
                                         {sessions.map((s, i) => (
-                                            <tr key={s.importId} className={`transition-colors ${i % 2 === 0 ? "bg-white" : "bg-gray-50/60"}`}>
-                                                <td className="px-3 py-2.5 font-medium text-gray-800">{s.schoolYear}</td>
-                                                <td className="px-3 py-2.5 text-gray-600">{s.semester} Semester</td>
+                                            <tr key={s.importId} className={`transition-colors ${i % 2 === 0 ? (darkMode ? "bg-[#1a1a1a]" : "bg-white") : (darkMode ? "bg-white/[0.02]" : "bg-gray-50/60")}`}>
+                                                <td className={`px-3 py-2.5 font-medium ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{s.schoolYear}</td>
+                                                <td className={`px-3 py-2.5 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{s.semester} Semester</td>
                                                 <td className="px-3 py-2.5 text-center">
                                                     <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold text-[10px]">{s.recordCount}</span>
                                                 </td>
@@ -423,8 +425,8 @@ export default function StudentImportPage() {
                                                         ? <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-semibold text-[10px]">{s.skippedCount}</span>
                                                         : <span className="text-gray-300">—</span>}
                                                 </td>
-                                                <td className="px-3 py-2.5 text-gray-500">{s.importedBy}</td>
-                                                <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{new Date(s.importedAt).toLocaleDateString()}</td>
+                                                <td className={`px-3 py-2.5 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{s.importedBy}</td>
+                                                <td className={`px-3 py-2.5 whitespace-nowrap ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{new Date(s.importedAt).toLocaleDateString()}</td>
                                                 <td className="px-3 py-2.5">
                                                     <button
                                                         onClick={() => { setDeleteTarget(s); setDeleteError(""); }}
@@ -448,7 +450,7 @@ export default function StudentImportPage() {
             {showInfo && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
                     onClick={() => setShowInfo(false)}>
-                    <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] p-6 w-full max-w-md"
+                    <div className={`rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] p-6 w-full max-w-md ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
                         onClick={e => e.stopPropagation()}
                         style={{ animation: "fadeInUp 0.2s ease both" }}>
                         <div className="flex items-center justify-between mb-4">
@@ -456,17 +458,17 @@ export default function StudentImportPage() {
                                 <div className="p-1.5 bg-orange-100 rounded-lg">
                                     <FiInfo className="w-4 h-4 text-orange-500" />
                                 </div>
-                                <h3 className="font-semibold text-gray-800">CSV Format Guide</h3>
+                                <h3 className={`font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>CSV Format Guide</h3>
                             </div>
-                            <button onClick={() => setShowInfo(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition">
+                            <button onClick={() => setShowInfo(false)} className={`p-1.5 rounded-lg transition ${darkMode ? "text-gray-400 hover:bg-white/10" : "text-gray-400 hover:bg-gray-100"}`}>
                                 <FiX className="w-4 h-4" />
                             </button>
                         </div>
-                        <ul className="space-y-2.5 text-xs text-gray-600">
+                        <ul className={`space-y-2.5 text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                             <li className="flex gap-2">
                                 <span className="text-orange-400 font-bold shrink-0">·</span>
                                 <div>Header row must be in <strong>ALL CAPS</strong>:<br />
-                                <code className="mt-1 inline-block bg-gray-100 rounded px-2 py-1 font-mono text-[10px] break-all">{EXPECTED_HEADERS.join(", ")}</code></div>
+                                <code className={`mt-1 inline-block rounded px-2 py-1 font-mono text-[10px] break-all ${darkMode ? "bg-[#2a2a2a] text-gray-300" : "bg-gray-100"}`}>{EXPECTED_HEADERS.join(", ")}</code></div>
                             </li>
                             <li className="flex gap-2">
                                 <span className="text-orange-400 font-bold shrink-0">·</span>
@@ -505,7 +507,7 @@ export default function StudentImportPage() {
             {deleteTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
                     onClick={() => { if (!deleting) setDeleteTarget(null); }}>
-                    <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] p-6 w-full max-w-sm"
+                    <div className={`rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] p-6 w-full max-w-sm ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
                         onClick={e => e.stopPropagation()}
                         style={{ animation: "fadeInUp 0.2s ease both" }}>
                         <div className="flex items-center gap-3 mb-4">
@@ -513,16 +515,16 @@ export default function StudentImportPage() {
                                 <FiTrash2 className="w-5 h-5 text-red-500" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-gray-800 text-sm">Delete Import Record</h3>
-                                <p className="text-xs text-gray-400">This action cannot be undone.</p>
+                                <h3 className={`font-semibold text-sm ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Delete Import Record</h3>
+                                <p className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}>This action cannot be undone.</p>
                             </div>
                         </div>
 
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className={`text-sm mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                             Remove the import record for{" "}
                             <strong>{deleteTarget.schoolYear} {deleteTarget.semester} Semester</strong>?
                         </p>
-                        <p className="text-xs text-gray-400 mb-5">
+                        <p className={`text-xs mb-5 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
                             Only the lock record is deleted — student accounts already created will remain. The period becomes available for re-import.
                         </p>
 
@@ -530,7 +532,7 @@ export default function StudentImportPage() {
 
                         <div className="flex gap-3">
                             <button onClick={() => setDeleteTarget(null)} disabled={deleting}
-                                className="flex-1 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50 border border-gray-200">
+                                className={`flex-1 py-2 rounded-xl text-sm transition disabled:opacity-50 border ${darkMode ? "text-gray-300 hover:bg-white/10 border-gray-600" : "text-gray-600 hover:bg-gray-50 border-gray-200"}`}>
                                 Cancel
                             </button>
                             <button onClick={handleDeleteConfirm} disabled={deleting}

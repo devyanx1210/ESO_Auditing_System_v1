@@ -21,7 +21,9 @@ import PaymentVerification  from "../pages/admin/PaymentVerification";
 import ClearanceVerification from "../pages/admin/ClearanceVerification";
 import Obligations          from "../pages/admin/Obligations";
 import Documents            from "../pages/admin/Documents";
+import AuditPage            from "../pages/admin/AuditPage";
 import Reports              from "../pages/admin/Reports";
+import StudentImportAdmin   from "../pages/sysadmin/StudentImportPage";
 
 /* Pages - Student */
 import StudentDashboard from "../pages/student/StudentDashboard";
@@ -91,11 +93,13 @@ const router = createBrowserRouter([
             { path: "home", element: <AdminDashboard /> },
             { path: "students",                       element: <Navigate to="/dashboard/students/list" replace /> },
             { path: "students/list",                  element: <StudentList /> },
+            { path: "students/import",                element: <StudentImportAdmin /> },
             { path: "students/obligations-list",      element: <StudentObligationList /> },
             { path: "students/payments",              element: <PaymentVerification /> },
             { path: "students/clearances",            element: <ClearanceVerification /> },
             { path: "obligations",                    element: <Obligations /> },
             { path: "documents",                      element: <Documents /> },
+            { path: "audit",                          element: <AuditPage /> },
             { path: "reports",                        element: <Reports /> },
             { path: "settings",                       element: <AdminSettings /> },
         ],

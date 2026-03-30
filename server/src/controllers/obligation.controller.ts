@@ -46,6 +46,8 @@ export const addObligation = (req: Request, res: Response) => {
             }
 
             const parsedAmount = parseFloat(amount) || 0;
+            const parsedScope = Number(scope);
+            const parsedSemester = Number(semester);
             const qrPath = req.file ? `qr/${req.file.filename}` : null;
 
             const obligation = await createObligation(
@@ -55,12 +57,12 @@ export const addObligation = (req: Request, res: Response) => {
                     amount: parsedAmount,
                     gcashQrPath: qrPath,
                     isRequired: isRequired === "true" || isRequired === true,
-                    scope,
+                    scope: parsedScope,
                     programId: programId ? Number(programId) : null,
                     yearLevel:   yearLevel   ? Number(yearLevel)   : null,
                     section:     section     || null,
                     schoolYear,
-                    semester,
+                    semester: parsedSemester,
                     dueDate:     dueDate     || null,
                 },
                 adminId

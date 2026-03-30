@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
     FiTrash2, FiPlus, FiCheck, FiUsers, FiArchive, FiFilter,
-    FiChevronDown, FiChevronUp, FiSearch, FiEdit2,
+    FiChevronDown, FiChevronUp, FiSearch, FiEdit2, FiEye, FiEyeOff,
 } from "react-icons/fi";
 import { MdClose, MdBlock, MdDeleteOutline } from "react-icons/md";
 import { useAuth } from "../../hooks/useAuth";
@@ -43,11 +43,17 @@ function UserAvatar() {
 
 // value = role_name, roleId = roles.role_id in DB
 const ROLES = [
-    { value: "eso_officer",   roleId: 2, label: "ESO Officer" },
-    { value: "class_officer", roleId: 3, label: "Class Officer" },
-    { value: "program_head",  roleId: 4, label: "Program Head" },
-    { value: "signatory",     roleId: 5, label: "Signatory" },
-    { value: "dean",          roleId: 6, label: "Dean" },
+    { value: "eso_officer",     roleId: 2, label: "ESO Officer" },
+    { value: "class_officer",   roleId: 3, label: "Class Officer" },
+    { value: "program_head",    roleId: 4, label: "Program Head" },
+    { value: "signatory",       roleId: 5, label: "Signatory" },
+    { value: "dean",            roleId: 6, label: "Dean" },
+    { value: "program_officer", roleId: 8, label: "Program Officer" },
+];
+
+const EDIT_ROLES = [
+    ...ROLES,
+    { value: "student", roleId: 7, label: "Student" },
 ];
 
 const DEPARTMENTS = [
@@ -138,10 +144,12 @@ export default function AccountsPage() {
     const [deleting,       setDeleting]       = useState(false);
 
     // Edit
-    const [editTarget,  setEditTarget]  = useState<Account | null>(null);
-    const [editForm,    setEditForm]    = useState({ firstName: "", lastName: "", email: "", roleId: "", programId: "", position: "", password: "" });
-    const [editSaving,  setEditSaving]  = useState(false);
-    const [editError,   setEditError]   = useState("");
+    const [editTarget,    setEditTarget]    = useState<Account | null>(null);
+    const [editForm,      setEditForm]      = useState({ firstName: "", lastName: "", email: "", roleId: "", programId: "", position: "", password: "" });
+    const [editSaving,    setEditSaving]    = useState(false);
+    const [editError,     setEditError]     = useState("");
+    const [showEditPass,  setShowEditPass]  = useState(false);
+    const [showCreatePass,setShowCreatePass]= useState(false);
 
     const filterRef   = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -239,7 +247,7 @@ export default function AccountsPage() {
                 position,
             });
             setSuccessMsg(`Account for ${form.firstName} ${form.lastName} created successfully.`);
-            setShowCreate(false); setForm(BLANK); load();
+            setShowCreate(false); setShowCreatePass(false); setForm(BLANK); load();
         } catch (err: any) {
             setFormError(err.message ?? "Failed to create account.");
         } finally { setSaving(false); }
@@ -310,7 +318,7 @@ export default function AccountsPage() {
                 position:  editForm.position.trim(),
                 password:  editForm.password || undefined,
             });
-            setEditTarget(null);
+            setEditTarget(null); setShowEditPass(false);
             showToast(`${editForm.firstName} ${editForm.lastName} updated.`);
             load();
         } catch (err: any) {
@@ -508,7 +516,7 @@ export default function AccountsPage() {
                 <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
                     style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[860px] text-xs">
+                        <table className="eso-table w-full min-w-[860px] text-xs">
                             <thead>
                                 <tr className="bg-gray-50 text-gray-500">
                                     <th className="px-3 py-2 w-10">
@@ -593,7 +601,7 @@ export default function AccountsPage() {
                     <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
                         style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[780px] text-xs">
+                            <table className="eso-table w-full min-w-[780px] text-xs">
                                 <thead>
                                     <tr className="bg-gray-50 text-gray-500">
                                         <th className="px-3 py-2 w-10">
@@ -689,7 +697,7 @@ export default function AccountsPage() {
                                         {editTarget.role_name === "system_admin" && (
                                             <option value={editForm.roleId}>System Admin</option>
                                         )}
-                                        {ROLES.map(r => (
+                                        {EDIT_ROLES.map(r => (
                                             <option key={r.value} value={r.roleId}>{r.label}</option>
                                         ))}
                                     </select>
@@ -703,19 +711,27 @@ export default function AccountsPage() {
                                         {COLLEGES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
+                                {editForm.roleId !== "7" && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
                                     <input className={inputCls} value={editForm.position}
                                         onChange={e => setEditForm(f => ({ ...f, position: e.target.value }))}
                                         placeholder="e.g. ESO Director" />
                                 </div>
+                                )}
                                 <div className="sm:col-span-2 lg:col-span-3">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         New Password <span className="text-gray-400 font-normal">(leave blank to keep current)</span>
                                     </label>
-                                    <input type="password" className={inputCls} value={editForm.password}
-                                        onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
-                                        placeholder="Min. 8 characters" />
+                                    <div className="relative">
+                                        <input type={showEditPass ? "text" : "password"} className={inputCls} value={editForm.password}
+                                            onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                                            placeholder="Min. 8 characters" />
+                                        <button type="button" onClick={() => setShowEditPass(v => !v)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                                            {showEditPass ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
@@ -764,8 +780,14 @@ export default function AccountsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                                    <input type="password" className={inputCls} value={form.password}
-                                        onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min. 8 characters" />
+                                    <div className="relative">
+                                        <input type={showCreatePass ? "text" : "password"} className={inputCls} value={form.password}
+                                            onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min. 8 characters" />
+                                        <button type="button" onClick={() => setShowCreatePass(v => !v)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                                            {showCreatePass ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>

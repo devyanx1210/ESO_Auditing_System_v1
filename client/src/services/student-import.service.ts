@@ -15,7 +15,7 @@ export interface ImportResult {
 export interface ImportSession {
     importId:     number;
     schoolYear:   string;
-    semester:     string;
+    semester:     number;
     recordCount:  number;
     skippedCount: number;
     errorCount:   number;
@@ -26,11 +26,11 @@ export interface ImportSession {
 export const studentImportService = {
     check: async (
         token: string,
-        params: { schoolYear: string; semester: string }
+        params: { schoolYear: string; semester: number }
     ): Promise<ImportCheckResult> => {
         const q = new URLSearchParams({
             schoolYear: params.schoolYear,
-            semester:   params.semester,
+            semester:   String(params.semester),
         });
         const res  = await fetch(`${API}/student-import/check?${q}`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -42,12 +42,12 @@ export const studentImportService = {
 
     import: async (
         token: string,
-        params: { schoolYear: string; semester: string },
+        params: { schoolYear: string; semester: number },
         file: File
     ): Promise<ImportResult> => {
         const form = new FormData();
         form.append("schoolYear", params.schoolYear);
-        form.append("semester",   params.semester);
+        form.append("semester",   String(params.semester));
         form.append("csv",        file);
 
         const res  = await fetch(`${API}/student-import`, {

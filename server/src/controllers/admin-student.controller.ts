@@ -24,10 +24,11 @@ export const handleGetStudentObligations = async (req: Request, res: Response) =
 export const handleVerifyProof = async (req: Request, res: Response) => {
     try {
         const studentObligationId = Number(req.params.studentObligationId);
-        const { status } = req.body; // "paid" | "unpaid"
-        if (!["paid", "unpaid"].includes(status)) return sendError(res, "status must be 'paid' or 'unpaid'", 400);
-        await verifyProofObligation(req.user!.userId, studentObligationId, status);
-        return sendSuccess(res, null, `Proof ${status === "paid" ? "verified" : "rejected"}`);
+        const { status } = req.body; // 2=paid | 0=unpaid
+        const statusNum = Number(status);
+        if (![2, 0].includes(statusNum)) return sendError(res, "status must be 2 (paid) or 0 (unpaid)", 400);
+        await verifyProofObligation(req.user!.userId, studentObligationId, statusNum);
+        return sendSuccess(res, null, `Proof ${statusNum === 2 ? "verified" : "rejected"}`);
     } catch (err: any) {
         return sendError(res, err.message, 400);
     }

@@ -36,38 +36,35 @@ function cleanMessage(text: string) {
     return text.replace(/\s*[-–—]{2,}\s*/g, " ").replace(/^\s*[-–—]\s*/g, "").replace(/\s*[-–—]\s*$/g, "").trim();
 }
 
-function notifTypeIcon(type: string) {
-    const t = type.toLowerCase();
-    // New / assigned obligation
-    if (t.includes("assign") || t.includes("new_obligation") || t.includes("new obligation"))
-        return <FiAlertCircle className="w-4 h-4 text-orange-500" />;
-    // Overdue
-    if (t.includes("overdue"))
+function notifTypeIcon(type: number) {
+    // 1=obligation_assigned, 2=payment_submitted, 3=payment_approved
+    // 4=payment_rejected, 5=payment_returned, 6=clearance_signed
+    // 7=clearance_cleared, 8=clearance_unapproved, 9=account_status
+    if (type === 9)
         return <FiAlertTriangle className="w-4 h-4 text-red-500" />;
-    // Pending / pending verification
-    if (t.includes("pending") || t.includes("verification") || t.includes("submitted"))
+    if (type === 1)
+        return <FiAlertCircle className="w-4 h-4 text-orange-500" />;
+    if (type === 2)
         return <FiClock className="w-4 h-4 text-yellow-500" />;
-    // Settled / paid / waived
-    if (t.includes("paid") || t.includes("settled") || t.includes("waived") || t.includes("approved"))
+    if (type === 3 || type === 7)
         return <FiCheckCircle className="w-4 h-4 text-green-500" />;
-    // Payment / GCash / receipt
-    if (t.includes("payment") || t.includes("receipt") || t.includes("cash"))
+    if (type === 4 || type === 8)
+        return <FiAlertTriangle className="w-4 h-4 text-red-400" />;
+    if (type === 5)
         return <FiCreditCard className="w-4 h-4 text-orange-500" />;
-    // Clearance / signed
-    if (t.includes("clearance") || t.includes("signed") || t.includes("cleared"))
+    if (type === 6)
         return <FiShield className="w-4 h-4 text-green-600" />;
-    // Proof / event / photo
-    if (t.includes("proof") || t.includes("photo") || t.includes("event"))
-        return <FiCamera className="w-4 h-4 text-blue-500" />;
     // Default
     return <FiBell className="w-4 h-4 text-gray-400" />;
 }
 
 const CLEARANCE_STEPS = [
-    { order: 1, label: "ESO Officer" },
-    { order: 2, label: "Program Head" },
-    { order: 3, label: "Signatory" },
-    { order: 4, label: "Dean" },
+    { order: 1, label: "Class Officer" },
+    { order: 2, label: "Program Officer" },
+    { order: 3, label: "ESO Officer" },
+    { order: 4, label: "Signatory" },
+    { order: 5, label: "Program Head" },
+    { order: 6, label: "Dean" },
 ];
 
 type FilterMode = "all" | "settled" | "pending" | "overdue";
@@ -161,18 +158,18 @@ export default function StudentDashboard() {
     }, [bellOpen]);
 
     /* ── derived stats ── */
-    const paidCount    = obligations.filter(o => o.status === "paid" || o.status === "waived").length;
+    const paidCount    = obligations.filter(o => o.status === 2 || o.status === 3).length;
     const totalCount   = obligations.length;
     const progressPct  = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
-    const overdueCount = obligations.filter(o => o.isOverdue && o.status !== "paid" && o.status !== "waived").length;
+    const overdueCount = obligations.filter(o => o.isOverdue && o.status !== 2 && o.status !== 3).length;
     const unreadCount  = notifications.filter(n => !n.isRead).length;
-    const pendingCount = obligations.filter(o => o.status === "pending_verification").length;
+    const pendingCount = obligations.filter(o => o.status === 1).length;
 
     /* ── filtered obligations based on active stat card ── */
     const visibleObs =
-        filterMode === "settled" ? obligations.filter(o => o.status === "paid" || o.status === "waived") :
-        filterMode === "pending" ? obligations.filter(o => o.status === "pending_verification") :
-        filterMode === "overdue" ? obligations.filter(o => o.isOverdue && o.status !== "paid" && o.status !== "waived") :
+        filterMode === "settled" ? obligations.filter(o => o.status === 2 || o.status === 3) :
+        filterMode === "pending" ? obligations.filter(o => o.status === 1) :
+        filterMode === "overdue" ? obligations.filter(o => o.isOverdue && o.status !== 2 && o.status !== 3) :
         obligations;
 
     /* ── notification actions ── */
@@ -422,19 +419,6 @@ export default function StudentDashboard() {
                 <div className="flex items-center gap-2 mb-4">
                     <FiShield className="w-4 h-4 text-orange-500" />
                     <h3 className={`font-semibold text-sm ${txt}`}>Clearance Status</h3>
-                    {clearance && clearance.clearanceId !== null && (
-                        <span className={`ml-auto text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                            clearance.status === "cleared"     ? "bg-green-100 text-green-700"  :
-                            clearance.status === "in_progress" ? "bg-blue-100 text-blue-700"    :
-                            clearance.status === "rejected"    ? "bg-red-100 text-red-700"      :
-                            "bg-gray-100 text-gray-600"
-                        }`}>
-                            {clearance.status === "cleared"     ? "Fully Cleared"  :
-                             clearance.status === "in_progress" ? "In Progress"    :
-                             clearance.status === "rejected"    ? "Rejected"        :
-                             "Pending"}
-                        </span>
-                    )}
                 </div>
 
                 {!clearance || clearance.clearanceId === null ? (
@@ -446,8 +430,8 @@ export default function StudentDashboard() {
                         {CLEARANCE_STEPS.map((step, idx) => {
                             const match      = clearance.steps.find(s => s.stepOrder === step.order);
                             const isCurrent  = clearance.currentStep === step.order;
-                            const isDone     = match?.status === "signed";
-                            const isRejected = match?.status === "rejected";
+                            const isDone     = match?.status === 1;
+                            const isRejected = match?.status === 2;
 
                             return (
                                 <React.Fragment key={step.order}>
@@ -459,7 +443,7 @@ export default function StudentDashboard() {
                                             isCurrent  ? "bg-orange-500 border-orange-500 text-white" :
                                             "bg-white border-gray-300 text-gray-400"
                                         }`}>
-                                            {isDone ? <FiCheckCircle className="w-4 h-4" /> : isRejected ? "✕" : step.order}
+                                            {isDone ? <FiCheckCircle className="w-4 h-4" /> : isRejected ? "✕" : idx + 1}
                                         </div>
                                         {/* Step label */}
                                         <p className={`text-[10px] font-medium text-center mt-1.5 leading-tight max-w-[64px] ${
@@ -516,11 +500,11 @@ export default function StudentDashboard() {
                     ) : (
                         <div className="space-y-3">
                             {visibleObs.map((o, idx) => {
-                                const isDone     = o.status === "paid" || o.status === "waived";
-                                const isPending  = o.status === "pending_verification";
-                                const isRejected = o.latestPayment?.paymentStatus === "rejected";
-                                const canPay     = o.requiresPayment  && (o.status === "unpaid" || (isPending && isRejected));
-                                const canProof   = !o.requiresPayment && (o.status === "unpaid" || (isPending && isRejected));
+                                const isDone     = o.status === 2 || o.status === 3;
+                                const isPending  = o.status === 1;
+                                const isRejected = o.latestPayment?.paymentStatus === 2;
+                                const canPay     = o.requiresPayment  && (o.status === 0 || (isPending && isRejected));
+                                const canProof   = !o.requiresPayment && (o.status === 0 || (isPending && isRejected));
 
                                 return (
                                     <div
@@ -620,7 +604,7 @@ export default function StudentDashboard() {
                         ) : (
                             <div className="space-y-2.5">
                                 {obligations.map(o => {
-                                    const isDone = o.status === "paid" || o.status === "waived";
+                                    const isDone = o.status === 2 || o.status === 3;
                                     return (
                                         <label
                                             key={o.studentObligationId}
@@ -852,12 +836,12 @@ export default function StudentDashboard() {
 
 /* ── Status Badge ── */
 function StatusBadge({ obligation: o }: { obligation: StudentObligationItem }) {
-    if (o.status === "paid" || o.status === "waived") {
+    if (o.status === 2 || o.status === 3) {
         // Proof-only: no paid/unpaid label, just show "Submitted"
-        if (!o.requiresPayment) return <span className="text-xs font-semibold text-white dark:text-green-300 bg-green-500 dark:bg-green-900/60 px-2 py-0.5 rounded-full">{o.status === "waived" ? "Waived" : "Submitted"}</span>;
+        if (!o.requiresPayment) return <span className="text-xs font-semibold text-white dark:text-green-300 bg-green-500 dark:bg-green-900/60 px-2 py-0.5 rounded-full">{o.status === 3 ? "Waived" : "Submitted"}</span>;
         return <span className="text-xs font-semibold text-white dark:text-green-300 bg-green-500 dark:bg-green-900/60 px-2 py-0.5 rounded-full">Paid</span>;
     }
-    if (o.status === "pending_verification") {
+    if (o.status === 1) {
         return <span className="text-xs font-semibold text-white dark:text-yellow-300 bg-yellow-500 dark:bg-yellow-900/60 px-2 py-0.5 rounded-full">Pending Verification</span>;
     }
     if (o.isOverdue) {

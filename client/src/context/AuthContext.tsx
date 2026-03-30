@@ -37,8 +37,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (storedUser && storedRefresh) {
                 try {
                     setUser(JSON.parse(storedUser));
-                    const { accessToken: newToken } = await authService.refresh(storedRefresh);
+                    const { accessToken: newToken, user: freshUser } = await authService.refresh(storedRefresh);
                     setAccessToken(newToken);
+                    setUser(freshUser);
+                    localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
                 } catch {
                     localStorage.removeItem(USER_KEY);
                     localStorage.removeItem(REFRESH_KEY);

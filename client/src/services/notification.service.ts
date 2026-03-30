@@ -4,7 +4,7 @@ export interface NotificationItem {
     notificationId: number;
     title: string;
     message: string;
-    type: string;
+    type: number;
     isRead: boolean;
     createdAt: string;
     referenceId: number | null;

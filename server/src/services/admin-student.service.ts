@@ -22,19 +22,18 @@ export interface AdminStudentItem {
     yearLevel: number;
     section: string;
     schoolYear: string;
-    semester: string;
+    semester: number;
     programName: string;
     programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
     obligationsPending: number;
-    clearanceStatus: string | null;
+    clearanceStatus: number | null;
     avatarPath: string | null;
     email: string | null;
     address: string | null;
     contactNumber: string | null;
     guardianName: string | null;
-    emergencyContact: string | null;
     shirtSize: string | null;
     userStatus: "active" | "inactive" | "suspended";
 }
@@ -64,23 +63,26 @@ export const listStudents = async (
             s.school_year       AS schoolYear,
             s.semester,
             s.avatar_path       AS avatarPath,
-            s.address,
-            s.contact_number    AS contactNumber,
-            s.guardian_name     AS guardianName,
-            s.emergency_contact AS emergencyContact,
+            g.address,
+            g.contact_number    AS contactNumber,
+            g.guardian_name     AS guardianName,
             s.shirt_size        AS shirtSize,
             u.email,
             u.status            AS userStatus,
             d.name              AS programName,
             d.code              AS programCode,
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
-            SUM(so.status IN ('paid','waived'))                     AS obligationsPaid,
-            SUM(so.status = 'pending_verification')                 AS obligationsPending,
-            cl.clearance_status AS clearanceStatus
+            SUM(so.status IN (2,3))                                 AS obligationsPaid,
+            SUM(so.status = 1)                                      AS obligationsPending,
+            cl.clearance_status AS clearanceStatus,
+            COALESCE(SUM(CASE WHEN o.amount > 0 THEN so.amount_due ELSE 0 END), 0)                    AS totalPayable,
+            COALESCE(SUM(CASE WHEN o.amount > 0 AND so.status = 2 THEN so.amount_due ELSE 0 END), 0)  AS totalPaid
         FROM students s
         JOIN users u       ON u.user_id       = s.user_id
         JOIN programs d ON d.program_id = s.program_id
+        LEFT JOIN guardian g ON g.student_id = s.student_id
         LEFT JOIN student_obligations so ON so.student_id = s.student_id
+        LEFT JOIN obligations o ON o.obligation_id = so.obligation_id
         LEFT JOIN clearances cl
             ON cl.student_id = s.student_id
             AND cl.school_year = s.school_year
@@ -107,6 +109,8 @@ export const listStudents = async (
         obligationsTotal:   Number(r.obligationsTotal),
         obligationsPaid:    Number(r.obligationsPaid),
         obligationsPending: Number(r.obligationsPending),
+        totalPayable:       Number(r.totalPayable),
+        totalPaid:          Number(r.totalPaid),
     }));
 };
 
@@ -120,13 +124,13 @@ export interface AdminObligationItem {
     requiresPayment: boolean;
     dueDate: string | null;
     isOverdue: boolean;
-    status: "unpaid" | "pending_verification" | "paid" | "waived";
+    status: number;
     proofImage: string | null;
-    paymentType: "gcash" | "cash" | null;
+    paymentType: number | null;
     paymentId: number | null;
     receiptPath: string | null;
     amountPaid: number | null;
-    paymentStatus: "pending" | "approved" | "rejected" | null;
+    paymentStatus: number | null;
     submittedAt: string | null;
     remarks: string | null;
     verifiedByName: string | null;
@@ -182,8 +186,8 @@ export const getStudentObligationsForAdmin = async (
             : null;
         const isOverdue = dueDate !== null
             && new Date(dueDate) < today
-            && r.status !== "paid"
-            && r.status !== "waived";
+            && r.status !== 2
+            && r.status !== 3;
         return {
             studentObligationId: r.student_obligation_id,
             obligationId:        r.obligation_id,
@@ -215,7 +219,7 @@ export const getStudentObligationsForAdmin = async (
 export const verifyProofObligation = async (
     userId: number,
     studentObligationId: number,
-    status: "paid" | "unpaid"
+    status: number
 ): Promise<void> => {
     const adminId = await getAdminId(userId);
 
@@ -237,13 +241,13 @@ export const verifyProofObligation = async (
         [status, studentObligationId]
     );
 
-    const title   = status === "paid" ? "Proof Verified" : "Proof Rejected";
-    const message = status === "paid"
+    const title   = status === 2 ? "Proof Verified" : "Proof Rejected";
+    const message = status === 2
         ? `Your proof for "${ob.obligation_name}" has been verified.`
         : `Your proof for "${ob.obligation_name}" was not accepted.`;
     await pool.execute(
         `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
          VALUES (?, ?, ?, ?, ?, 'obligation', 0, NOW())`,
-        [ob.studentUserId, title, message, `proof_${status}`, studentObligationId]
+        [ob.studentUserId, title, message, status === 2 ? 3 : 4, studentObligationId]
     );
 };

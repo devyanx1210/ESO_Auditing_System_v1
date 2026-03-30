@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { MdSave, MdSettings, MdBuild, MdSchool, MdClose } from "react-icons/md";
-import { FiArrowUp, FiUserCheck } from "react-icons/fi";
+import { FiArrowUp, FiUserCheck, FiUser, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
 import { useAuth } from "../../hooks/useAuth";
 import { sysadminService } from "../../services/sysadmin.service";
+import { adminProfileService, adminAvatarUrl } from "../../services/admin-profile.service";
+import type { AdminProfile } from "../../services/admin-profile.service";
 
 interface AdvancementStudent {
     student_id: number;
@@ -33,8 +35,35 @@ function groupByYear(list: AdvancementStudent[]) {
     return Object.entries(map).sort(([a], [b]) => Number(a) - Number(b));
 }
 
+function DefaultAvatarSvg() {
+    return (
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ display: "block", width: "100%", height: "100%" }}>
+            <circle cx="50" cy="50" r="50" fill="#E4E6E9" />
+            <ellipse cx="50" cy="37" rx="17" ry="20" fill="#6B7280" />
+            <ellipse cx="50" cy="95" rx="35" ry="28" fill="#6B7280" />
+        </svg>
+    );
+}
+
 export default function SystemSettingsPage() {
-    const { accessToken } = useAuth();
+    const { accessToken, changePassword } = useAuth();
+
+    // Profile state
+    const [profile,     setProfile]     = useState<AdminProfile | null>(null);
+    const [firstName,   setFirstName]   = useState("");
+    const [lastName,    setLastName]    = useState("");
+    const [position,    setPosition]    = useState("");
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [avatarFile,  setAvatarFile]  = useState<File | null>(null);
+    const [profileSaving, setProfileSaving] = useState(false);
+    const [profileMsg,  setProfileMsg]  = useState("");
+
+    // Password state
+    const [pw,       setPw]       = useState({ current: "", next: "", confirm: "" });
+    const [pwErr,    setPwErr]    = useState("");
+    const [pwOk,     setPwOk]    = useState("");
+    const [pwSaving, setPwSaving] = useState(false);
+    const [showPw,   setShowPw]  = useState(false);
 
     // Maintenance state
     const [mode, setMode] = useState(false);
@@ -42,7 +71,7 @@ export default function SystemSettingsPage() {
 
     // Semester state
     const [schoolYear,      setSchoolYear]      = useState("");
-    const [semester,        setSemester]        = useState("");
+    const [semester,        setSemester]        = useState<number | "">("");
     const [savedSchoolYear, setSavedSchoolYear] = useState(""); // tracks what's in DB
     const [yearAutoChanged, setYearAutoChanged] = useState(false); // highlights school year input
 
@@ -58,11 +87,56 @@ export default function SystemSettingsPage() {
 
     useEffect(() => {
         if (!accessToken) return;
+        adminProfileService.getProfile(accessToken).then(p => {
+            setProfile(p);
+            setFirstName(p.firstName);
+            setLastName(p.lastName);
+            setPosition(p.position ?? "");
+            if (p.avatarPath) setAvatarPreview(adminAvatarUrl(p.avatarPath));
+        }).catch(() => {});
+    }, [accessToken]);
+
+    const handleSaveProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!accessToken || !firstName.trim() || !lastName.trim()) return;
+        setProfileSaving(true); setProfileMsg("");
+        try {
+            const updated = await adminProfileService.updateProfile(
+                accessToken,
+                { firstName: firstName.trim(), lastName: lastName.trim(), position: position.trim() },
+                avatarFile
+            );
+            setProfile(updated);
+            setAvatarFile(null);
+            if (updated.avatarPath) setAvatarPreview(adminAvatarUrl(updated.avatarPath));
+            setProfileMsg("Profile updated.");
+            setTimeout(() => setProfileMsg(""), 3000);
+        } catch (e: any) { setProfileMsg(e.message); }
+        finally { setProfileSaving(false); }
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPwErr(""); setPwOk("");
+        if (!pw.current) { setPwErr("Enter current password."); return; }
+        if (pw.next.length < 8) { setPwErr("New password must be at least 8 characters."); return; }
+        if (pw.next !== pw.confirm) { setPwErr("Passwords do not match."); return; }
+        setPwSaving(true);
+        try {
+            await changePassword(pw.current, pw.next);
+            setPwOk("Password changed successfully.");
+            setPw({ current: "", next: "", confirm: "" });
+        } catch (err: any) { setPwErr(err.message ?? "Failed to change password."); }
+        finally { setPwSaving(false); }
+    };
+
+    useEffect(() => {
+        if (!accessToken) return;
         sysadminService.getSettings(accessToken).then(s => {
             setMode(Boolean(s.maintenance_mode));
             setMsg(s.maintenance_msg);
             setSchoolYear(s.school_year);
-            setSemester(s.current_semester);
+            setSemester(Number(s.current_semester) as 1 | 2 | 3);
             setSavedSchoolYear(s.school_year);
         }).finally(() => setLoading(false));
     }, [accessToken]);
@@ -77,8 +151,9 @@ export default function SystemSettingsPage() {
     };
 
     const handleSemesterChange = (newSem: string) => {
-        setSemester(newSem);
-        if (newSem === "1st") {
+        const val = Number(newSem) as 1 | 2 | 3;
+        setSemester(val);
+        if (val === 1) {
             const next = advanceSchoolYear(savedSchoolYear);
             setSchoolYear(next);
             setYearAutoChanged(next !== savedSchoolYear);
@@ -99,7 +174,7 @@ export default function SystemSettingsPage() {
     };
 
     // Detect if this save requires year advancement
-    const isNewAcademicYear = schoolYear !== savedSchoolYear && semester === "1st";
+    const isNewAcademicYear = schoolYear !== savedSchoolYear && semester === 1;
 
     const handleSaveSemester = async () => {
         if (!accessToken || !schoolYear || !semester) { showToast("Please fill in all fields."); return; }
@@ -184,6 +259,105 @@ export default function SystemSettingsPage() {
             ) : (
                 <div className="flex flex-col gap-5 max-w-2xl">
 
+                    {/* ── My Profile ── */}
+                    <form onSubmit={handleSaveProfile}
+                        className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
+                        style={{ animation: "fadeInUp 0.4s ease both 0.03s" }}>
+                        <div className="flex items-center gap-2">
+                            <FiUser className="text-orange-500" size={16} />
+                            <h2 className="text-gray-700 font-semibold text-sm">My Profile</h2>
+                        </div>
+
+                        {profile && (
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
+                                    {avatarPreview
+                                        ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                                        : <DefaultAvatarSvg />}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-800">{firstName} {lastName}</p>
+                                    <p className="text-xs text-orange-500 font-medium">{profile.roleLabel}</p>
+                                    <p className="text-xs text-gray-400">{profile.email}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className={lbl}>First Name</label>
+                                <input value={firstName} onChange={e => setFirstName(e.target.value)}
+                                    placeholder="First name" className={inp} />
+                            </div>
+                            <div>
+                                <label className={lbl}>Last Name</label>
+                                <input value={lastName} onChange={e => setLastName(e.target.value)}
+                                    placeholder="Last name" className={inp} />
+                            </div>
+                            <div>
+                                <label className={lbl}>Email</label>
+                                <div className={inp + " bg-gray-50 text-gray-400 cursor-default"}>
+                                    {profile?.email ?? "—"}
+                                </div>
+                            </div>
+                            <div>
+                                <label className={lbl}>Position / Title</label>
+                                <input value={position} onChange={e => setPosition(e.target.value)}
+                                    placeholder="e.g. System Administrator" className={inp} />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button type="submit" disabled={profileSaving}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition disabled:opacity-60">
+                                <MdSave size={16} />
+                                {profileSaving ? "Saving..." : "Save Profile"}
+                            </button>
+                            {profileMsg && <p className="text-sm text-green-600 font-medium">{profileMsg}</p>}
+                        </div>
+                    </form>
+
+                    {/* ── Change Password ── */}
+                    <form onSubmit={handleChangePassword}
+                        className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-4"
+                        style={{ animation: "fadeInUp 0.4s ease both 0.05s" }}>
+                        <div className="flex items-center gap-2">
+                            <FiLock className="text-orange-500" size={16} />
+                            <h2 className="text-gray-700 font-semibold text-sm">Change Password</h2>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {[
+                                { label: "Current Password", key: "current" as const },
+                                { label: "New Password", key: "next" as const },
+                                { label: "Confirm New Password", key: "confirm" as const },
+                            ].map(f => (
+                                <div key={f.key}>
+                                    <label className={lbl}>{f.label}</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPw ? "text" : "password"}
+                                            value={pw[f.key]}
+                                            onChange={e => setPw(p => ({ ...p, [f.key]: e.target.value }))}
+                                            placeholder={f.key === "next" ? "Min. 8 characters" : ""}
+                                            className={inp + " pr-10"}
+                                        />
+                                        <button type="button" onClick={() => setShowPw(s => !s)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                            {showPw ? <FiEyeOff size={15} /> : <FiEye size={15} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {pwErr && <p className="text-red-500 text-xs">{pwErr}</p>}
+                        {pwOk  && <p className="text-green-600 text-xs">{pwOk}</p>}
+                        <button type="submit" disabled={pwSaving}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold transition disabled:opacity-60">
+                            <FiLock size={14} />
+                            {pwSaving ? "Changing..." : "Change Password"}
+                        </button>
+                    </form>
+
                     {/* ── Maintenance Mode ── */}
                     <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-6"
                         style={{ animation: "fadeInUp 0.4s ease both 0.06s" }}>
@@ -267,8 +441,9 @@ export default function SystemSettingsPage() {
                                 <select value={semester} onChange={e => handleSemesterChange(e.target.value)}
                                     className={inp + " cursor-pointer"}>
                                     <option value="" disabled hidden>Select semester</option>
-                                    <option value="1st">1st Semester</option>
-                                    <option value="2nd">2nd Semester</option>
+                                    <option value={1}>1st Semester</option>
+                                    <option value={2}>2nd Semester</option>
+                                    <option value={3}>Summer</option>
                                 </select>
                             </div>
                         </div>

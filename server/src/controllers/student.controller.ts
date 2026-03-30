@@ -44,8 +44,8 @@ export const getMyObligations = async (req: Request, res: Response) => {
 export const updateMyProfile = async (req: Request, res: Response) => {
     try {
         const {
-            firstName, lastName, yearLevel, section, schoolYear, semester,
-            address, contactNumber, guardianName, emergencyContact, shirtSize,
+            firstName, lastName, middleName, yearLevel, section, schoolYear, semester,
+            gender, address, contactNumber, guardianName, shirtSize,
         } = req.body;
         if (!firstName || !lastName || !yearLevel || !section || !schoolYear || !semester)
             return sendError(res, "firstName, lastName, yearLevel, section, schoolYear, and semester are required", 400);
@@ -56,13 +56,15 @@ export const updateMyProfile = async (req: Request, res: Response) => {
 
         const profile = await updateStudentProfile(req.user!.userId, {
             firstName, lastName,
-            yearLevel:        Number(yearLevel),
-            section,          schoolYear, semester,
-            address:          address          ?? "",
-            contactNumber:    contactNumber    ?? "",
-            guardianName:     guardianName     ?? "",
-            emergencyContact: emergencyContact ?? "",
-            shirtSize:        shirtSize        ?? "",
+            middleName:    middleName    ?? undefined,
+            yearLevel:     Number(yearLevel),
+            section,       schoolYear,
+            semester:      Number(semester),
+            gender:        gender ? Number(gender) : null,
+            address:       address       ?? "",
+            contactNumber: contactNumber ?? "",
+            guardianName:  guardianName  ?? "",
+            shirtSize:     shirtSize     ?? "",
             avatarPath,
         });
         return sendSuccess(res, profile, "Profile updated");

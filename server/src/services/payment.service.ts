@@ -5,7 +5,7 @@ export interface PaymentSubmission {
     obligationName: string;
     receiptUrl: string;
     amountPaid: number;
-    paymentStatus: "pending" | "approved" | "rejected";
+    paymentStatus: number;
     submittedAt: string;
     remarks: string | null;
 }
@@ -14,7 +14,7 @@ export interface ProofSubmission {
     studentObligationId: number;
     obligationName: string;
     proofImageUrl: string;
-    status: "pending_verification";
+    status: 1;
 }
 
 const getStudentId = async (userId: number): Promise<number> => {
@@ -47,8 +47,11 @@ export const submitPayment = async (
     if (!soRows.length) throw new Error("Obligation not found");
 
     const so = soRows[0];
-    if (so.status === "paid" || so.status === "waived") {
+    if (so.status === 2 || so.status === 3) {
         throw new Error("This obligation is already settled");
+    }
+    if (so.status === 1) {
+        throw new Error("A payment is already pending verification for this obligation.");
     }
     if (Number(so.amount_due) === 0) {
         throw new Error("This obligation does not require payment. Upload proof instead.");
@@ -62,7 +65,7 @@ export const submitPayment = async (
             `INSERT INTO payment_submissions
                 (student_id, obligation_id, student_obligation_id, payment_receipt_path,
                  amount_paid, notes, payment_type, payment_status, submitted_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, 'gcash', 'pending', NOW(), NOW())`,
+             VALUES (?, ?, ?, ?, ?, ?, 1, 0, NOW(), NOW())`,
             [
                 studentId,
                 so.obligation_id,
@@ -77,7 +80,7 @@ export const submitPayment = async (
         // Update obligation status to pending_verification
         await conn.execute(
             `UPDATE student_obligations
-             SET status = 'pending_verification', updated_at = NOW()
+             SET status = 1, updated_at = NOW()
              WHERE student_obligation_id = ?`,
             [studentObligationId]
         );
@@ -92,7 +95,7 @@ export const submitPayment = async (
             await conn.execute(
                 `INSERT INTO notifications
                     (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Payment Submitted', ?, 'payment_submitted', ?, 'payment', 0, NOW())`,
+                 VALUES (?, 'Payment Submitted', ?, 2, ?, 'payment', 0, NOW())`,
                 [
                     officer.user_id,
                     `A student submitted a payment receipt for: ${so.obligation_name}`,
@@ -108,7 +111,7 @@ export const submitPayment = async (
             obligationName: so.obligation_name,
             receiptUrl:     `receipts/${receiptPath.split("/").pop()}`,
             amountPaid,
-            paymentStatus:  "pending",
+            paymentStatus:  0,
             submittedAt:    new Date().toISOString(),
             remarks:        null,
         };
@@ -139,7 +142,8 @@ export const submitProof = async (
     );
     if (!soRows.length) throw new Error("Obligation not found");
     const so = soRows[0];
-    if (so.status === "paid" || so.status === "waived") throw new Error("This obligation is already settled");
+    if (so.status === 2 || so.status === 3) throw new Error("This obligation is already settled");
+    if (so.status === 1) throw new Error("Proof is already pending verification for this obligation.");
     if (Number(so.amount_due) > 0) throw new Error("This obligation requires payment, not proof.");
 
     const conn = await pool.getConnection();
@@ -148,7 +152,7 @@ export const submitProof = async (
 
         await conn.execute(
             `UPDATE student_obligations
-             SET proof_image = ?, status = 'pending_verification', updated_at = NOW()
+             SET proof_image = ?, status = 1, updated_at = NOW()
              WHERE student_obligation_id = ?`,
             [proofImagePath, studentObligationId]
         );
@@ -163,7 +167,7 @@ export const submitProof = async (
             await conn.execute(
                 `INSERT INTO notifications
                     (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Proof Submitted', ?, 'proof_submitted', ?, 'obligation', 0, NOW())`,
+                 VALUES (?, 'Proof Submitted', ?, 2, ?, 'obligation', 0, NOW())`,
                 [
                     officer.user_id,
                     `A student submitted proof for: ${so.obligation_name}`,
@@ -177,7 +181,7 @@ export const submitProof = async (
             studentObligationId,
             obligationName: so.obligation_name,
             proofImageUrl: proofImagePath,
-            status: "pending_verification",
+            status: 1,
         };
     } catch (err) {
         await conn.rollback();

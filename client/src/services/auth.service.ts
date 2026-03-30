@@ -18,6 +18,7 @@ interface RegisterResponse {
 
 interface RefreshResponse {
     accessToken: string;
+    user: AuthenticatedUser;
 }
 
 export const authService = {

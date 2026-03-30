@@ -107,7 +107,7 @@ function VerifyModal({ item, token, onClose, onDone }: VerifyModalProps) {
     const [imgError, setImgError] = useState(false);
     if (!item) return null;
 
-    async function act(status: "approved" | "rejected") {
+    async function act(status: number) {
         setSaving(true);
         try {
             await adminStudentService.verifyPayment(token, item!.paymentId, status, remarks);
@@ -155,7 +155,7 @@ function VerifyModal({ item, token, onClose, onDone }: VerifyModalProps) {
                 <div className="flex gap-3 justify-end">
                     <button onClick={onClose}
                         className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium">Cancel</button>
-                    <button onClick={() => act("approved")} disabled={saving}
+                    <button onClick={() => act(1)} disabled={saving}
                         className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-60">
                         {saving ? "Saving..." : "Verify"}
                     </button>
@@ -398,8 +398,8 @@ const PaymentVerification = () => {
         return items.filter(i => (i.verifiedByName ?? "").toLowerCase().includes(q));
     }
     function applyHistoryStatus(items: PaymentHistoryItem[]) {
-        if (historyStatusFilter === "verified")   return items.filter(i => i.paymentStatus === "approved");
-        if (historyStatusFilter === "unverified") return items.filter(i => i.paymentStatus === "rejected");
+        if (historyStatusFilter === "verified")   return items.filter(i => i.paymentStatus === 1);
+        if (historyStatusFilter === "unverified") return items.filter(i => i.paymentStatus === 2);
         return items;
     }
     function applyPaySort(items: PendingPaymentItem[]) {
@@ -603,7 +603,7 @@ const PaymentVerification = () => {
                         <>
                             <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                                 <div className="overflow-x-auto">
-                                <table className="w-full min-w-[700px] border-collapse">
+                                <table className="eso-table w-full min-w-[700px] border-collapse">
                                     <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
                                         <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
                                             <th className="px-3 py-2 text-center w-10">
@@ -712,7 +712,7 @@ const PaymentVerification = () => {
                         <>
                             <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                                 <div className="overflow-x-auto">
-                                <table className="w-full min-w-[700px] border-collapse">
+                                <table className="eso-table w-full min-w-[700px] border-collapse">
                                     <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
                                         <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
                                             <th className="px-3 py-2 text-center w-10">
@@ -762,8 +762,8 @@ const PaymentVerification = () => {
                                                 <td className={`px-3 py-2.5 text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{h.obligationName}</td>
                                                 <td className={`px-3 py-2.5 text-right font-semibold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>PHP {Number(h.amountPaid).toFixed(2)}</td>
                                                 <td className="px-3 py-2.5 text-center">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${h.paymentType === "gcash" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                                                        {h.paymentType === "gcash" ? "GCash" : "Cash"}
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${h.paymentType === 1 ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
+                                                        {h.paymentType === 1 ? "GCash" : "Cash"}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-2.5">
@@ -783,8 +783,8 @@ const PaymentVerification = () => {
                                                         : <span className={`text-xs ${darkMode ? "text-gray-600" : "text-gray-300"}`}>—</span>}
                                                 </td>
                                                 <td className="px-3 py-2.5 text-center">
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${h.paymentStatus === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                                                        {h.paymentStatus === "approved" ? "Verified" : "Unverified"}
+                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${h.paymentStatus === 1 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                                        {h.paymentStatus === 1 ? "Verified" : "Unverified"}
                                                     </span>
                                                 </td>
                                             </tr>

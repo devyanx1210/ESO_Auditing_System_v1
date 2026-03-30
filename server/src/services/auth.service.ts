@@ -107,7 +107,7 @@ export const loginUser = async (
 
 export const refreshAccessToken = async (
     refreshToken: string
-): Promise<string> => {
+): Promise<{ accessToken: string; user: Record<string, any> }> => {
     try {
         const decoded = jwt.verify(
             refreshToken,
@@ -138,7 +138,18 @@ export const refreshAccessToken = async (
         const newAccessToken = jwt.sign(payload, jwtConfig.accessSecret, {
             expiresIn: jwtConfig.accessExpiresIn,
         } as jwt.SignOptions);
-        return newAccessToken;
+        const freshUser = {
+            userId:    user.user_id,
+            firstName: user.first_name,
+            lastName:  user.last_name,
+            email:     user.email,
+            role:      user.role_name,
+            programId: user.program_id ?? null,
+            status:    user.status,
+            yearLevel: isOfficer ? (user.admin_year_level ?? null) : null,
+            section:   isOfficer ? (user.admin_section   ?? null) : null,
+        };
+        return { accessToken: newAccessToken, user: freshUser };
     } catch (error) {
         throw new Error("Invalid or expired refresh token");
     }
@@ -213,112 +224,123 @@ export const registerUser = async (
     const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
     const passwordHash = await bcrypt.hash(input.password, saltRounds);
 
-    const [result]: any = await pool.execute(
-        `INSERT INTO users (
-            role_id, program_id, first_name, last_name,
-            email, password_hash, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
-        [
-            roleId,
-            input.programId,
-            input.firstName.trim(),
-            input.lastName.trim(),
-            input.email.toLowerCase().trim(),
-            passwordHash,
-        ]
-    );
-    const userId = result.insertId;
+    const conn = await (pool as any).getConnection();
+    try {
+        await conn.beginTransaction();
 
-    const [studentResult]: any = await pool.execute(
-        `INSERT INTO students (
-            user_id, student_no, first_name, last_name, middle_name, suffix,
-            program_id, year_level, section, school_year, semester,
-            is_enrolled, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
-        [
-            userId,
-            input.studentNo,
-            input.firstName.trim(),
-            input.lastName.trim(),
-            input.middleName?.trim() ?? null,
-            input.suffix?.trim() ?? null,
-            input.programId,
-            input.yearLevel,
-            input.section,
-            input.schoolYear,
-            input.semester,
-        ]
-    );
-
-    // Auto-assign all active obligations that match this student
-    const studentId = studentResult.insertId;
-    const [matchingObs]: any = await pool.execute(
-        `SELECT obligation_id, amount
-         FROM obligations
-         WHERE is_active = 1
-           AND school_year = ?
-           AND (
-               scope = 'all'
-               OR (scope = 'department' AND program_id = ?)
-               OR (scope = 'year_level' AND year_level = ?
-                   AND (program_id IS NULL OR program_id = ?))
-               OR (scope = 'section' AND section = ? AND year_level = ?
-                   AND (program_id IS NULL OR program_id = ?))
-           )`,
-        [
-            input.schoolYear,
-            input.programId,
-            input.yearLevel, input.programId,
-            input.section, input.yearLevel, input.programId,
-        ]
-    );
-    for (const ob of matchingObs) {
-        await pool.execute(
-            `INSERT IGNORE INTO student_obligations
-                (student_id, obligation_id, amount_due, status, created_at, updated_at)
-             VALUES (?, ?, ?, 'unpaid', NOW(), NOW())`,
-            [studentId, ob.obligation_id, ob.amount]
-        );
-        await pool.execute(
-            `INSERT INTO notifications
-                (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-             VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
+        const [result]: any = await conn.execute(
+            `INSERT INTO users (
+                role_id, program_id, first_name, last_name,
+                email, password_hash, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
             [
-                userId,
-                `New obligation assigned: ${ob.obligation_name ?? "obligation"}`,
-                ob.obligation_id,
+                roleId,
+                input.programId,
+                input.firstName.trim(),
+                input.lastName.trim(),
+                input.email.toLowerCase().trim(),
+                passwordHash,
             ]
         );
-    }
+        const userId = result.insertId;
 
-    const payload: JwtAccessPayload = {
-        userId,
-        email: input.email.toLowerCase().trim(),
-        role: "student",
-        programId: input.programId,
-    };
-    const tokens = generateTokens(payload);
-    const refreshExpiry = new Date();
-    refreshExpiry.setDate(refreshExpiry.getDate() + 7);
+        const [studentResult]: any = await conn.execute(
+            `INSERT INTO students (
+                user_id, student_no, first_name, last_name, middle_name,
+                program_id, year_level, section, school_year, semester,
+                is_enrolled, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+            [
+                userId,
+                input.studentNo,
+                input.firstName.trim(),
+                input.lastName.trim(),
+                input.middleName?.trim() ?? null,
+                input.programId,
+                input.yearLevel,
+                input.section,
+                input.schoolYear,
+                input.semester,
+            ]
+        );
 
-    await pool.execute(
-        `UPDATE users SET
-            refresh_token = ?,
-            refresh_token_expires_at = ?
-         WHERE user_id = ?`,
-        [tokens.refreshToken, refreshExpiry, userId]
-    );
+        // Auto-assign all active obligations that match this student
+        const studentId = studentResult.insertId;
+        const [matchingObs]: any = await conn.execute(
+            `SELECT obligation_id, amount, obligation_name
+             FROM obligations
+             WHERE is_active = 1
+               AND school_year = ?
+               AND (
+                   scope = 0
+                   OR (scope = 1 AND program_id = ?)
+                   OR (scope = 2 AND year_level = ?
+                       AND (program_id IS NULL OR program_id = ?))
+                   OR (scope = 3 AND section = ? AND year_level = ?
+                       AND (program_id IS NULL OR program_id = ?))
+               )`,
+            [
+                input.schoolYear,
+                input.programId,
+                input.yearLevel, input.programId,
+                input.section, input.yearLevel, input.programId,
+            ]
+        );
+        for (const ob of matchingObs) {
+            await conn.execute(
+                `INSERT IGNORE INTO student_obligations
+                    (student_id, obligation_id, amount_due, status, created_at, updated_at)
+                 VALUES (?, ?, ?, 0, NOW(), NOW())`,
+                [studentId, ob.obligation_id, ob.amount]
+            );
+            await conn.execute(
+                `INSERT INTO notifications
+                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+                 VALUES (?, 'New Obligation Assigned', ?, 1, ?, 'obligation', 0, NOW())`,
+                [
+                    userId,
+                    `New obligation assigned: ${ob.obligation_name ?? "obligation"}`,
+                    ob.obligation_id,
+                ]
+            );
+        }
 
-    return {
-        user: {
+        const payload: JwtAccessPayload = {
             userId,
-            firstName: input.firstName.trim(),
-            lastName: input.lastName.trim(),
             email: input.email.toLowerCase().trim(),
             role: "student",
             programId: input.programId,
-            status: "active",
-        },
-        tokens,
-    };
+        };
+        const tokens = generateTokens(payload);
+        const refreshExpiry = new Date();
+        refreshExpiry.setDate(refreshExpiry.getDate() + 7);
+
+        await conn.execute(
+            `UPDATE users SET
+                refresh_token = ?,
+                refresh_token_expires_at = ?
+             WHERE user_id = ?`,
+            [tokens.refreshToken, refreshExpiry, userId]
+        );
+
+        await conn.commit();
+
+        return {
+            user: {
+                userId,
+                firstName: input.firstName.trim(),
+                lastName: input.lastName.trim(),
+                email: input.email.toLowerCase().trim(),
+                role: "student",
+                programId: input.programId,
+                status: "active",
+            },
+            tokens,
+        };
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
+    }
 };

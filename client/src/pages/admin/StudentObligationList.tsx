@@ -59,59 +59,59 @@ const PROGRAM_NAMES: Record<string, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusBadge(status: string) {
-    const map: Record<string, string> = {
-        paid:                 "bg-green-100 text-green-700",
-        waived:               "bg-blue-100 text-blue-700",
-        pending_verification: "bg-yellow-100 text-yellow-700",
-        unpaid:               "bg-red-100 text-red-700",
+function statusBadge(status: number) {
+    const map: Record<number, string> = {
+        2: "bg-green-100 text-green-700",
+        3: "bg-blue-100 text-blue-700",
+        1: "bg-yellow-100 text-yellow-700",
+        0: "bg-red-100 text-red-700",
     };
-    const labels: Record<string, string> = {
-        paid: "Paid", waived: "Waived",
-        pending_verification: "Pending", unpaid: "Unpaid",
+    const labels: Record<number, string> = {
+        2: "Verified", 3: "Waived",
+        1: "For Verification", 0: "Not Submitted",
     };
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] ?? "bg-gray-100 text-gray-600"}`}>
-            {labels[status] ?? status}
+            {labels[status] ?? String(status)}
         </span>
     );
 }
 
-function proofStatusBadge(status: string) {
-    const map: Record<string, string> = {
-        paid:                 "bg-green-100 text-green-700",
-        waived:               "bg-blue-100 text-blue-700",
-        pending_verification: "bg-yellow-100 text-yellow-700",
-        unpaid:               "bg-yellow-100 text-yellow-700",
+function proofStatusBadge(status: number) {
+    const map: Record<number, string> = {
+        2: "bg-green-100 text-green-700",
+        3: "bg-blue-100 text-blue-700",
+        1: "bg-yellow-100 text-yellow-700",
+        0: "bg-yellow-100 text-yellow-700",
     };
-    const labels: Record<string, string> = {
-        paid:                 "Verified",
-        waived:               "Waived",
-        pending_verification: "Pending",
-        unpaid:               "Pending",
+    const labels: Record<number, string> = {
+        2: "Verified",
+        3: "Waived",
+        1: "For Verification",
+        0: "Not Submitted",
     };
     return (
         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] ?? "bg-gray-100 text-gray-600"}`}>
-            {labels[status] ?? status}
+            {labels[status] ?? String(status)}
         </span>
     );
 }
 
-function clearanceBadge(s: string | null) {
-    const map: Record<string, string> = {
-        cleared:     "bg-green-100 text-green-700",
-        in_progress: "bg-yellow-100 text-yellow-700",
-        rejected:    "bg-red-100 text-red-700",
-        pending:     "bg-yellow-100 text-yellow-700",
+function clearanceBadge(s: number | null) {
+    const map: Record<number, string> = {
+        2: "bg-green-100 text-green-700",
+        1: "bg-blue-100 text-blue-700",
+        3: "bg-red-100 text-red-700",
+        0: "bg-gray-100 text-gray-500",
     };
-    const label = s ?? "pending";
-    const labels: Record<string, string> = {
-        cleared: "Approved", in_progress: "In Progress",
-        rejected: "Disapproved", pending: "Pending",
+    const val = s ?? 0;
+    const labels: Record<number, string> = {
+        2: "Approved", 1: "Processing",
+        3: "Disapproved", 0: "Pending",
     };
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[label] ?? "bg-gray-100 text-gray-600"}`}>
-            {labels[label] ?? label.replace("_", " ")}
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[val] ?? "bg-gray-100 text-gray-600"}`}>
+            {labels[val] ?? String(val)}
         </span>
     );
 }
@@ -182,7 +182,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
 
     const obs = cache[studentId];
 
-    async function handleVerifyProof(soId: number, status: "paid" | "unpaid") {
+    async function handleVerifyProof(soId: number, status: number) {
         setVerifyingId(soId);
         try {
             await adminStudentService.verifyProof(token, soId, status);
@@ -245,7 +245,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
         <tr>
             <td colSpan={9} className={`${panelOuter} px-4 py-3`}>
                 <div className={`${panelInner} overflow-x-auto`}>
-                    <table className="w-full text-xs border-collapse">
+                    <table className="eso-table w-full text-xs border-collapse">
                         <thead>
                             <tr className={`border-b-2 ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
                                 <th className={`px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Obligation Name</th>
@@ -277,8 +277,8 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                                 {ob.isOverdue && <span className="ml-1.5 text-red-500 bg-red-50 px-1.5 py-0.5 rounded text-[10px] font-normal">overdue</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
-                                                {ob.paymentType === "gcash" && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">GCash</span>}
-                                                {ob.paymentType === "cash"  && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold">Cash</span>}
+                                                {ob.paymentType === 1 && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">GCash</span>}
+                                                {ob.paymentType === 2  && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold">Cash</span>}
                                                 {!ob.paymentType && <span className={darkMode ? "text-gray-600" : "text-gray-300"}>—</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
@@ -349,16 +349,16 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                                 {ob.verifiedAt ? fmtDateTime(ob.verifiedAt) : <span className={darkMode ? "text-gray-600" : "text-gray-300"}>—</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
-                                                {ob.status === "pending_verification" && ob.proofImage ? (
+                                                {ob.status === 1 && ob.proofImage ? (
                                                     <div className="flex items-center justify-center gap-1">
                                                         <button
-                                                            onClick={() => handleVerifyProof(ob.studentObligationId, "paid")}
+                                                            onClick={() => handleVerifyProof(ob.studentObligationId, 2)}
                                                             disabled={verifyingId === ob.studentObligationId}
                                                             className="px-2 py-0.5 text-[10px] bg-green-600 text-white rounded font-semibold hover:bg-green-700 disabled:opacity-60">
                                                             {verifyingId === ob.studentObligationId ? "..." : "Verify"}
                                                         </button>
                                                         <button
-                                                            onClick={() => handleVerifyProof(ob.studentObligationId, "unpaid")}
+                                                            onClick={() => handleVerifyProof(ob.studentObligationId, 0)}
                                                             disabled={verifyingId === ob.studentObligationId}
                                                             className="px-2 py-0.5 text-[10px] bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 disabled:opacity-60">
                                                             Reject
@@ -375,6 +375,42 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                             )}
 
                         </tbody>
+
+                        {/* ── Payment Summary Footer ── */}
+                        {payObs.length > 0 && (() => {
+                            const totalPayable = payObs.reduce((sum, ob) => sum + Number(ob.amount), 0);
+                            const totalPaid    = payObs.filter(ob => ob.status === 2).reduce((sum, ob) => sum + Number(ob.amountPaid ?? ob.amount), 0);
+                            const remaining    = totalPayable - totalPaid;
+                            const cellCls = `px-3 py-2 text-right text-xs font-bold border-t-2 ${darkMode ? "border-gray-600 text-gray-200" : "border-gray-300 text-gray-700"}`;
+                            const labelCls = `px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide border-t-2 ${darkMode ? "border-gray-600 text-gray-400" : "border-gray-300 text-gray-500"}`;
+                            return (
+                                <tfoot>
+                                    <tr className={darkMode ? "bg-[#222]/40" : "bg-gray-50"}>
+                                        <td colSpan={2} className={labelCls}>Payment Summary</td>
+                                        <td className={`${cellCls} text-center`}>—</td>
+                                        <td className={cellCls}>
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Payable</span>
+                                                <span>₱{totalPayable.toFixed(2)}</span>
+                                            </div>
+                                        </td>
+                                        <td colSpan={2} className={cellCls}>
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Paid</span>
+                                                <span className="text-green-600">₱{totalPaid.toFixed(2)}</span>
+                                            </div>
+                                        </td>
+                                        <td className={`${cellCls} ${remaining > 0 ? "text-red-500" : "text-green-600"}`}>
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Balance</span>
+                                                <span>₱{remaining.toFixed(2)}</span>
+                                            </div>
+                                        </td>
+                                        <td className={`border-t-2 ${darkMode ? "border-gray-600" : "border-gray-300"}`}></td>
+                                    </tr>
+                                </tfoot>
+                            );
+                        })()}
                     </table>
                 </div>
             </td>
@@ -404,7 +440,7 @@ function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode 
             .finally(() => setLoading(false));
     }, [studentId, token, cache, onCache]);
 
-    async function handleVerifyProof(soId: number, status: "paid" | "unpaid") {
+    async function handleVerifyProof(soId: number, status: number) {
         setVerifyingId(soId);
         try {
             await adminStudentService.verifyProof(token, soId, status);
@@ -447,8 +483,8 @@ function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode 
                                             {ob.isOverdue && <span className="ml-1 text-red-500 text-[10px]">(overdue)</span>}
                                         </p>
                                         <div className={`flex items-center gap-2 mt-0.5 text-[11px] ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                            {ob.paymentType === "gcash" && <span className="px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold">GCash</span>}
-                                            {ob.paymentType === "cash"  && <span className="px-1 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-semibold">Cash</span>}
+                                            {ob.paymentType === 1 && <span className="px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold">GCash</span>}
+                                            {ob.paymentType === 2  && <span className="px-1 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-semibold">Cash</span>}
                                             {ob.amountPaid != null
                                                 ? <span className="font-semibold">₱{Number(ob.amountPaid).toFixed(2)}</span>
                                                 : <span>₱{Number(ob.amount).toFixed(2)}</span>}
@@ -494,16 +530,16 @@ function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode 
                                     </div>
                                     <div className="flex flex-col items-end gap-1 shrink-0">
                                         {proofStatusBadge(ob.status)}
-                                        {ob.status === "pending_verification" && ob.proofImage && (
+                                        {ob.status === 1 && ob.proofImage && (
                                             <div className="flex gap-1 mt-1">
                                                 <button
-                                                    onClick={() => handleVerifyProof(ob.studentObligationId, "paid")}
+                                                    onClick={() => handleVerifyProof(ob.studentObligationId, 2)}
                                                     disabled={verifyingId === ob.studentObligationId}
                                                     className="px-2 py-0.5 text-[10px] bg-green-600 text-white rounded font-semibold hover:bg-green-700 disabled:opacity-60">
                                                     {verifyingId === ob.studentObligationId ? "..." : "Verify"}
                                                 </button>
                                                 <button
-                                                    onClick={() => handleVerifyProof(ob.studentObligationId, "unpaid")}
+                                                    onClick={() => handleVerifyProof(ob.studentObligationId, 0)}
                                                     disabled={verifyingId === ob.studentObligationId}
                                                     className="px-2 py-0.5 text-[10px] bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 disabled:opacity-60">
                                                     Reject
@@ -517,6 +553,30 @@ function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode 
                     </div>
                 </div>
             )}
+            {/* ── Mobile Payment Summary ── */}
+            {payObs.length > 0 && (() => {
+                const totalPayable = payObs.reduce((sum, ob) => sum + Number(ob.amount), 0);
+                const totalPaid    = payObs.filter(ob => ob.status === 2).reduce((sum, ob) => sum + Number(ob.amountPaid ?? ob.amount), 0);
+                const remaining    = totalPayable - totalPaid;
+                return (
+                    <div className={`mt-3 rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 ${darkMode ? "bg-[#222]/60 border border-gray-700" : "bg-white border border-gray-200"}`}>
+                        <div className="text-center flex-1">
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Payable</p>
+                            <p className={`text-xs font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>₱{totalPayable.toFixed(2)}</p>
+                        </div>
+                        <div className={`w-px h-8 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                        <div className="text-center flex-1">
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Paid</p>
+                            <p className="text-xs font-bold text-green-600">₱{totalPaid.toFixed(2)}</p>
+                        </div>
+                        <div className={`w-px h-8 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                        <div className="text-center flex-1">
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Balance</p>
+                            <p className={`text-xs font-bold ${remaining > 0 ? "text-red-500" : "text-green-600"}`}>₱{remaining.toFixed(2)}</p>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
@@ -781,7 +841,7 @@ const StudentObligationList = () => {
                 <>
                     <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${card}`}>
                         <div className="overflow-x-auto">
-                        <table className="w-full min-w-[750px] border-collapse">
+                        <table className="eso-table w-full min-w-[750px] border-collapse">
                             <thead className={`${th}`}>
                                 <tr className={`border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
                                     <th className="pl-4 pr-2 py-2 w-8"></th>
@@ -851,6 +911,34 @@ const StudentObligationList = () => {
                                     );
                                 })}
                             </tbody>
+                            {(() => {
+                                const grandPayable  = filtered.reduce((s, st) => s + (st.totalPayable ?? 0), 0);
+                                const grandPaid     = filtered.reduce((s, st) => s + (st.totalPaid    ?? 0), 0);
+                                const grandBalance  = grandPayable - grandPaid;
+                                if (grandPayable === 0) return null;
+                                return (
+                                    <tfoot>
+                                        <tr className={`border-t-2 ${darkMode ? "border-orange-500/40 bg-[#1c1c1c]" : "border-orange-200 bg-orange-50/60"}`}>
+                                            <td colSpan={5} className={`pl-4 pr-3 py-3 text-xs font-bold uppercase tracking-wide ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                                Grand Total — {filtered.length} student{filtered.length !== 1 ? "s" : ""}
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className={`text-[10px] font-semibold ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Payable / Paid / Balance</span>
+                                                    <span className={`text-xs font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
+                                                        ₱{grandPayable.toFixed(2)}
+                                                        <span className="mx-1 text-gray-400">·</span>
+                                                        <span className="text-green-600">₱{grandPaid.toFixed(2)}</span>
+                                                        <span className="mx-1 text-gray-400">·</span>
+                                                        <span className={grandBalance > 0 ? "text-red-500" : "text-green-600"}>₱{grandBalance.toFixed(2)}</span>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td colSpan={2}></td>
+                                        </tr>
+                                    </tfoot>
+                                );
+                            })()}
                         </table>
                         </div>
                     </div>

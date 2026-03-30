@@ -103,6 +103,31 @@ input[type="checkbox"]:indeterminate {
 .anim-modal-backdrop { animation: modalBackdropIn 0.2s ease-out both; }
 .anim-modal-panel  { animation: modalPanelIn    0.32s cubic-bezier(0.34,1.56,0.64,1) both; }
 
+/* ── Table borders ── */
+.eso-table {
+    border-collapse: collapse;
+}
+.eso-table th,
+.eso-table td {
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+}
+.eso-table th:last-child,
+.eso-table td:last-child {
+    border-right: none;
+}
+.eso-table thead tr:last-child th {
+    border-bottom: 2px solid #d1d5db;
+}
+.dark .eso-table th,
+.dark .eso-table td {
+    border-right-color: #2a2a2a;
+    border-bottom-color: #2a2a2a;
+}
+.dark .eso-table thead tr:last-child th {
+    border-bottom-color: #3a3a3a;
+}
+
 /* Hide browser password reveal button */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,

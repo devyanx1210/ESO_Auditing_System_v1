@@ -7,13 +7,13 @@ export interface ObligationStudentStatus {
     lastName: string;
     yearLevel: number;
     section: string;
-    status: string; // 'paid' | 'unpaid' | 'pending_verification' | 'waived'
+    status: number; // 0=unpaid | 1=pending_verification | 2=paid | 3=waived
 }
 
 export interface ObligationStat {
     obligationId: number;
     obligationName: string;
-    scope: string;
+    scope: number;
     programId: number | null;
     programName: string | null;
     totalStudents: number;
@@ -73,13 +73,13 @@ export const getDashboardStats = async (
             p.code,
             p.name,
             COUNT(DISTINCT s.student_id)                                                    AS totalStudents,
-            COUNT(DISTINCT CASE WHEN c.clearance_status = 'cleared' THEN s.student_id END) AS verifiedStudents,
+            COUNT(DISTINCT CASE WHEN c.clearance_status = 2 THEN s.student_id END) AS verifiedStudents,
             COUNT(so.student_obligation_id)                                                 AS totalObligations,
-            COALESCE(SUM(CASE WHEN so.status = 'paid' THEN 1 ELSE 0 END), 0)               AS paidObligations,
+            COALESCE(SUM(CASE WHEN so.status = 2 THEN 1 ELSE 0 END), 0)                    AS paidObligations,
             COALESCE(SUM(so.amount_due), 0)                                                 AS totalAmountToCollect
         FROM programs p
         LEFT JOIN students s  ON p.program_id = s.program_id ${studentFilter}
-        LEFT JOIN clearances c ON s.student_id = c.student_id AND c.clearance_status = 'cleared'
+        LEFT JOIN clearances c ON s.student_id = c.student_id AND c.clearance_status = 2
         LEFT JOIN student_obligations so ON s.student_id = so.student_id
         ${programWhere}
         GROUP BY p.program_id
@@ -93,7 +93,7 @@ export const getDashboardStats = async (
     const [programRows]: any = await pool.execute(programSql, programParams);
 
     // ─── Approved payments (separate simple query) ────────────────────────────
-    const paymentConditions: string[] = ["ps.payment_status = 'approved'"];
+    const paymentConditions: string[] = ["ps.payment_status = 1"];
     const paymentParams: any[] = [];
 
     if (isClassOfficer) {
@@ -135,9 +135,9 @@ export const getDashboardStats = async (
             s.program_id                                                                     AS programId,
             s.year_level                                                                     AS yearLevel,
             COUNT(DISTINCT s.student_id)                                                     AS totalStudents,
-            COUNT(DISTINCT CASE WHEN c.clearance_status = 'cleared' THEN s.student_id END)  AS verifiedStudents
+            COUNT(DISTINCT CASE WHEN c.clearance_status = 2 THEN s.student_id END)  AS verifiedStudents
         FROM students s
-        LEFT JOIN clearances c ON s.student_id = c.student_id AND c.clearance_status = 'cleared'
+        LEFT JOIN clearances c ON s.student_id = c.student_id AND c.clearance_status = 2
         ${ylWhere}
         GROUP BY s.program_id, s.year_level
         ORDER BY s.program_id, s.year_level
@@ -229,7 +229,7 @@ export const getDashboardStats = async (
         if (r.student_id == null) continue;
         const ob = obligationMap.get(id)!;
         ob.totalStudents++;
-        if (r.so_status === "paid") ob.paidCount++;
+        if (r.so_status === 2) ob.paidCount++;
         ob.students.push({
             studentId: Number(r.student_id),
             studentNo: r.student_no,

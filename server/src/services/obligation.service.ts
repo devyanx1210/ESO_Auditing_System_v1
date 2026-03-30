@@ -8,13 +8,13 @@ export interface ObligationData {
     requiresPayment: boolean;
     gcashQrPath: string | null;
     isRequired: boolean;
-    scope: "all" | "department" | "year_level" | "section";
+    scope: number;
     programId: number | null;
     programName: string | null;
     yearLevel: number | null;
     section: string | null;
     schoolYear: string;
-    semester: string;
+    semester: number;
     dueDate: string | null;
     isActive: boolean;
     createdAt: string;
@@ -27,12 +27,12 @@ export interface CreateObligationInput {
     amount: number;
     gcashQrPath?: string | null;
     isRequired?: boolean;
-    scope: "all" | "department" | "year_level" | "section";
+    scope: number;
     programId?: number | null;
     yearLevel?: number | null;
     section?: string | null;
     schoolYear: string;
-    semester: "1st" | "2nd" | "Summer";
+    semester: number;
     dueDate?: string | null;
 }
 
@@ -140,10 +140,10 @@ export const createObligation = async (
         `;
         const params: any[] = [];
 
-        if (input.scope === "department" && input.programId) {
+        if (input.scope === 1 && input.programId) {
             studentQuery += " AND s.program_id = ?";
             params.push(input.programId);
-        } else if (input.scope === "year_level" && input.yearLevel) {
+        } else if (input.scope === 2 && input.yearLevel) {
             if (input.programId) {
                 studentQuery += " AND s.program_id = ? AND s.year_level = ?";
                 params.push(input.programId, input.yearLevel);
@@ -151,7 +151,7 @@ export const createObligation = async (
                 studentQuery += " AND s.year_level = ?";
                 params.push(input.yearLevel);
             }
-        } else if (input.scope === "section" && input.section) {
+        } else if (input.scope === 3 && input.section) {
             if (input.programId) {
                 studentQuery += " AND s.program_id = ? AND s.year_level = ? AND s.section = ?";
                 params.push(input.programId, input.yearLevel, input.section);
@@ -167,14 +167,14 @@ export const createObligation = async (
             await conn.execute(
                 `INSERT IGNORE INTO student_obligations
                     (student_id, obligation_id, amount_due, status, created_at, updated_at)
-                 VALUES (?, ?, ?, 'unpaid', NOW(), NOW())`,
+                 VALUES (?, ?, ?, 0, NOW(), NOW())`,
                 [student.student_id, obligationId, input.amount]
             );
 
             await conn.execute(
                 `INSERT INTO notifications
                     (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
+                 VALUES (?, 'New Obligation Assigned', ?, 1, ?, 'obligation', 0, NOW())`,
                 [
                     student.user_id,
                     `New obligation assigned: ${input.obligationName}`,
@@ -261,13 +261,13 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
         `;
         const params: any[] = [];
 
-        if (ob.scope === "department" && ob.program_id) {
+        if (ob.scope === 1 && ob.program_id) {
             studentQuery += " AND s.program_id = ?";
             params.push(ob.program_id);
-        } else if (ob.scope === "year_level") {
+        } else if (ob.scope === 2) {
             if (ob.year_level) { studentQuery += " AND s.year_level = ?"; params.push(ob.year_level); }
             if (ob.program_id) { studentQuery += " AND s.program_id = ?"; params.push(ob.program_id); }
-        } else if (ob.scope === "section") {
+        } else if (ob.scope === 3) {
             if (ob.section) { studentQuery += " AND s.section = ?"; params.push(ob.section); }
             if (ob.year_level) { studentQuery += " AND s.year_level = ?"; params.push(ob.year_level); }
             if (ob.program_id) { studentQuery += " AND s.program_id = ?"; params.push(ob.program_id); }
@@ -288,13 +288,13 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
             await conn.execute(
                 `INSERT IGNORE INTO student_obligations
                     (student_id, obligation_id, amount_due, status, created_at, updated_at)
-                 VALUES (?, ?, ?, 'unpaid', NOW(), NOW())`,
+                 VALUES (?, ?, ?, 0, NOW(), NOW())`,
                 [student.student_id, obligationId, ob.amount]
             );
             await conn.execute(
                 `INSERT INTO notifications
                     (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'New Obligation Assigned', ?, 'obligation_assigned', ?, 'obligation', 0, NOW())`,
+                 VALUES (?, 'New Obligation Assigned', ?, 1, ?, 'obligation', 0, NOW())`,
                 [
                     student.user_id,
                     `New obligation assigned: ${ob.obligation_name}`,
@@ -321,7 +321,7 @@ export const deleteObligation = async (obligationId: number): Promise<void> => {
          JOIN students s ON so.student_id = s.student_id
          JOIN users u ON s.user_id = u.user_id
          JOIN obligations o ON so.obligation_id = o.obligation_id
-         WHERE so.obligation_id = ? AND so.status = 'unpaid'`,
+         WHERE so.obligation_id = ? AND so.status = 0`,
         [obligationId]
     );
 
@@ -337,5 +337,6 @@ export const deleteObligation = async (obligationId: number): Promise<void> => {
         }
     }
 
+    await pool.execute("DELETE FROM student_obligations WHERE obligation_id = ?", [obligationId]);
     await pool.execute("DELETE FROM obligations WHERE obligation_id = ?", [obligationId]);
 };

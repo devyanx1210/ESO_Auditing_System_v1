@@ -24,10 +24,11 @@ export const handleVerifyPayment = async (req: Request, res: Response) => {
     try {
         const paymentId = Number(req.params.id);
         const { status, remarks } = req.body;
-        if (!["approved", "rejected"].includes(status))
-            return sendError(res, "status must be approved or rejected", 400);
-        await verifyPayment(req.user!.userId, paymentId, status, remarks ?? null);
-        return sendSuccess(res, null, `Payment ${status}`);
+        const statusNum = Number(status);
+        if (![1, 2].includes(statusNum))
+            return sendError(res, "status must be 1 (approved) or 2 (rejected)", 400);
+        await verifyPayment(req.user!.userId, paymentId, statusNum, remarks ?? null);
+        return sendSuccess(res, null, `Payment ${statusNum === 1 ? "approved" : "rejected"}`);
     } catch (err: any) {
         return sendError(res, err.message, 400);
     }

@@ -8,17 +8,16 @@ export interface StudentListItem {
     yearLevel: number;
     section: string;
     schoolYear: string;
-    semester: string;
+    semester: number;
     programName: string;
     programCode: string;
     obligationsTotal: number;
     obligationsPaid: number;
-    clearanceStatus: string | null;
+    clearanceStatus: number | null;
     avatarPath: string | null;
     address: string | null;
     contactNumber: string | null;
     guardianName: string | null;
-    emergencyContact: string | null;
     shirtSize: string | null;
     email: string | null;
 }
@@ -35,16 +34,15 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
             s.school_year         AS schoolYear,
             s.semester,
             s.avatar_path         AS avatarPath,
-            s.address,
-            s.contact_number      AS contactNumber,
-            s.guardian_name       AS guardianName,
-            s.emergency_contact   AS emergencyContact,
+            g.address,
+            g.contact_number      AS contactNumber,
+            g.guardian_name       AS guardianName,
             s.shirt_size          AS shirtSize,
             u.email,
             d.name                AS programName,
             d.code                AS programCode,
             COUNT(so.student_obligation_id)                                          AS obligationsTotal,
-            SUM(CASE WHEN so.status = 'paid' THEN 1 ELSE 0 END)                     AS obligationsPaid,
+            SUM(CASE WHEN so.status = 2 THEN 1 ELSE 0 END)                          AS obligationsPaid,
             (SELECT cl.clearance_status
              FROM clearances cl
              WHERE cl.student_id = s.student_id
@@ -52,6 +50,7 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
         FROM students s
         JOIN programs d ON s.program_id = d.program_id
         JOIN users u ON s.user_id = u.user_id
+        LEFT JOIN guardian g ON g.student_id = s.student_id
         LEFT JOIN student_obligations so ON s.student_id = so.student_id
         GROUP BY s.student_id
         ORDER BY s.last_name, s.first_name
@@ -75,7 +74,6 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
         address:          r.address ?? null,
         contactNumber:    r.contactNumber ?? null,
         guardianName:     r.guardianName ?? null,
-        emergencyContact: r.emergencyContact ?? null,
         shirtSize:        r.shirtSize ?? null,
         email:            r.email ?? null,
     }));
@@ -93,12 +91,11 @@ export interface StudentProfile {
     yearLevel:        number;
     section:          string;
     schoolYear:       string;
-    semester:         string;
+    semester:         number;
     avatarPath:       string | null;
     address:          string | null;
     contactNumber:    string | null;
     guardianName:     string | null;
-    emergencyContact: string | null;
     shirtSize:        string | null;
 }
 
@@ -112,13 +109,13 @@ export interface StudentObligationItem {
     gcashQrPath: string | null;
     dueDate: string | null;
     isOverdue: boolean;
-    status: "unpaid" | "pending_verification" | "paid" | "waived";
+    status: number;
     proofImage: string | null;
     latestPayment: {
         paymentId: number;
         receiptPath: string;
         amountPaid: number;
-        paymentStatus: "pending" | "approved" | "rejected";
+        paymentStatus: number;
         submittedAt: string;
         remarks: string | null;
     } | null;
@@ -127,14 +124,14 @@ export interface StudentObligationItem {
 export interface ClearanceStepItem {
     stepOrder: number;
     roleLabel: string;
-    status: "pending" | "signed" | "rejected";
+    status: number;
     verifiedAt: string | null;
     remarks: string | null;
 }
 
 export interface StudentClearance {
     clearanceId: number | null;
-    status: "pending" | "in_progress" | "cleared" | "rejected" | null;
+    status: number | null;
     currentStep: number;
     steps: ClearanceStepItem[];
 }
@@ -150,13 +147,16 @@ const findStudentId = async (userId: number): Promise<number> => {
 
 export const getStudentProfile = async (userId: number): Promise<StudentProfile> => {
     const [rows]: any = await pool.execute(
-        `SELECT s.student_id, s.student_no, s.first_name, s.last_name,
+        `SELECT s.student_id, s.student_no, s.first_name, s.last_name, s.middle_name,
                 s.year_level, s.section, s.school_year, s.semester,
-                s.avatar_path, s.address, s.contact_number, s.guardian_name,
-                s.emergency_contact, s.shirt_size,
-                d.code AS programCode, d.name AS programName
+                s.avatar_path, s.shirt_size, s.gender,
+                g.address, g.contact_number, g.guardian_name,
+                d.code AS programCode, d.name AS programName,
+                u.email
          FROM students s
          JOIN programs d ON s.program_id = d.program_id
+         JOIN users u ON s.user_id = u.user_id
+         LEFT JOIN guardian g ON g.student_id = s.student_id
          WHERE s.user_id = ?`,
         [userId]
     );
@@ -167,36 +167,39 @@ export const getStudentProfile = async (userId: number): Promise<StudentProfile>
         studentNo:        r.student_no,
         firstName:        r.first_name,
         lastName:         r.last_name,
+        middleName:       r.middle_name    ?? null,
+        email:            r.email,
         programCode:      r.programCode,
         programName:      r.programName,
         yearLevel:        r.year_level,
         section:          r.section,
         schoolYear:       r.school_year,
         semester:         r.semester,
-        avatarPath:       r.avatar_path       ?? null,
-        address:          r.address           ?? null,
-        contactNumber:    r.contact_number    ?? null,
-        guardianName:     r.guardian_name     ?? null,
-        emergencyContact: r.emergency_contact ?? null,
-        shirtSize:        r.shirt_size        ?? null,
+        gender:           r.gender          ?? null,
+        avatarPath:       r.avatar_path     ?? null,
+        address:          r.address         ?? null,
+        contactNumber:    r.contact_number  ?? null,
+        guardianName:     r.guardian_name   ?? null,
+        shirtSize:        r.shirt_size      ?? null,
     };
 };
 
 export const updateStudentProfile = async (
     userId: number,
     data: {
-        firstName:        string;
-        lastName:         string;
-        yearLevel:        number;
-        section:          string;
-        schoolYear:       string;
-        semester:         string;
-        address:          string;
-        contactNumber:    string;
-        guardianName:     string;
-        emergencyContact: string;
-        shirtSize:        string;
-        avatarPath?:      string | null;
+        firstName:     string;
+        lastName:      string;
+        middleName?:   string;
+        yearLevel:     number;
+        section:       string;
+        schoolYear:    string;
+        semester:      number;
+        gender?:       number | null;
+        address:       string;
+        contactNumber: string;
+        guardianName:  string;
+        shirtSize:     string;
+        avatarPath?:   string | null;
     }
 ): Promise<StudentProfile> => {
     const VALID_SIZES = ["XS","S","M","L","XL","XXL",""];
@@ -204,33 +207,45 @@ export const updateStudentProfile = async (
         ? (data.shirtSize.trim().toUpperCase() || null)
         : null;
 
+    // Get student_id for guardian upsert
+    const [stRows]: any = await pool.execute(
+        "SELECT student_id FROM students WHERE user_id = ?", [userId]
+    );
+    if (!stRows.length) throw new Error("Student not found");
+    const studentId = stRows[0].student_id;
+
     const avatarClause = data.avatarPath !== undefined ? ", avatar_path = ?" : "";
+    const middleNameVal = data.middleName !== undefined ? (data.middleName.trim() || null) : undefined;
+    const genderVal = data.gender ?? null;
     const params: any[] = [
-        data.firstName.trim(),
-        data.lastName.trim(),
-        data.yearLevel,
-        data.section.trim(),
-        data.schoolYear.trim(),
-        data.semester,
-        data.address.trim()          || null,
-        data.contactNumber.trim()    || null,
-        data.guardianName.trim()     || null,
-        data.emergencyContact.trim() || null,
-        shirtSize,
+        data.firstName.trim(), data.lastName.trim(), middleNameVal,
+        data.yearLevel, data.section.trim(),
+        data.schoolYear.trim(), data.semester, shirtSize, genderVal,
     ];
     if (data.avatarPath !== undefined) params.push(data.avatarPath);
     params.push(userId);
 
     await pool.execute(
         `UPDATE students
-            SET first_name = ?, last_name = ?, year_level = ?, section = ?,
-                school_year = ?, semester = ?,
-                address = ?, contact_number = ?, guardian_name = ?,
-                emergency_contact = ?, shirt_size = ?
+            SET first_name = ?, last_name = ?, middle_name = ?, year_level = ?, section = ?,
+                school_year = ?, semester = ?, shirt_size = ?, gender = ?
                 ${avatarClause}, updated_at = NOW()
           WHERE user_id = ?`,
         params
     );
+
+    // Upsert guardian info
+    await pool.execute(
+        `INSERT INTO guardian (student_id, guardian_name, contact_number, address)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+             guardian_name  = VALUES(guardian_name),
+             contact_number = VALUES(contact_number),
+             address        = VALUES(address),
+             updated_at     = NOW()`,
+        [studentId, data.guardianName.trim() || null, data.contactNumber.trim() || null, data.address.trim() || null]
+    );
+
     await pool.execute(
         `UPDATE users SET first_name = ?, last_name = ?, updated_at = NOW() WHERE user_id = ?`,
         [data.firstName.trim(), data.lastName.trim(), userId]
@@ -273,7 +288,7 @@ export const getStudentObligations = async (
          LEFT JOIN payment_verifications pv ON pv.payment_id = ps.payment_id
          WHERE so.student_id = ?
          ORDER BY
-            CASE WHEN so.status NOT IN ('paid','waived')
+            CASE WHEN so.status NOT IN (2,3)
                       AND o.due_date IS NOT NULL
                       AND o.due_date < CURDATE()
                  THEN 0 ELSE 1 END,
@@ -289,8 +304,8 @@ export const getStudentObligations = async (
         const dueDate  = r.due_date ? (r.due_date.toISOString?.().split("T")[0] ?? r.due_date) : null;
         const isOverdue = dueDate !== null
             && new Date(dueDate) < today
-            && r.status !== "paid"
-            && r.status !== "waived";
+            && r.status !== 2
+            && r.status !== 3;
 
         return {
             studentObligationId: r.student_obligation_id,

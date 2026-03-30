@@ -70,7 +70,7 @@ export default function Signup({ onCancel }: SignupProps) {
                 yearLevel:  Number(form.yearLevel),
                 section:    form.section.trim(),
                 schoolYear: getCurrentSchoolYear(),
-                semester:   form.semester as "1st" | "2nd",
+                semester:   Number(form.semester),
             });
             sessionStorage.setItem("justSignedUp", "1");
             navigate("/student/dashboard");
@@ -173,8 +173,9 @@ export default function Signup({ onCancel }: SignupProps) {
                             <select value={form.semester} onChange={e => set("semester", e.target.value)}
                                 className={inp + " cursor-pointer"}>
                                 <option value="" disabled hidden>Select semester</option>
-                                <option value="1st">1st Semester</option>
-                                <option value="2nd">2nd Semester</option>
+                                <option value="1">1st Semester</option>
+                                <option value="2">2nd Semester</option>
+                                <option value="3">Summer</option>
                             </select>
                         </div>
                         <div className={fld}>

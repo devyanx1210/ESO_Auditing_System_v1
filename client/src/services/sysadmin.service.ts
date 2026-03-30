@@ -29,7 +29,7 @@ export const sysadminService = {
             body: JSON.stringify({ maintenance_mode, maintenance_msg }),
         }, token),
 
-    updateSemester: (token: string, school_year: string, current_semester: string) =>
+    updateSemester: (token: string, school_year: string, current_semester: number) =>
         apiFetch("/sysadmin/settings/semester", {
             method: "PATCH",
             body: JSON.stringify({ school_year, current_semester }),

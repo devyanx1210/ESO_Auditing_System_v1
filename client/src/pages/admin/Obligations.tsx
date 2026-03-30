@@ -12,17 +12,25 @@ const DEPARTMENTS = [
     { id: 5, name: "Mechanical Engineering" },
 ];
 
-const SCOPES = ["all", "department", "year_level", "section"] as const;
+const SCOPES = [
+    { value: 0, label: "all" },
+    { value: 1, label: "program" },
+    { value: 2, label: "year level" },
+    { value: 3, label: "section" },
+] as const;
+
+const SCOPE_LABELS: Record<number, string> = { 0: "all", 1: "program", 2: "year level", 3: "section" };
+const SEMESTER_LABELS: Record<number, string> = { 1: "1st", 2: "2nd", 3: "Summer" };
 
 function currentSchoolYear() {
     const y = new Date().getFullYear();
     return new Date().getMonth() >= 7 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
 }
 
-function currentSemester(): "1st" | "2nd" {
+function currentSemester(): number {
     const m = new Date().getMonth() + 1;
-    if (m >= 8 && m <= 12) return "1st";
-    return "2nd";
+    if (m >= 8 && m <= 12) return 1;
+    return 2;
 }
 
 const BLANK_FORM: CreateObligationInput = {
@@ -30,7 +38,7 @@ const BLANK_FORM: CreateObligationInput = {
     description: "",
     amount: 0,
     isRequired: true,
-    scope: "all",
+    scope: 0,
     programId: null,
     yearLevel: null,
     section: null,
@@ -187,7 +195,7 @@ const Obligations = () => {
             yearLevel: o.yearLevel,
             section: o.section,
             schoolYear: o.schoolYear,
-            semester: o.semester as "1st" | "2nd",
+            semester: o.semester,
             dueDate: o.dueDate,
             gcashQrPath: o.gcashQrPath,
         });
@@ -312,7 +320,7 @@ const Obligations = () => {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
-                <div className="flex gap-2 flex-wrap items-center">
+                <div className="flex gap-2 flex-wrap items-center justify-between sm:justify-start w-full sm:w-auto">
                     {selectedObIds.size > 0 && (
                         <button onClick={handleBulkDelete}
                             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
@@ -341,7 +349,7 @@ const Obligations = () => {
                         </button>
 
                         {showFilter && (
-                            <div className="absolute right-0 top-full mt-2 z-30 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl ring-1 ring-black/5 p-4 w-72 flex flex-col gap-3" style={{ animation: 'fadeInUp 0.15s ease both' }}>
+                            <div className="absolute right-0 sm:right-0 top-full mt-2 z-30 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl ring-1 ring-black/5 p-4 w-72 max-w-[calc(100vw-2rem)] flex flex-col gap-3" style={{ animation: 'fadeInUp 0.15s ease both' }}>
                                 <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Sort &amp; Filter</p>
 
                                 {/* Sort By */}
@@ -403,7 +411,7 @@ const Obligations = () => {
             ) : (
                 <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
                     <div className="overflow-x-auto">
-                    <table className="w-full text-[11px] border-collapse">
+                    <table className="eso-table w-full text-[11px] border-collapse">
                         <thead className="bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400">
                             <tr>
                                 <th className="pl-3 pr-1 py-2 w-7">
@@ -442,13 +450,13 @@ const Obligations = () => {
                                             ? <span className="font-semibold text-gray-800 dark:text-gray-100">₱{Number(o.amount).toFixed(2)}</span>
                                             : <span className="text-gray-400 dark:text-gray-500">—</span>}
                                     </td>
-                                    <td className="px-2 py-2 text-center capitalize dark:text-gray-300">{o.scope === "department" ? "program" : o.scope.replace("_", " ")}</td>
+                                    <td className="px-2 py-2 text-center capitalize dark:text-gray-300">{SCOPE_LABELS[o.scope] ?? String(o.scope)}</td>
                                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.programName ?? "—"}</td>
                                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">
                                         {o.yearLevel != null ? `${o.yearLevel}${o.section ?? ""}` : "—"}
                                     </td>
                                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.schoolYear}</td>
-                                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.semester}</td>
+                                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{SEMESTER_LABELS[o.semester] ?? String(o.semester)}</td>
                                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.dueDate ? new Date(o.dueDate).toLocaleDateString() : "—"}</td>
                                     <td className="px-2 py-2 text-center">
                                         {o.gcashQrPath
@@ -619,10 +627,11 @@ const Obligations = () => {
                                     <select
                                         className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
                                         value={form.semester}
-                                        onChange={e => setForm({ ...form, semester: e.target.value as "1st" | "2nd" })}
+                                        onChange={e => setForm({ ...form, semester: Number(e.target.value) })}
                                     >
-                                        <option value="1st">1st</option>
-                                        <option value="2nd">2nd</option>
+                                        <option value={1}>1st</option>
+                                        <option value={2}>2nd</option>
+                                        <option value={3}>Summer</option>
                                     </select>
                                 </div>
 
@@ -632,9 +641,9 @@ const Obligations = () => {
                                     <select
                                         className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
                                         value={form.scope}
-                                        onChange={e => setForm({ ...form, scope: e.target.value as CreateObligationInput["scope"], programId: null, yearLevel: null, section: null })}
+                                        onChange={e => setForm({ ...form, scope: Number(e.target.value), programId: null, yearLevel: null, section: null })}
                                     >
-                                        {SCOPES.map(s => <option key={s} value={s}>{s === "department" ? "program" : s.replace("_", " ")}</option>)}
+                                        {SCOPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                                     </select>
                                 </div>
 
@@ -656,7 +665,7 @@ const Obligations = () => {
                                 </div>
 
                                 {/* Program */}
-                                {(form.scope === "department" || form.scope === "year_level" || form.scope === "section") && (
+                                {(form.scope === 1 || form.scope === 2 || form.scope === 3) && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
                                         <select
@@ -671,7 +680,7 @@ const Obligations = () => {
                                 )}
 
                                 {/* Year Level */}
-                                {(form.scope === "year_level" || form.scope === "section") && (
+                                {(form.scope === 2 || form.scope === 3) && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
                                         <select
@@ -689,7 +698,7 @@ const Obligations = () => {
                                 )}
 
                                 {/* Section */}
-                                {(form.scope === "year_level" || form.scope === "section") && (
+                                {(form.scope === 2 || form.scope === 3) && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</label>
                                         <input

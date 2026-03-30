@@ -16,7 +16,7 @@ export interface ImportRow {
 
 export interface ImportContext {
     schoolYear:  string;              // "2025-2026"
-    semester:    "1st" | "2nd" | "Summer";
+    semester:    number;              // 1=1st, 2=2nd, 3=Summer
     importedBy:  number;
 }
 
@@ -59,7 +59,7 @@ function normalizeShirtSize(raw: string | null): string | null {
 // ── Check if school_year + semester already imported ─────────────────────────
 export const checkImportExists = async (
     schoolYear: string,
-    semester:   string
+    semester:   number
 ): Promise<{ exists: boolean; importedAt: string | null; recordCount: number }> => {
     const [rows]: any = await pool.execute(
         `SELECT imported_at, record_count

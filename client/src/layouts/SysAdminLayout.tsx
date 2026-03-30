@@ -20,8 +20,18 @@ function useForceLightMode() {
     useEffect(() => { document.documentElement.classList.remove("dark"); }, []);
 }
 
+function DefaultAvatarSvg() {
+    return (
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ display: "block", width: "100%", height: "100%" }}>
+            <circle cx="50" cy="50" r="50" fill="#E4E6E9" />
+            <ellipse cx="50" cy="37" rx="17" ry="20" fill="#6B7280" />
+            <ellipse cx="50" cy="95" rx="35" ry="28" fill="#6B7280" />
+        </svg>
+    );
+}
+
 export default function SysAdminLayout() {
-    const { logout }  = useAuth();
+    const { logout } = useAuth();
     const navigate    = useNavigate();
     const location    = useLocation();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -41,12 +51,12 @@ export default function SysAdminLayout() {
 
             {/* Desktop Sidebar */}
             <div className="hidden md:flex w-56 p-4 flex-col shrink-0 bg-gray-100">
-                <div className="flex items-center justify-center mb-5 mt-1">
+                <div className="flex items-center justify-center mb-4 mt-1">
                     <img src={logo} className="object-contain"
                         style={{ width: "clamp(36px,20vw,56px)", height: "clamp(36px,20vw,56px)" }} />
                 </div>
 
-                <nav className="flex flex-col gap-1">
+<nav className="flex flex-col gap-1">
                     {navItems.map(item => (
                         <NavLink key={item.path} to={item.path}
                             className={({ isActive }) => `${navBase} ${isActive ? navActive : navInactive}`}>

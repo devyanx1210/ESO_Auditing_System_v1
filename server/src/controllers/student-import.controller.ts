@@ -14,7 +14,7 @@ export const handleCheckImport = async (req: Request, res: Response) => {
         const { schoolYear, semester } = req.query;
         if (!schoolYear || !semester)
             return sendError(res, "schoolYear and semester are required", 400);
-        const result = await checkImportExists(String(schoolYear), semester as any);
+        const result = await checkImportExists(String(schoolYear), Number(semester));
         return sendSuccess(res, result);
     } catch (err: any) {
         return sendError(res, err.message);
@@ -60,7 +60,7 @@ export const handleImportCSV = async (req: Request, res: Response) => {
 
         const result = await importStudents(rows, {
             schoolYear: String(schoolYear).trim(),
-            semester:   semester as any,
+            semester:   Number(semester),
             importedBy: req.user!.userId,
         });
 

@@ -15,20 +15,21 @@ const StudentSettings = () => {
     const inp  = dk ? "bg-[#252525] border-[#3a3a3a] text-gray-100 focus:border-orange-500" : "border-gray-300 focus:border-orange-400 text-gray-800";
 
     // Profile state
-    const [profile,          setProfile]          = useState<StudentProfile | null>(null);
-    const [loading,          setLoading]          = useState(true);
-    const [profileErr,       setProfileErr]       = useState("");
-    const [firstName,        setFirstName]        = useState("");
-    const [lastName,         setLastName]         = useState("");
-    const [yearLevel,        setYearLevel]        = useState("");
-    const [section,          setSection]          = useState("");
-    const [schoolYear,       setSchoolYear]       = useState("");
-    const [semester,         setSemester]         = useState("");
-    const [address,          setAddress]          = useState("");
-    const [contactNumber,    setContactNumber]    = useState("");
-    const [guardianName,     setGuardianName]     = useState("");
-    const [emergencyContact, setEmergencyContact] = useState("");
-    const [shirtSize,        setShirtSize]        = useState("");
+    const [profile,       setProfile]       = useState<StudentProfile | null>(null);
+    const [loading,       setLoading]       = useState(true);
+    const [profileErr,    setProfileErr]    = useState("");
+    const [firstName,     setFirstName]     = useState("");
+    const [lastName,      setLastName]      = useState("");
+    const [middleName,    setMiddleName]    = useState("");
+    const [yearLevel,     setYearLevel]     = useState("");
+    const [section,       setSection]       = useState("");
+    const [schoolYear,    setSchoolYear]    = useState("");
+    const [semester,      setSemester]      = useState<number>(1);
+    const [gender,        setGender]        = useState<number | "">("");
+    const [address,       setAddress]       = useState("");
+    const [contactNumber, setContactNumber] = useState("");
+    const [guardianName,  setGuardianName]  = useState("");
+    const [shirtSize,     setShirtSize]     = useState("");
 
     // Avatar state
     const [avatarFile,     setAvatarFile]     = useState<File | null>(null);
@@ -56,14 +57,15 @@ const StudentSettings = () => {
                 setProfile(p);
                 setFirstName(p.firstName);
                 setLastName(p.lastName);
+                setMiddleName(p.middleName    ?? "");
                 setYearLevel(String(p.yearLevel));
                 setSection(p.section);
                 setSchoolYear(p.schoolYear);
                 setSemester(p.semester);
+                setGender(p.gender ?? "");
                 setAddress(p.address          ?? "");
                 setContactNumber(p.contactNumber    ?? "");
                 setGuardianName(p.guardianName     ?? "");
-                setEmergencyContact(p.emergencyContact ?? "");
                 setShirtSize(p.shirtSize        ?? "");
                 if (p.avatarPath) setAvatarPreview(avatarUrl(p.avatarPath));
             })
@@ -85,15 +87,16 @@ const StudentSettings = () => {
         if (profile) {
             setFirstName(profile.firstName);
             setLastName(profile.lastName);
+            setMiddleName(profile.middleName   ?? "");
             setYearLevel(String(profile.yearLevel));
             setSection(profile.section);
             setSchoolYear(profile.schoolYear);
             setSemester(profile.semester);
-            setAddress(profile.address          ?? "");
-            setContactNumber(profile.contactNumber    ?? "");
-            setGuardianName(profile.guardianName     ?? "");
-            setEmergencyContact(profile.emergencyContact ?? "");
-            setShirtSize(profile.shirtSize        ?? "");
+            setGender(profile.gender           ?? "");
+            setAddress(profile.address         ?? "");
+            setContactNumber(profile.contactNumber ?? "");
+            setGuardianName(profile.guardianName   ?? "");
+            setShirtSize(profile.shirtSize     ?? "");
         }
         setPw(BLANK_PW);
         setPwError("");
@@ -108,7 +111,7 @@ const StudentSettings = () => {
         setSaveErr(""); setSaveMsg(""); setPwError(""); setPwSuccess("");
 
         if (!firstName.trim() || !lastName.trim() || !yearLevel || !section.trim() || !schoolYear.trim() || !semester) {
-            setSaveErr("All profile fields are required.");
+            setSaveErr("First name, last name, year level, section, school year, and semester are required.");
             return;
         }
 
@@ -122,17 +125,18 @@ const StudentSettings = () => {
         setSaving(true);
         try {
             const updated = await studentService.updateProfile(accessToken, {
-                firstName:        firstName.trim(),
-                lastName:         lastName.trim(),
-                yearLevel:        Number(yearLevel),
-                section:          section.trim(),
-                schoolYear:       schoolYear.trim(),
+                firstName:     firstName.trim(),
+                lastName:      lastName.trim(),
+                middleName:    middleName.trim(),
+                yearLevel:     Number(yearLevel),
+                section:       section.trim(),
+                schoolYear:    schoolYear.trim(),
                 semester,
-                address:          address.trim(),
-                contactNumber:    contactNumber.trim(),
-                guardianName:     guardianName.trim(),
-                emergencyContact: emergencyContact.trim(),
-                shirtSize:        shirtSize.trim(),
+                gender:        gender !== "" ? Number(gender) : null,
+                address:       address.trim(),
+                contactNumber: contactNumber.trim(),
+                guardianName:  guardianName.trim(),
+                shirtSize:     shirtSize.trim(),
             }, avatarFile);
             setAvatarFile(null);
             if (updated.avatarPath) setAvatarPreview(avatarUrl(updated.avatarPath));
@@ -256,64 +260,20 @@ const StudentSettings = () => {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <Field label="First Name">
-                                    <input
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                        value={firstName}
-                                        onChange={e => setFirstName(e.target.value)}
-                                        placeholder="First name"
-                                    />
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
                                 </Field>
                                 <Field label="Last Name">
-                                    <input
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                        value={lastName}
-                                        onChange={e => setLastName(e.target.value)}
-                                        placeholder="Last name"
-                                    />
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" />
                                 </Field>
-                                <Field label="Year Level">
-                                    <select
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                        value={yearLevel}
-                                        onChange={e => setYearLevel(e.target.value)}
-                                    >
-                                        <option value="1">1st Year</option>
-                                        <option value="2">2nd Year</option>
-                                        <option value="3">3rd Year</option>
-                                        <option value="4">4th Year</option>
-                                    </select>
+                                <Field label="Middle Name">
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={middleName} onChange={e => setMiddleName(e.target.value)} placeholder="Middle name (optional)" />
                                 </Field>
-                                <Field label="Section">
-                                    <input
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                        value={section}
-                                        onChange={e => setSection(e.target.value)}
-                                        placeholder="e.g. A"
-                                    />
-                                </Field>
-                                <Field label="School Year">
-                                    <input
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                        value={schoolYear}
-                                        onChange={e => setSchoolYear(e.target.value)}
-                                        placeholder="e.g. 2025-2026"
-                                    />
-                                </Field>
-                                <Field label="Semester">
-                                    <select
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                        value={semester}
-                                        onChange={e => setSemester(e.target.value)}
-                                    >
-                                        <option value="1st">1st Semester</option>
-                                        <option value="2nd">2nd Semester</option>
-                                    </select>
-                                </Field>
-
-                                {/* Read-only */}
-                                <Field label="Program">
-                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
-                                        {profile.programName}
+                                <Field label="Email">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500">
+                                        {profile.email}
                                     </div>
                                 </Field>
                                 <Field label="Student Number">
@@ -321,58 +281,75 @@ const StudentSettings = () => {
                                         {profile.studentNo}
                                     </div>
                                 </Field>
+                                <Field label="Program">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                        {profile.programName}
+                                    </div>
+                                </Field>
+                                <Field label="Year Level">
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={yearLevel} onChange={e => setYearLevel(e.target.value)}>
+                                        <option value="1">1st Year</option>
+                                        <option value="2">2nd Year</option>
+                                        <option value="3">3rd Year</option>
+                                        <option value="4">4th Year</option>
+                                        <option value="5">5th Year</option>
+                                    </select>
+                                </Field>
+                                <Field label="Section">
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={section} onChange={e => setSection(e.target.value)} placeholder="e.g. A" />
+                                </Field>
+                                <Field label="School Year">
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={schoolYear} onChange={e => setSchoolYear(e.target.value)} placeholder="e.g. 2025-2026" />
+                                </Field>
+                                <Field label="Semester">
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={semester} onChange={e => setSemester(Number(e.target.value))}>
+                                        <option value={1}>1st Semester</option>
+                                        <option value={2}>2nd Semester</option>
+                                        <option value={3}>Summer</option>
+                                    </select>
+                                </Field>
+                                <Field label="Gender">
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={gender} onChange={e => setGender(e.target.value !== "" ? Number(e.target.value) : "")}>
+                                        <option value="">— select —</option>
+                                        <option value={1}>Male</option>
+                                        <option value={2}>Female</option>
+                                        <option value={3}>Other</option>
+                                    </select>
+                                </Field>
+                                <Field label="Shirt Size">
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        value={shirtSize} onChange={e => setShirtSize(e.target.value)}>
+                                        <option value="">— select —</option>
+                                        <option value="XS">XS</option>
+                                        <option value="S">S</option>
+                                        <option value="M">M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                        <option value="XXL">XXL</option>
+                                    </select>
+                                </Field>
                             </div>
 
                             {/* ── Contact & Guardian ── */}
                             <div className={`mt-6 pt-5 border-t ${dk ? "border-[#2a2a2a]" : "border-gray-100"}`}>
                                 <p className={`text-xs font-bold uppercase tracking-wide mb-4 ${sub}`}>Contact &amp; Guardian Information</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <Field label="Contact Number">
-                                        <input
-                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                            value={contactNumber}
-                                            onChange={e => setContactNumber(e.target.value)}
-                                            placeholder="e.g. 09XXXXXXXXX"
-                                        />
-                                    </Field>
                                     <Field label="Guardian Name">
-                                        <input
-                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                            value={guardianName}
-                                            onChange={e => setGuardianName(e.target.value)}
-                                            placeholder="Guardian's full name"
-                                        />
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                            value={guardianName} onChange={e => setGuardianName(e.target.value)} placeholder="Guardian's full name" />
                                     </Field>
-                                    <Field label="Emergency Contact Number">
-                                        <input
-                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                            value={emergencyContact}
-                                            onChange={e => setEmergencyContact(e.target.value)}
-                                            placeholder="e.g. 09XXXXXXXXX"
-                                        />
-                                    </Field>
-                                    <Field label="Shirt Size">
-                                        <select
-                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
-                                            value={shirtSize}
-                                            onChange={e => setShirtSize(e.target.value)}
-                                        >
-                                            <option value="">— select —</option>
-                                            <option value="XS">XS</option>
-                                            <option value="S">S</option>
-                                            <option value="M">M</option>
-                                            <option value="L">L</option>
-                                            <option value="XL">XL</option>
-                                            <option value="XXL">XXL</option>
-                                        </select>
+                                    <Field label="Guardian Contact Number">
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                            value={contactNumber} onChange={e => setContactNumber(e.target.value)} placeholder="e.g. 09XXXXXXXXX" />
                                     </Field>
                                     <Field label="Address">
-                                        <input
-                                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525] sm:col-span-2"
-                                            value={address}
-                                            onChange={e => setAddress(e.target.value)}
-                                            placeholder="Complete address"
-                                        />
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                            value={address} onChange={e => setAddress(e.target.value)} placeholder="Complete address" />
                                     </Field>
                                 </div>
                             </div>

@@ -244,7 +244,7 @@ const StudentList = () => {
             ) : (
                 <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
                     <div className="overflow-x-auto">
-                        <table className="w-full border-collapse" style={{ minWidth: "1100px" }}>
+                        <table className="eso-table w-full border-collapse" style={{ minWidth: "1100px" }}>
                             <thead className="bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400">
                                 <tr>
                                     <th className="px-3 py-2 text-left   text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Full Name</th>
