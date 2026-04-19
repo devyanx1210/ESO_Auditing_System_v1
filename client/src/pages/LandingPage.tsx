@@ -73,7 +73,6 @@ const LandingPage = () => {
             <header className="landing-header fixed top-0 left-0 right-0 z-20 flex h-[72px] w-full items-center justify-between px-4 sm:px-6 text-white"
                 style={{ background: "linear-gradient(to right, #fbbf24, #f97316, #ea580c)" }}>
                 <div className="flex items-center gap-2 sm:gap-3">
-                    <img src={logo} alt="ESO Logo" className="h-8 w-8 sm:h-10 sm:w-10 object-contain drop-shadow" />
                     <div className="leading-tight">
                         <div className="font-bold text-[clamp(11px,1.4vw,18px)] tracking-wide">
                             Marinduque State University

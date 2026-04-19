@@ -48,9 +48,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5174,
-    allowedHosts: [
-      'geography-diet-highlighted-folks.trycloudflare.com'
-    ],
+    allowedHosts: true,
     proxy: {
       '/api':     'http://localhost:5000',
       '/uploads': 'http://localhost:5000'

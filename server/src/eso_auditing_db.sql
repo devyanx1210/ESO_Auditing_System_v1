@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 29, 2026 at 05:38 PM
+-- Generation Time: Apr 19, 2026 at 06:34 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -20,20 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `eso_auditing_db`
 --
-
--- --------------------------------------------------------
-
---
--- Table structure for table `academic_years`
---
-
-CREATE TABLE `academic_years` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `label` varchar(20) NOT NULL,
-  `is_current` tinyint(1) NOT NULL DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -65,24 +51,9 @@ INSERT INTO `admins` (`admin_id`, `user_id`, `position`, `program_id`, `deleted_
 (4, 6, 'none', 1, NULL, '2026-03-12 06:11:38', '2026-03-12 06:11:38', NULL, NULL, NULL),
 (5, 7, 'President', 1, NULL, '2026-03-20 01:35:32', '2026-03-26 06:32:15', NULL, NULL, NULL),
 (6, 8, 'Program Head', 1, NULL, '2026-03-20 01:36:42', '2026-03-26 06:31:04', NULL, NULL, NULL),
-(7, 9, 'Dean', NULL, NULL, '2026-03-20 01:37:21', '2026-03-26 06:00:01', NULL, NULL, NULL),
+(7, 9, 'Dean', NULL, NULL, '2026-03-20 01:37:21', '2026-04-08 04:35:08', NULL, NULL, NULL),
 (8, 1158, 'Treasurer', 1, NULL, '2026-03-26 06:31:57', '2026-03-26 06:31:57', NULL, NULL, NULL),
 (9, 1159, 'none', NULL, NULL, '2026-03-26 06:38:27', '2026-03-26 06:38:27', NULL, NULL, NULL);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `admissions`
---
-
-CREATE TABLE `admissions` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `student_id` int(10) UNSIGNED NOT NULL,
-  `curriculum_id` int(10) UNSIGNED NOT NULL,
-  `status` int(11) NOT NULL DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -102,6 +73,57 @@ CREATE TABLE `audit_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `audit_logs`
+--
+
+INSERT INTO `audit_logs` (`audit_id`, `performed_by`, `action`, `target_type`, `target_id`, `details`, `ip_address`, `user_agent`, `created_at`) VALUES
+(1, 3, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 11:09:51'),
+(2, 3, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 11:12:22'),
+(3, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 11:12:46'),
+(4, 1, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 11:14:01'),
+(5, 3, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 11:14:15'),
+(6, 3, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 11:17:04'),
+(7, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 11:17:38'),
+(8, 1, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 16:08:01'),
+(9, 3, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 16:08:10'),
+(10, 3, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 16:09:05'),
+(11, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 16:09:24'),
+(12, 1, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 23:03:57'),
+(13, 3, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 23:04:05'),
+(14, 3, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 23:06:54'),
+(15, 3, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 23:07:05'),
+(16, 3, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-18 23:07:28'),
+(17, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 23:08:11'),
+(18, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-18 23:30:44'),
+(19, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-19 03:31:36'),
+(20, 3, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-19 03:44:37'),
+(21, 3, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-19 03:46:00'),
+(22, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-19 03:46:16'),
+(23, 1, 'logout', NULL, NULL, NULL, '::1', NULL, '2026-04-19 03:47:05'),
+(24, 1, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-19 03:47:25'),
+(25, 3, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-19 03:47:42'),
+(26, 10, 'login', NULL, NULL, NULL, '::1', NULL, '2026-04-19 04:28:11');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `budgets`
+--
+
+CREATE TABLE `budgets` (
+  `budget_id` int(10) UNSIGNED NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `description` varchar(200) DEFAULT NULL,
+  `allocated_amount` decimal(10,2) NOT NULL,
+  `semester` tinyint(3) UNSIGNED NOT NULL COMMENT '1=1st, 2=2nd, 3=Summer',
+  `school_year` varchar(20) NOT NULL,
+  `created_by` int(10) UNSIGNED NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- --------------------------------------------------------
 
 --
@@ -116,9 +138,35 @@ CREATE TABLE `clearances` (
   `clearance_status` tinyint(3) UNSIGNED NOT NULL DEFAULT 0 COMMENT '0=pending 1=in_progress 2=cleared 3=rejected',
   `current_step` tinyint(3) UNSIGNED DEFAULT NULL,
   `generated_at` date DEFAULT NULL,
+  `is_printed` tinyint(1) NOT NULL DEFAULT 0,
+  `printed_at` timestamp NULL DEFAULT NULL,
+  `printed_by` int(10) UNSIGNED DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `clearances`
+--
+
+INSERT INTO `clearances` (`clearance_id`, `student_id`, `school_year`, `semester`, `clearance_status`, `current_step`, `generated_at`, `is_printed`, `printed_at`, `printed_by`, `created_at`, `updated_at`) VALUES
+(2, 3, '2025-2026', 2, 1, 5, NULL, 0, NULL, NULL, '2026-04-01 01:00:00', '2026-04-07 06:00:00'),
+(3, 4, '2025-2026', 2, 1, 1, NULL, 0, NULL, NULL, '2026-04-01 01:10:00', '2026-04-14 04:33:27'),
+(4, 5, '2025-2026', 2, 1, 5, NULL, 0, NULL, NULL, '2026-04-02 02:00:00', '2026-04-07 07:00:00'),
+(5, 6, '2025-2026', 2, 1, 6, NULL, 0, NULL, NULL, '2026-03-31 01:00:00', '2026-04-06 06:00:00'),
+(6, 7, '2025-2026', 2, 1, 6, NULL, 0, NULL, NULL, '2026-03-31 01:20:00', '2026-04-06 06:30:00'),
+(12, 12, '2025-2026', 2, 1, 1, NULL, 0, NULL, NULL, '2026-04-06 01:00:00', '2026-04-06 01:00:00'),
+(13, 13, '2025-2026', 2, 1, 1, NULL, 0, NULL, NULL, '2026-04-06 01:10:00', '2026-04-06 01:10:00'),
+(14, 14, '2025-2026', 2, 1, 1, NULL, 0, NULL, NULL, '2026-04-06 01:20:00', '2026-04-06 01:20:00'),
+(15, 15, '2025-2026', 2, 1, 2, NULL, 0, NULL, NULL, '2026-04-05 01:00:00', '2026-04-06 02:00:00'),
+(16, 16, '2025-2026', 2, 1, 2, NULL, 0, NULL, NULL, '2026-04-05 01:10:00', '2026-04-06 02:10:00'),
+(17, 17, '2025-2026', 2, 1, 2, NULL, 0, NULL, NULL, '2026-04-05 01:20:00', '2026-04-06 02:20:00'),
+(18, 18, '2025-2026', 2, 1, 4, NULL, 0, NULL, NULL, '2026-04-04 01:00:00', '2026-04-14 04:33:32'),
+(19, 19, '2025-2026', 2, 1, 4, NULL, 0, NULL, NULL, '2026-04-04 01:10:00', '2026-04-17 10:41:32'),
+(20, 20, '2025-2026', 2, 1, 3, NULL, 0, NULL, NULL, '2026-04-04 01:20:00', '2026-04-06 03:20:00'),
+(21, 21, '2025-2026', 2, 1, 4, NULL, 0, NULL, NULL, '2026-04-03 01:00:00', '2026-04-07 01:00:00'),
+(22, 22, '2025-2026', 2, 1, 4, NULL, 0, NULL, NULL, '2026-04-03 01:10:00', '2026-04-07 01:10:00'),
+(23, 23, '2025-2026', 2, 1, 4, NULL, 0, NULL, NULL, '2026-04-03 01:20:00', '2026-04-07 01:20:00');
 
 -- --------------------------------------------------------
 
@@ -133,24 +181,58 @@ CREATE TABLE `clearance_verifications` (
   `role_id` int(10) UNSIGNED NOT NULL,
   `step_order` tinyint(3) UNSIGNED NOT NULL,
   `status` tinyint(3) UNSIGNED NOT NULL DEFAULT 0 COMMENT '0=pending 1=signed 2=rejected',
-  `remarks` varchar(255) DEFAULT NULL,
+  `remarks` varchar(100) DEFAULT NULL,
   `verified_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
 --
--- Table structure for table `curricula`
+-- Dumping data for table `clearance_verifications`
 --
 
-CREATE TABLE `curricula` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `name` varchar(200) NOT NULL,
-  `program_id` int(10) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `clearance_verifications` (`clearance_verification_id`, `clearance_id`, `admin_id`, `role_id`, `step_order`, `status`, `remarks`, `verified_at`, `created_at`) VALUES
+(3, 2, 5, 3, 1, 1, NULL, '2026-04-01 01:15:00', '2026-04-01 01:15:00'),
+(4, 2, 8, 8, 2, 1, NULL, '2026-04-02 02:00:00', '2026-04-02 02:00:00'),
+(5, 2, 1, 2, 3, 1, NULL, '2026-04-04 03:00:00', '2026-04-04 03:00:00'),
+(6, 2, 9, 5, 4, 1, NULL, '2026-04-07 05:00:00', '2026-04-07 05:00:00'),
+(7, 3, 5, 3, 1, 1, NULL, '2026-04-01 01:20:00', '2026-04-01 01:20:00'),
+(8, 3, 8, 8, 2, 1, NULL, '2026-04-02 02:30:00', '2026-04-02 02:30:00'),
+(9, 3, 1, 2, 3, 1, NULL, '2026-04-04 03:30:00', '2026-04-04 03:30:00'),
+(10, 3, 9, 5, 4, 1, NULL, '2026-04-07 05:30:00', '2026-04-07 05:30:00'),
+(11, 4, 5, 3, 1, 1, NULL, '2026-04-02 02:15:00', '2026-04-02 02:15:00'),
+(12, 4, 8, 8, 2, 1, NULL, '2026-04-03 01:30:00', '2026-04-03 01:30:00'),
+(13, 4, 1, 2, 3, 1, NULL, '2026-04-05 02:00:00', '2026-04-05 02:00:00'),
+(14, 4, 9, 5, 4, 1, NULL, '2026-04-07 06:00:00', '2026-04-07 06:00:00'),
+(15, 5, 5, 3, 1, 1, NULL, '2026-03-31 01:30:00', '2026-03-31 01:30:00'),
+(16, 5, 8, 8, 2, 1, NULL, '2026-04-01 02:00:00', '2026-04-01 02:00:00'),
+(17, 5, 1, 2, 3, 1, NULL, '2026-04-02 03:00:00', '2026-04-02 03:00:00'),
+(18, 5, 9, 5, 4, 1, NULL, '2026-04-04 05:00:00', '2026-04-04 05:00:00'),
+(19, 5, 6, 4, 5, 1, NULL, '2026-04-06 05:30:00', '2026-04-06 05:30:00'),
+(20, 6, 5, 3, 1, 1, NULL, '2026-03-31 01:45:00', '2026-03-31 01:45:00'),
+(21, 6, 8, 8, 2, 1, NULL, '2026-04-01 02:30:00', '2026-04-01 02:30:00'),
+(22, 6, 1, 2, 3, 1, NULL, '2026-04-02 03:30:00', '2026-04-02 03:30:00'),
+(23, 6, 9, 5, 4, 1, NULL, '2026-04-04 05:30:00', '2026-04-04 05:30:00'),
+(24, 6, 6, 4, 5, 1, NULL, '2026-04-06 06:00:00', '2026-04-06 06:00:00'),
+(47, 15, 5, 3, 1, 1, NULL, '2026-04-06 01:30:00', '2026-04-06 01:30:00'),
+(48, 16, 5, 3, 1, 1, NULL, '2026-04-06 01:30:00', '2026-04-06 01:30:00'),
+(49, 17, 5, 3, 1, 1, NULL, '2026-04-06 01:30:00', '2026-04-06 01:30:00'),
+(50, 18, 5, 3, 1, 1, NULL, '2026-04-05 01:30:00', '2026-04-05 01:30:00'),
+(51, 19, 5, 3, 1, 1, NULL, '2026-04-05 01:30:00', '2026-04-05 01:30:00'),
+(52, 20, 5, 3, 1, 1, NULL, '2026-04-05 01:30:00', '2026-04-05 01:30:00'),
+(53, 18, 8, 8, 2, 1, NULL, '2026-04-06 02:00:00', '2026-04-06 02:00:00'),
+(54, 19, 8, 8, 2, 1, NULL, '2026-04-06 02:00:00', '2026-04-06 02:00:00'),
+(55, 20, 8, 8, 2, 1, NULL, '2026-04-06 02:00:00', '2026-04-06 02:00:00'),
+(56, 21, 5, 3, 1, 1, NULL, '2026-04-04 01:30:00', '2026-04-04 01:30:00'),
+(57, 22, 5, 3, 1, 1, NULL, '2026-04-04 01:30:00', '2026-04-04 01:30:00'),
+(58, 23, 5, 3, 1, 1, NULL, '2026-04-04 01:30:00', '2026-04-04 01:30:00'),
+(59, 21, 8, 8, 2, 1, NULL, '2026-04-05 02:00:00', '2026-04-05 02:00:00'),
+(60, 22, 8, 8, 2, 1, NULL, '2026-04-05 02:00:00', '2026-04-05 02:00:00'),
+(61, 23, 8, 8, 2, 1, NULL, '2026-04-05 02:00:00', '2026-04-05 02:00:00'),
+(62, 21, 1, 2, 3, 1, NULL, '2026-04-06 03:00:00', '2026-04-06 03:00:00'),
+(63, 22, 1, 2, 3, 1, NULL, '2026-04-06 03:00:00', '2026-04-06 03:00:00'),
+(64, 23, 1, 2, 3, 1, NULL, '2026-04-06 03:00:00', '2026-04-06 03:00:00'),
+(65, 18, 1, 2, 3, 1, '', '2026-04-14 04:33:32', '2026-04-14 04:33:32'),
+(66, 19, 1, 2, 3, 1, '', '2026-04-17 10:41:32', '2026-04-17 10:41:32');
 
 -- --------------------------------------------------------
 
@@ -170,6 +252,33 @@ CREATE TABLE `document_templates` (
   `field_positions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`field_positions`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `document_templates`
+--
+
+INSERT INTO `document_templates` (`template_id`, `name`, `content`, `is_default`, `created_by`, `created_at`, `updated_at`, `pdf_path`, `field_positions`) VALUES
+(9, 'New Template', '<p style=\"text-align:center\"><strong>STUDENT CLEARANCE</strong></p><p><br></p><p>This certifies that <strong>{{full_name}}</strong> ({{student_no}}), a {{year_section}} student of <strong>{{program}}</strong>, has been cleared of all ESO obligations for School Year <strong>{{school_year}}</strong>, Semester <strong>{{semester}}</strong>.</p><p><br></p><p>Issued on {{date}}.</p>', 0, 1, '2026-04-10 07:46:25', '2026-04-19 07:14:50', 'C:\\Users\\Ian\\OneDrive\\Documents\\OJT_Project\\ESO_Auditing_System_v1\\server\\uploads\\pdf-templates\\1775778385619-955916296.pdf', '{\"full_name\":{\"x\":144,\"y\":232,\"size\":12},\"student_no\":{\"x\":102,\"y\":282,\"size\":12},\"school_year\":{\"x\":258,\"y\":257,\"size\":12},\"program_section\":{\"x\":432,\"y\":233,\"size\":12}}');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expenses`
+--
+
+CREATE TABLE `expenses` (
+  `expense_id` int(10) UNSIGNED NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `description` varchar(200) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `semester` tinyint(3) UNSIGNED NOT NULL COMMENT '1=1st, 2=2nd, 3=Summer',
+  `school_year` varchar(20) NOT NULL COMMENT 'e.g. 2024-2025',
+  `recorded_by` int(10) UNSIGNED NOT NULL,
+  `receipt_path` varchar(500) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- --------------------------------------------------------
 
 --
@@ -185,6 +294,13 @@ CREATE TABLE `guardian` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `guardian`
+--
+
+INSERT INTO `guardian` (`guardian_id`, `student_id`, `guardian_name`, `contact_number`, `address`, `created_at`, `updated_at`) VALUES
+(1, 2, 'Guardian Name', '09153890567', 'Bognuyan Gasan, Marinduque', '2026-04-10 00:33:02', '2026-04-19 03:45:52');
 
 -- --------------------------------------------------------
 
@@ -273,10 +389,74 @@ INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `message`, `
 (64, 3, 'Clearance Update', 'Your clearance has been signed at step 2. Proceeding to next step.', 9, 1, 'clearance', 1, '2026-03-26 06:33:06'),
 (65, 3, 'Payment Returned for Review', 'Your payment for \"ESO Fee\" has been returned for re-review.', 5, 9, 'payment', 1, '2026-03-26 21:50:00'),
 (66, 2, 'New Obligation Assigned', 'New obligation assigned: Org Shirt', 1, 14, 'obligation', 0, '2026-03-27 02:08:57'),
-(67, 3, 'New Obligation Assigned', 'New obligation assigned: Org Shirt', 1, 14, 'obligation', 0, '2026-03-27 02:08:57'),
+(67, 3, 'New Obligation Assigned', 'New obligation assigned: Org Shirt', 1, 14, 'obligation', 1, '2026-03-27 02:08:57'),
 (68, 1164, 'New Obligation Assigned', 'New obligation assigned: Org Shirt', 1, 14, 'obligation', 0, '2026-03-27 02:08:57'),
 (69, 1, 'Payment Submitted', 'A student submitted a payment receipt for: ESO Fee', 2, 10, 'payment', 0, '2026-03-27 02:11:54'),
-(70, 3, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 10, 'payment', 0, '2026-03-27 02:25:32');
+(70, 3, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 10, 'payment', 1, '2026-03-27 02:25:32'),
+(71, 2, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(73, 1161, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(74, 1162, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(75, 1163, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(76, 1164, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(77, 1165, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(78, 1166, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(79, 1167, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(80, 1168, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(81, 1169, 'New Obligation Assigned', 'New obligation assigned: Eso fee', 1, 15, 'obligation', 0, '2026-04-08 06:21:14'),
+(82, 1161, 'Clearance Update', 'Your clearance has been approved at step 4. Proceeding to Program Head.', 6, 2, 'clearance', 0, '2026-04-07 05:00:00'),
+(83, 1162, 'Clearance Update', 'Your clearance has been approved at step 4. Proceeding to Program Head.', 6, 3, 'clearance', 0, '2026-04-07 05:30:00'),
+(84, 1163, 'Clearance Update', 'Your clearance has been approved at step 4. Proceeding to Program Head.', 6, 4, 'clearance', 0, '2026-04-07 06:00:00'),
+(85, 1164, 'Clearance Update', 'Your clearance has been approved at step 5. Proceeding to Dean.', 6, 5, 'clearance', 0, '2026-04-06 05:30:00'),
+(86, 1165, 'Clearance Update', 'Your clearance has been approved at step 5. Proceeding to Dean.', 6, 6, 'clearance', 0, '2026-04-06 06:00:00'),
+(87, 1161, 'Clearance Update', 'Your clearance has been approved at step 4. Proceeding to Program Head.', 6, 2, 'clearance', 0, '2026-04-07 05:00:00'),
+(88, 1162, 'Clearance Update', 'Your clearance has been approved at step 4. Proceeding to Program Head.', 6, 3, 'clearance', 0, '2026-04-07 05:30:00'),
+(89, 1163, 'Clearance Update', 'Your clearance has been approved at step 4. Proceeding to Program Head.', 6, 4, 'clearance', 0, '2026-04-07 06:00:00'),
+(90, 1164, 'Clearance Update', 'Your clearance has been approved at step 5. Proceeding to Dean.', 6, 5, 'clearance', 0, '2026-04-06 05:30:00'),
+(91, 1165, 'Clearance Update', 'Your clearance has been approved at step 5. Proceeding to Dean.', 6, 6, 'clearance', 0, '2026-04-06 06:00:00'),
+(92, 2, 'Obligation Removed', 'The obligation \"Eso fee\" has been removed.', 3, 15, 'obligation', 0, '2026-04-09 23:57:58'),
+(94, 1169, 'Obligation Removed', 'The obligation \"Eso fee\" has been removed.', 3, 15, 'obligation', 0, '2026-04-09 23:57:58'),
+(95, 1182, 'Obligation Removed', 'The obligation \"Eso fee\" has been removed.', 3, 15, 'obligation', 0, '2026-04-09 23:57:58'),
+(96, 1183, 'Obligation Removed', 'The obligation \"Eso fee\" has been removed.', 3, 15, 'obligation', 0, '2026-04-09 23:57:58'),
+(97, 1184, 'Obligation Removed', 'The obligation \"Eso fee\" has been removed.', 3, 15, 'obligation', 0, '2026-04-09 23:57:58'),
+(98, 1162, 'Clearance Returned', 'Your clearance approval has been returned and needs to restart the process.', 8, 3, 'clearance', 0, '2026-04-14 04:33:27'),
+(99, 1176, 'Clearance Update', 'Your clearance has been approved at step 3. Proceeding to next step.', 6, 18, 'clearance', 0, '2026-04-14 04:33:32'),
+(100, 1177, 'Clearance Update', 'Your clearance has been approved at step 3. Proceeding to next step.', 6, 19, 'clearance', 0, '2026-04-17 10:41:32'),
+(101, 1, 'Proof Submitted', 'A student submitted proof for: Org Shirt', 2, 25, 'obligation', 0, '2026-04-18 11:12:00'),
+(102, 3, 'Proof Verified', 'Your proof for \"Org Shirt\" has been verified.', 3, 25, 'obligation', 1, '2026-04-18 11:13:14'),
+(103, 1169, 'Cash Payment Recorded', 'Your cash payment of ₱150 for \"ESO Fee\" has been recorded.', 3, 20, 'payment', 0, '2026-04-18 16:17:13'),
+(104, 1184, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 19, 'payment', 0, '2026-04-18 16:20:32'),
+(105, 1183, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 18, 'payment', 0, '2026-04-18 16:44:12'),
+(106, 1182, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 17, 'payment', 0, '2026-04-18 16:44:51'),
+(107, 1168, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 16, 'payment', 0, '2026-04-18 16:53:04'),
+(108, 1168, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 13, 'payment', 0, '2026-04-18 16:53:06'),
+(109, 1167, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 15, 'payment', 0, '2026-04-18 16:53:23'),
+(110, 1167, 'Payment Approved', 'Your payment for \"ESO Fee\" has been approved.', 3, 12, 'payment', 0, '2026-04-18 16:53:26'),
+(111, 2, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(112, 3, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(113, 1161, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(114, 1162, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(115, 1163, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(116, 1164, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(117, 1165, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(118, 1166, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(119, 1167, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(120, 1168, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(121, 1169, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(122, 1170, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(123, 1171, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(124, 1172, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(125, 1173, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(126, 1174, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(127, 1175, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(128, 1176, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(129, 1177, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(130, 1178, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(131, 1179, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(132, 1180, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(133, 1181, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(134, 1182, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(135, 1183, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54'),
+(136, 1184, 'New Obligation Assigned', 'New obligation assigned: Nothing', 1, 16, 'obligation', 0, '2026-04-19 03:46:54');
 
 -- --------------------------------------------------------
 
@@ -295,7 +475,7 @@ CREATE TABLE `obligations` (
   `year_level` tinyint(3) UNSIGNED DEFAULT NULL,
   `section` varchar(10) DEFAULT NULL,
   `school_year` varchar(10) NOT NULL,
-  `semester` enum('1st','2nd','Summer') NOT NULL,
+  `semester` tinyint(3) UNSIGNED NOT NULL DEFAULT 2 COMMENT '1=1st 2=2nd 3=Summer',
   `due_date` date DEFAULT NULL,
   `gcash_qr_path` varchar(255) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
@@ -310,8 +490,9 @@ CREATE TABLE `obligations` (
 --
 
 INSERT INTO `obligations` (`obligation_id`, `obligation_name`, `description`, `amount`, `is_required`, `scope`, `program_id`, `year_level`, `section`, `school_year`, `semester`, `due_date`, `gcash_qr_path`, `is_active`, `created_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(13, 'ESO Fee', NULL, 150.00, 1, 1, NULL, NULL, NULL, '2025-2026', '2nd', '2026-03-27', 'qr/1774505883724-224178664.jpg', 1, 1, NULL, '2026-03-26 06:18:03', '2026-03-26 06:18:03'),
-(14, 'Org Shirt', NULL, 0.00, 1, 2, 1, 4, 'A', '2025-2026', '2nd', '2026-03-28', NULL, 1, 1, NULL, '2026-03-27 02:08:57', '2026-03-27 02:08:57');
+(13, 'ESO Fee', NULL, 150.00, 1, 1, NULL, NULL, NULL, '2025-2026', 2, '2026-03-27', 'qr/1774505883724-224178664.jpg', 1, 1, NULL, '2026-03-26 06:18:03', '2026-03-26 06:18:03'),
+(14, 'Org Shirt', NULL, 0.00, 1, 2, 1, 4, 'A', '2025-2026', 2, '2026-03-28', NULL, 1, 1, NULL, '2026-03-27 02:08:57', '2026-03-27 02:08:57'),
+(16, 'Nothing', NULL, 0.00, 1, 0, NULL, NULL, NULL, '2025-2026', 2, NULL, NULL, 1, 1, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54');
 
 -- --------------------------------------------------------
 
@@ -342,7 +523,17 @@ CREATE TABLE `payment_submissions` (
 --
 
 INSERT INTO `payment_submissions` (`payment_id`, `student_id`, `obligation_id`, `student_obligation_id`, `payment_receipt_path`, `receipt_filename`, `receipt_filesize`, `receipt_mimetype`, `amount_paid`, `notes`, `payment_type`, `recorded_by`, `payment_status`, `submitted_at`, `updated_at`) VALUES
-(10, 2, 13, 23, 'receipts/1774577514467-777196201.jpg', '', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-03-27 02:11:54', '2026-03-27 02:25:32');
+(10, 2, 13, 23, 'receipts/1774577514467-777196201.jpg', '', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-03-27 02:11:54', '2026-03-27 02:25:32'),
+(11, 8, 13, 43, NULL, 'gcash_receipt_student7.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 0, '2026-04-07 01:28:00', '2026-04-07 01:28:00'),
+(12, 9, 13, 44, NULL, 'gcash_receipt_student8.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-04-07 02:12:00', '2026-04-18 16:53:26'),
+(13, 10, 13, 45, NULL, 'gcash_receipt_student9.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-04-08 00:43:00', '2026-04-18 16:53:06'),
+(14, 8, 13, 43, NULL, 'gcash_receipt_student7.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 0, '2026-04-07 01:28:00', '2026-04-07 01:28:00'),
+(15, 9, 13, 44, NULL, 'gcash_receipt_student8.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-04-07 02:12:00', '2026-04-18 16:53:23'),
+(16, 10, 13, 45, NULL, 'gcash_receipt_student9.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-04-08 00:43:00', '2026-04-18 16:53:04'),
+(17, 24, 13, 68, NULL, 'gcash_receipt_maria.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-04-09 02:05:00', '2026-04-18 16:44:51'),
+(18, 25, 13, 69, NULL, 'gcash_receipt_nathan.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-04-09 02:30:00', '2026-04-18 16:44:12'),
+(19, 26, 13, 70, NULL, 'gcash_receipt_olivia.jpg', NULL, NULL, 150.00, NULL, 1, NULL, 1, '2026-04-09 03:00:00', '2026-04-18 16:20:32'),
+(20, 11, 13, 46, NULL, '', NULL, NULL, 150.00, '', 2, 1, 1, '2026-04-18 16:17:13', '2026-04-18 16:17:13');
 
 -- --------------------------------------------------------
 
@@ -364,7 +555,15 @@ CREATE TABLE `payment_verifications` (
 --
 
 INSERT INTO `payment_verifications` (`payment_verification_id`, `payment_id`, `admin_id`, `verification_status`, `remarks`, `verified_at`) VALUES
-(19, 10, 1, 1, '', '2026-03-27 02:25:32');
+(19, 10, 1, 1, '', '2026-03-27 02:25:32'),
+(20, 20, 1, 1, 'Cash payment recorded by admin', '2026-04-18 16:17:13'),
+(21, 19, 1, 1, '', '2026-04-18 16:20:32'),
+(22, 18, 1, 1, '', '2026-04-18 16:44:12'),
+(23, 17, 1, 1, '', '2026-04-18 16:44:51'),
+(24, 16, 1, 1, '', '2026-04-18 16:53:04'),
+(25, 13, 1, 1, '', '2026-04-18 16:53:06'),
+(26, 15, 1, 1, '', '2026-04-18 16:53:23'),
+(27, 12, 1, 1, '', '2026-04-18 16:53:26');
 
 -- --------------------------------------------------------
 
@@ -394,26 +593,6 @@ INSERT INTO `programs` (`program_id`, `code`, `name`, `created_at`, `updated_at`
 -- --------------------------------------------------------
 
 --
--- Table structure for table `registrations`
---
-
-CREATE TABLE `registrations` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `admission_id` int(10) UNSIGNED NOT NULL,
-  `enrollment_adviser_id` int(10) UNSIGNED NOT NULL,
-  `academic_year_id` int(10) UNSIGNED NOT NULL,
-  `year_term_id` int(10) UNSIGNED NOT NULL,
-  `student_type_id` int(10) UNSIGNED NOT NULL,
-  `student_class_id` int(10) UNSIGNED NOT NULL,
-  `old_record` int(11) NOT NULL DEFAULT 0,
-  `status` int(11) NOT NULL DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `roles`
 --
 
@@ -438,22 +617,6 @@ INSERT INTO `roles` (`role_id`, `role_name`, `role_label`, `clearance_step`, `cr
 (6, 'dean', 'Dean of Engineering', 6, '2026-03-09 01:11:14'),
 (7, 'student', 'Student', NULL, '2026-03-09 01:11:14'),
 (8, 'program_officer', 'Program Officer', 2, '2026-03-25 03:28:50');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `sections`
---
-
-CREATE TABLE `sections` (
-  `section_id` smallint(5) UNSIGNED NOT NULL,
-  `program_id` int(10) UNSIGNED NOT NULL,
-  `section_name` varchar(5) NOT NULL,
-  `year_level` tinyint(3) UNSIGNED NOT NULL,
-  `school_year` varchar(9) NOT NULL,
-  `semester` tinyint(3) UNSIGNED NOT NULL DEFAULT 1 COMMENT '1=1st 2=2nd 3=Summer',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -489,7 +652,7 @@ CREATE TABLE `students` (
 
 INSERT INTO `students` (`student_id`, `user_id`, `student_no`, `first_name`, `last_name`, `middle_name`, `gender`, `program_id`, `year_level`, `section`, `section_id`, `school_year`, `semester`, `shirt_size`, `avatar_path`, `is_enrolled`, `deleted_at`, `created_at`, `updated_at`) VALUES
 (1, 2, '22B1799', 'james', 'Jantoc', 'Laylay', NULL, 1, 4, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-11 12:51:25', '2026-03-11 12:51:25'),
-(2, 3, '22B1798', 'Student1', 'Profile', 'Laylay', NULL, 1, 4, 'A', NULL, '2025-2026', 2, NULL, '/uploads/avatars/713cae1b-f214-4d1b-b658-2936771ee311.jpg', 1, NULL, '2026-03-11 21:11:47', '2026-03-26 06:16:16'),
+(2, 3, '22B1798', 'Student1', 'Profile', 'Laylay', 1, 1, 4, 'A', NULL, '2025-2026', 2, 'S', '/uploads/avatars/713cae1b-f214-4d1b-b658-2936771ee311.jpg', 1, NULL, '2026-03-11 21:11:47', '2026-04-19 03:45:52'),
 (3, 1161, '22B1002', 'Student2', 'Account', NULL, NULL, 1, 1, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
 (4, 1162, '22B1003', 'Student3', 'Account', NULL, NULL, 1, 2, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
 (5, 1163, '22B1004', 'Student4', 'Account', NULL, NULL, 1, 3, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
@@ -498,20 +661,22 @@ INSERT INTO `students` (`student_id`, `user_id`, `student_no`, `first_name`, `la
 (8, 1166, '22B2007', 'Student7', 'Account', NULL, NULL, 2, 1, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
 (9, 1167, '22B2008', 'Student8', 'Account', NULL, NULL, 2, 2, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:12', '2026-03-27 01:26:12'),
 (10, 1168, '22B2009', 'Student9', 'Account', NULL, NULL, 2, 3, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:12', '2026-03-27 01:26:12'),
-(11, 1169, '22B2010', 'Student10', 'Account', NULL, NULL, 2, 4, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:12', '2026-03-27 01:26:12');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `student_classes`
---
-
-CREATE TABLE `student_classes` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `label` varchar(50) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+(11, 1169, '22B2010', 'Student10', 'Account', NULL, NULL, 2, 4, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-03-27 01:26:12', '2026-03-27 01:26:12'),
+(12, 1170, '22B1010', 'Alice', 'Santos', NULL, NULL, 1, 2, 'B', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(13, 1171, '22B1011', 'Bob', 'Reyes', NULL, NULL, 1, 3, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(14, 1172, '22B1012', 'Clara', 'Cruz', NULL, NULL, 2, 1, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(15, 1173, '22B1013', 'Diego', 'Lim', NULL, NULL, 1, 2, 'C', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(16, 1174, '22B1014', 'Elena', 'Torres', NULL, NULL, 2, 2, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(17, 1175, '22B1015', 'Felix', 'Garcia', NULL, NULL, 3, 1, 'B', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(18, 1176, '22B1016', 'Grace', 'Mendoza', NULL, NULL, 2, 3, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(19, 1177, '22B1017', 'Henry', 'Ramos', NULL, NULL, 3, 2, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(20, 1178, '22B1018', 'Iris', 'Valdez', NULL, NULL, 4, 1, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(21, 1179, '22B1019', 'Jake', 'Navarro', NULL, NULL, 3, 3, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(22, 1180, '22B1020', 'Karen', 'Flores', NULL, NULL, 4, 2, 'B', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(23, 1181, '22B1021', 'Leo', 'Castillo', NULL, NULL, 5, 1, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(24, 1182, '22B1022', 'Maria', 'Dela Rosa', NULL, NULL, 5, 2, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(25, 1183, '22B1023', 'Nathan', 'Aquino', NULL, NULL, 5, 3, 'A', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(26, 1184, '22B1024', 'Olivia', 'Bautista', NULL, NULL, 1, 1, 'B', NULL, '2025-2026', 2, NULL, NULL, 1, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01');
 
 -- --------------------------------------------------------
 
@@ -522,7 +687,7 @@ CREATE TABLE `student_classes` (
 CREATE TABLE `student_imports` (
   `import_id` int(10) UNSIGNED NOT NULL,
   `school_year` varchar(9) NOT NULL,
-  `semester` enum('1st','2nd','Summer') NOT NULL,
+  `semester` tinyint(3) UNSIGNED NOT NULL DEFAULT 2 COMMENT '1=1st 2=2nd 3=Summer',
   `imported_by` int(10) UNSIGNED NOT NULL,
   `record_count` int(11) NOT NULL DEFAULT 0,
   `skipped_count` int(11) NOT NULL DEFAULT 0,
@@ -558,21 +723,58 @@ INSERT INTO `student_obligations` (`student_obligation_id`, `student_id`, `oblig
 (22, 1, 13, 150.00, 1, NULL, NULL, NULL, NULL, '2026-03-26 06:18:03', '2026-03-26 06:18:03'),
 (23, 2, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-03-26 06:18:03', '2026-03-27 02:25:32'),
 (24, 1, 14, 0.00, 0, NULL, NULL, NULL, NULL, '2026-03-27 02:08:57', '2026-03-27 02:08:57'),
-(25, 2, 14, 0.00, 0, NULL, NULL, NULL, NULL, '2026-03-27 02:08:57', '2026-03-27 02:08:57'),
-(26, 6, 14, 0.00, 0, NULL, NULL, NULL, NULL, '2026-03-27 02:08:57', '2026-03-27 02:08:57');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `student_types`
---
-
-CREATE TABLE `student_types` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `label` varchar(50) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+(25, 2, 14, 0.00, 2, 'proofs/1776510720757-594186879.jpg', NULL, NULL, NULL, '2026-03-27 02:08:57', '2026-04-18 11:13:14'),
+(26, 6, 14, 0.00, 0, NULL, NULL, NULL, NULL, '2026-03-27 02:08:57', '2026-03-27 02:08:57'),
+(38, 3, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-03-28 00:00:00', '2026-04-01 01:00:00'),
+(39, 4, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-03-28 00:00:00', '2026-04-01 01:30:00'),
+(40, 5, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-03-28 00:00:00', '2026-04-02 02:00:00'),
+(41, 6, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-03-28 00:00:00', '2026-04-01 03:00:00'),
+(42, 7, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-03-28 00:00:00', '2026-04-01 03:30:00'),
+(43, 8, 13, 150.00, 1, NULL, NULL, NULL, NULL, '2026-04-06 01:00:00', '2026-04-07 01:30:00'),
+(44, 9, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-06 01:00:00', '2026-04-18 16:53:26'),
+(45, 10, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-06 01:00:00', '2026-04-18 16:53:06'),
+(46, 11, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-06 01:00:00', '2026-04-18 16:17:13'),
+(56, 12, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-06 00:00:00', '2026-04-06 01:00:00'),
+(57, 13, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-06 00:00:00', '2026-04-06 01:00:00'),
+(58, 14, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-06 00:00:00', '2026-04-06 01:00:00'),
+(59, 15, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-05 00:00:00', '2026-04-05 02:00:00'),
+(60, 16, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-05 00:00:00', '2026-04-05 02:00:00'),
+(61, 17, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-05 00:00:00', '2026-04-05 02:00:00'),
+(62, 18, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-04 00:00:00', '2026-04-04 02:00:00'),
+(63, 19, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-04 00:00:00', '2026-04-04 02:00:00'),
+(64, 20, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-04 00:00:00', '2026-04-04 02:00:00'),
+(65, 21, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-03 00:00:00', '2026-04-03 02:00:00'),
+(66, 22, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-03 00:00:00', '2026-04-03 02:00:00'),
+(67, 23, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-03 00:00:00', '2026-04-03 02:00:00'),
+(68, 24, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-08 02:00:00', '2026-04-18 16:44:51'),
+(69, 25, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-08 02:00:00', '2026-04-18 16:44:12'),
+(70, 26, 13, 150.00, 2, NULL, NULL, NULL, NULL, '2026-04-08 02:00:00', '2026-04-18 16:20:32'),
+(86, 1, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(87, 2, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(88, 3, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(89, 4, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(90, 5, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(91, 6, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(92, 7, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(93, 8, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(94, 9, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(95, 10, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(96, 11, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(97, 12, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(98, 13, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(99, 14, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(100, 15, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(101, 16, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(102, 17, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(103, 18, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(104, 19, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(105, 20, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(106, 21, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(107, 22, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(108, 23, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(109, 24, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(110, 25, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54'),
+(111, 26, 16, 0.00, 0, NULL, NULL, NULL, NULL, '2026-04-19 03:46:54', '2026-04-19 03:46:54');
 
 -- --------------------------------------------------------
 
@@ -585,7 +787,7 @@ CREATE TABLE `system_settings` (
   `maintenance_mode` tinyint(1) NOT NULL DEFAULT 0,
   `maintenance_msg` varchar(50) DEFAULT NULL,
   `school_year` varchar(10) NOT NULL DEFAULT '2025-2026',
-  `current_semester` enum('1st','2nd','Summer') NOT NULL DEFAULT '2nd',
+  `current_semester` tinyint(3) UNSIGNED NOT NULL DEFAULT 2 COMMENT '1=1st 2=2nd 3=Summer',
   `updated_by` int(10) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -594,7 +796,7 @@ CREATE TABLE `system_settings` (
 --
 
 INSERT INTO `system_settings` (`setting_id`, `maintenance_mode`, `maintenance_msg`, `school_year`, `current_semester`, `updated_by`) VALUES
-(1, 0, 'System is currently under maintenance.', '2025-2026', '2nd', 10);
+(1, 0, 'System is currently under maintenance.', '2025-2026', 2, 10);
 
 -- --------------------------------------------------------
 
@@ -634,18 +836,18 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `first_name`, `last_name`, `email`, `password_hash`, `password_changed_at`, `email_verified_at`, `email_verify_token`, `email_verify_expires_at`, `password_reset_token`, `password_reset_expires_at`, `remember_token`, `refresh_token`, `refresh_token_expires_at`, `failed_login_attempts`, `locked_until`, `role_id`, `program_id`, `status`, `last_login_at`, `last_login_ip`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(1, 'System', 'Admin', 'admin@gmail.com', '$2b$10$0FwXaFgVHkDlxziIyBwxGe9.m.w.6SgEekFzmqmXxh28qUP4m/vGO', NULL, '2026-03-09 01:11:14', NULL, NULL, NULL, NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTc3NDc5Mjk5OCwiZXhwIjoxNzc1Mzk3Nzk4fQ.qvW2GKXqGFDMvpL9j6Pjg0KaPIkkwlbtV9w6eEd8qM8', '2026-04-05 14:03:18', 0, NULL, 2, NULL, 'active', '2026-03-29 14:03:18', '::1', NULL, '2026-03-09 01:11:14', '2026-03-29 14:03:18'),
+(1, 'System', 'Admin', 'admin@gmail.com', '$2b$10$0FwXaFgVHkDlxziIyBwxGe9.m.w.6SgEekFzmqmXxh28qUP4m/vGO', NULL, '2026-03-09 01:11:14', NULL, NULL, NULL, NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTc3NjU3MDQ0NSwiZXhwIjoxNzc3MTc1MjQ1fQ.eqB4N7wCNVVxQUsWOwHsOOvvcU56z3N2O9lpXCB3mtQ', '2026-04-26 03:47:25', 0, NULL, 2, NULL, 'active', '2026-04-19 03:47:25', '::1', NULL, '2026-03-09 01:11:14', '2026-04-19 03:47:25'),
 (2, 'james', 'Jantoc', 'james@gmail.com', '$2b$10$YCbQnRtj/6KFrkrkQU4KweWiFH.lqm9NYM/EygHuqYsc5QPPzNgzi', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'inactive', '2026-03-11 13:34:55', '::1', NULL, '2026-03-11 12:51:25', '2026-03-26 06:01:04'),
-(3, 'Student1', 'Profile', 'student1@gmail.com', '$2b$10$3qiAe2MhX9C9mg/4Ed/ObOArCTnKEwzvXuKbk2MMLViq395Pvuoey', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', '2026-03-27 02:11:05', '::1', NULL, '2026-03-11 21:11:47', '2026-03-27 02:11:57'),
+(3, 'Student1', 'Profile', 'student1@gmail.com', '$2b$10$3qiAe2MhX9C9mg/4Ed/ObOArCTnKEwzvXuKbk2MMLViq395Pvuoey', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsImlhdCI6MTc3NjU3MDQ2MiwiZXhwIjoxNzc3MTc1MjYyfQ.Q6J3VI-9WRdjj5IF3pjW5f3DIePfgwj61vf77Lqv9KY', '2026-04-26 03:47:42', 0, NULL, 7, 1, 'active', '2026-04-19 03:47:42', '::1', NULL, '2026-03-11 21:11:47', '2026-04-19 03:47:42'),
 (4, 'Jake', 'Dela Cruz', 'jake@gmail.com', '$2b$10$iu/7t8gwiZj0.1ZasWGAUOOfoIJF/ownYfF.1SC2JSN1koxRpbaUu', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 3, 1, 'inactive', '2026-03-12 06:25:51', '::1', '2026-03-20 01:56:37', '2026-03-12 02:24:14', '2026-03-20 01:56:37'),
 (5, 'Juan', 'Dela Cruz', 'juan@gmail.com', '$2b$10$pjyOZiLGaOrwDpqCehdmU.NdRmUIS9AzXZ5D0rb7eDI0ZDQtY11N6', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 4, 1, 'inactive', '2026-03-12 08:10:53', '::1', '2026-03-20 01:56:41', '2026-03-12 06:11:12', '2026-03-20 01:56:41'),
 (6, 'John', 'Pork', 'john@gmail.com', '$2b$10$DnOUVPjLLIWqjmmwAC3MPeBffra81AHslGez2L5Ritzson8p/e7Ze', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 6, 1, 'inactive', '2026-03-12 08:10:34', '::1', '2026-03-20 01:56:39', '2026-03-12 06:11:38', '2026-03-20 01:56:39'),
-(7, 'class', 'officer', 'class@gmail.com', '$2b$10$VgE14QG/4GpR3B7A0MY8tuBLlHHD/Q2D.F554drsP.8RLy5XO5JWe', '2026-03-26 06:32:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 3, 1, 'active', '2026-03-21 10:49:06', '::1', NULL, '2026-03-20 01:35:32', '2026-03-26 06:32:15'),
-(8, 'program', 'head', 'program@gmail.com', '$2b$10$0ghfjIBoFLDV3ut.nAWuIOpjqden7VIqLITQT0YDkOgCLDL8lY6yy', '2026-03-26 06:31:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 4, 1, 'active', '2026-03-26 06:33:01', '::1', NULL, '2026-03-20 01:36:42', '2026-03-26 06:33:10'),
-(9, 'dean', 'dean', 'dean@gmail.com', '$2b$10$FL2Cu1hPKV/V2AqDw84VqeB37gFQQYbYbvjSjm2NXDBbOVx0M0Bq.', '2026-03-26 06:00:01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 6, NULL, 'active', '2026-03-21 10:49:33', '::1', NULL, '2026-03-20 01:37:21', '2026-03-26 06:00:01'),
-(10, 'System', 'Admin', 'sysadmin@eso.edu.ph', '$2b$10$WPz5Ntsvq6XTNxN62hyNTe.SGlf.cavHOo0YHrbRZGeggGkTjMslW', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 1, NULL, 'active', '2026-03-27 02:13:05', '::1', NULL, '2026-03-24 05:29:46', '2026-03-27 02:18:53'),
-(1158, 'CpE', 'Officer', 'cpe.officer@gmail.com', '$2b$10$rLouBX6QALZWwZTvnbKiy.8YemqAWtiQsMYb5ZRBWCgvPl3pmBqmy', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 8, 1, 'active', NULL, NULL, NULL, '2026-03-26 06:31:57', '2026-03-26 06:31:57'),
-(1159, 'Dane', 'Joe', 'dane@gmail.com', '$2b$10$RWxw.hV9wizajUlohFLItOtyGzmZpUBshb1pLrXIN5WW.wC95Jb5q', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 5, NULL, 'active', '2026-03-26 12:25:19', '::1', NULL, '2026-03-26 06:38:27', '2026-03-26 20:49:25'),
+(7, 'class', 'officer', 'class@gmail.com', '$2b$10$VgE14QG/4GpR3B7A0MY8tuBLlHHD/Q2D.F554drsP.8RLy5XO5JWe', '2026-03-26 06:32:15', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 3, 1, 'active', '2026-04-17 23:16:43', '::1', NULL, '2026-03-20 01:35:32', '2026-04-17 23:17:01'),
+(8, 'program', 'head', 'program@gmail.com', '$2b$10$0ghfjIBoFLDV3ut.nAWuIOpjqden7VIqLITQT0YDkOgCLDL8lY6yy', '2026-03-26 06:31:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 4, 1, 'active', '2026-04-17 23:20:01', '::1', NULL, '2026-03-20 01:36:42', '2026-04-17 23:20:10'),
+(9, 'Dean', '_', 'dean@gmail.com', '$2b$10$FL2Cu1hPKV/V2AqDw84VqeB37gFQQYbYbvjSjm2NXDBbOVx0M0Bq.', '2026-03-26 06:00:01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 6, NULL, 'active', '2026-04-17 23:21:44', '::1', NULL, '2026-03-20 01:37:21', '2026-04-17 23:22:00'),
+(10, 'System', 'Admin', 'sysadmin@eso.edu.ph', '$2b$10$WPz5Ntsvq6XTNxN62hyNTe.SGlf.cavHOo0YHrbRZGeggGkTjMslW', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEwLCJpYXQiOjE3NzY1NzI4OTEsImV4cCI6MTc3NzE3NzY5MX0.EiGYH7fpeRO1f7CXiaT7_L8e9SX6ytWhqThizHcfV_o', '2026-04-26 04:28:11', 0, NULL, 1, NULL, 'active', '2026-04-19 04:28:11', '::1', NULL, '2026-03-24 05:29:46', '2026-04-19 04:28:11'),
+(1158, 'CpE', 'Officer', 'cpe.officer@gmail.com', '$2b$10$rLouBX6QALZWwZTvnbKiy.8YemqAWtiQsMYb5ZRBWCgvPl3pmBqmy', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 8, 1, 'active', '2026-04-17 23:17:15', '::1', NULL, '2026-03-26 06:31:57', '2026-04-17 23:18:33'),
+(1159, 'Dane', 'Joe', 'dane@gmail.com', '$2b$10$RWxw.hV9wizajUlohFLItOtyGzmZpUBshb1pLrXIN5WW.wC95Jb5q', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 5, NULL, 'active', '2026-04-17 23:18:44', '::1', NULL, '2026-03-26 06:38:27', '2026-04-17 23:19:01'),
 (1161, 'Student2', 'Account', 'student2@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', NULL, NULL, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
 (1162, 'Student3', 'Account', 'student3@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', NULL, NULL, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
 (1163, 'Student4', 'Account', 'student4@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', NULL, NULL, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
@@ -654,173 +856,42 @@ INSERT INTO `users` (`user_id`, `first_name`, `last_name`, `email`, `password_ha
 (1166, 'Student7', 'Account', 'student7@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
 (1167, 'Student8', 'Account', 'student8@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-03-27 01:26:11', '2026-03-27 01:26:11'),
 (1168, 'Student9', 'Account', 'student9@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-03-27 01:26:12', '2026-03-27 01:26:12'),
-(1169, 'Student10', 'Account', 'student10@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-03-27 01:26:12', '2026-03-27 01:26:12');
+(1169, 'Student10', 'Account', 'student10@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-03-27 01:26:12', '2026-03-27 01:26:12'),
+(1170, 'Alice', 'Santos', 'stu12@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1171, 'Bob', 'Reyes', 'stu13@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1172, 'Clara', 'Cruz', 'stu14@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1173, 'Diego', 'Lim', 'stu15@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1174, 'Elena', 'Torres', 'stu16@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1175, 'Felix', 'Garcia', 'stu17@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 3, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1176, 'Grace', 'Mendoza', 'stu18@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 2, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1177, 'Henry', 'Ramos', 'stu19@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 3, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1178, 'Iris', 'Valdez', 'stu20@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 4, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1179, 'Jake', 'Navarro', 'stu21@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 3, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1180, 'Karen', 'Flores', 'stu22@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 4, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1181, 'Leo', 'Castillo', 'stu23@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 5, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1182, 'Maria', 'Dela Rosa', 'stu24@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 5, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1183, 'Nathan', 'Aquino', 'stu25@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 5, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01'),
+(1184, 'Olivia', 'Bautista', 'stu26@gmail.com', '$2b$10$DM8bcQB2HezmMjsUzds7yeSpovKuGonbLG7nttWC.afBg/GgpKd7a', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 7, 1, 'active', NULL, NULL, NULL, '2026-04-09 23:45:01', '2026-04-09 23:45:01');
 
 -- --------------------------------------------------------
 
 --
--- Stand-in structure for view `v_enrollment_per_semester`
--- (See below for the actual view)
---
-CREATE TABLE `v_enrollment_per_semester` (
-`school_year` varchar(10)
-,`semester` tinyint(3) unsigned
-,`program_id` int(10) unsigned
-,`program_code` varchar(10)
-,`program_name` varchar(45)
-,`total_enrolled` bigint(21)
-);
-
--- --------------------------------------------------------
-
---
--- Stand-in structure for view `v_eso_quota`
--- (See below for the actual view)
---
-CREATE TABLE `v_eso_quota` (
-`program_id` int(10) unsigned
-,`program_code` varchar(10)
-,`program_name` varchar(45)
-,`school_year` varchar(10)
-,`semester` enum('1st','2nd','Summer')
-,`total_obligations` bigint(21)
-,`students_with_obligations` bigint(21)
-,`total_amount_due` decimal(28,2)
-,`total_collected` decimal(28,2)
-,`remaining_balance` decimal(29,2)
-,`collection_rate_pct` decimal(34,2)
-);
-
--- --------------------------------------------------------
-
---
--- Stand-in structure for view `v_program_stats`
--- (See below for the actual view)
---
-CREATE TABLE `v_program_stats` (
-`program_id` int(10) unsigned
-,`program_code` varchar(10)
-,`program_name` varchar(45)
-,`total_sections` bigint(21)
-,`total_students` bigint(21)
-,`enrolled_students` bigint(21)
-,`registered_accounts` bigint(21)
-,`total_obligations` bigint(21)
-,`obligations_settled` decimal(22,0)
-,`obligations_pending` decimal(22,0)
-,`total_amount_due` decimal(28,2)
-,`total_collected` decimal(28,2)
-,`remaining_balance` decimal(28,2)
-,`collection_rate_pct` decimal(34,2)
-);
-
--- --------------------------------------------------------
-
---
--- Stand-in structure for view `v_registered_accounts`
--- (See below for the actual view)
---
-CREATE TABLE `v_registered_accounts` (
-`total_accounts` bigint(21)
-,`student_accounts` decimal(23,0)
-,`admin_accounts` decimal(23,0)
-,`active_accounts` decimal(23,0)
-,`inactive_accounts` decimal(23,0)
-,`suspended_accounts` decimal(23,0)
-);
-
--- --------------------------------------------------------
-
---
--- Stand-in structure for view `v_section_stats`
--- (See below for the actual view)
---
-CREATE TABLE `v_section_stats` (
-`section_id` smallint(5) unsigned
-,`section_name` varchar(5)
-,`year_level` tinyint(3) unsigned
-,`school_year` varchar(9)
-,`semester` tinyint(3) unsigned
-,`program_id` int(10) unsigned
-,`program_code` varchar(10)
-,`program_name` varchar(45)
-,`total_students` bigint(21)
-,`enrolled_students` bigint(21)
-,`total_obligations` bigint(21)
-,`obligations_settled` decimal(22,0)
-,`obligations_pending` decimal(22,0)
-,`total_amount_due` decimal(28,2)
-,`total_collected` decimal(28,2)
-,`total_remaining` decimal(28,2)
-);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `year_terms`
+-- Table structure for table `year_sections`
 --
 
-CREATE TABLE `year_terms` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `label` varchar(20) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+CREATE TABLE `year_sections` (
+  `section_id` smallint(5) UNSIGNED NOT NULL,
+  `program_id` int(10) UNSIGNED NOT NULL,
+  `section_name` varchar(5) NOT NULL,
+  `year_level` tinyint(3) UNSIGNED NOT NULL,
+  `school_year` varchar(9) NOT NULL,
+  `semester` tinyint(3) UNSIGNED NOT NULL DEFAULT 1 COMMENT '1=1st 2=2nd 3=Summer',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Structure for view `v_enrollment_per_semester`
---
-DROP TABLE IF EXISTS `v_enrollment_per_semester`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_enrollment_per_semester`  AS SELECT `s`.`school_year` AS `school_year`, `s`.`semester` AS `semester`, `p`.`program_id` AS `program_id`, `p`.`code` AS `program_code`, `p`.`name` AS `program_name`, count(0) AS `total_enrolled` FROM (`students` `s` join `programs` `p` on(`p`.`program_id` = `s`.`program_id`)) WHERE `s`.`is_enrolled` = 1 GROUP BY `s`.`school_year`, `s`.`semester`, `p`.`program_id`, `p`.`code`, `p`.`name` ORDER BY `s`.`school_year` DESC, field(`s`.`semester`,'1st','2nd','Summer') ASC ;
-
--- --------------------------------------------------------
-
---
--- Structure for view `v_eso_quota`
---
-DROP TABLE IF EXISTS `v_eso_quota`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_eso_quota`  AS SELECT `p`.`program_id` AS `program_id`, `p`.`code` AS `program_code`, `p`.`name` AS `program_name`, `o`.`school_year` AS `school_year`, `o`.`semester` AS `semester`, count(distinct `o`.`obligation_id`) AS `total_obligations`, count(distinct `so`.`student_id`) AS `students_with_obligations`, coalesce(sum(`so`.`amount_due`),0) AS `total_amount_due`, coalesce(sum(case when `ps`.`payment_status` = 'approved' then `ps`.`amount_paid` else 0 end),0) AS `total_collected`, coalesce(sum(`so`.`amount_due`),0) - coalesce(sum(case when `ps`.`payment_status` = 'approved' then `ps`.`amount_paid` else 0 end),0) AS `remaining_balance`, round(coalesce(sum(case when `ps`.`payment_status` = 'approved' then `ps`.`amount_paid` else 0 end),0) / nullif(sum(`so`.`amount_due`),0) * 100,2) AS `collection_rate_pct` FROM ((((`programs` `p` left join `students` `s` on(`s`.`program_id` = `p`.`program_id`)) left join `student_obligations` `so` on(`so`.`student_id` = `s`.`student_id`)) left join `obligations` `o` on(`o`.`obligation_id` = `so`.`obligation_id`)) left join `payment_submissions` `ps` on(`ps`.`student_obligation_id` = `so`.`student_obligation_id`)) GROUP BY `p`.`program_id`, `p`.`code`, `p`.`name`, `o`.`school_year`, `o`.`semester` ORDER BY `o`.`school_year` DESC, field(`o`.`semester`,'1st','2nd','Summer') ASC ;
-
--- --------------------------------------------------------
-
---
--- Structure for view `v_program_stats`
---
-DROP TABLE IF EXISTS `v_program_stats`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_program_stats`  AS SELECT `p`.`program_id` AS `program_id`, `p`.`code` AS `program_code`, `p`.`name` AS `program_name`, count(distinct `sec`.`section_id`) AS `total_sections`, count(distinct `s`.`student_id`) AS `total_students`, count(distinct case when `s`.`is_enrolled` = 1 then `s`.`student_id` end) AS `enrolled_students`, count(distinct `u`.`user_id`) AS `registered_accounts`, count(distinct `so`.`student_obligation_id`) AS `total_obligations`, sum(case when `so`.`status` in ('paid','waived') then 1 else 0 end) AS `obligations_settled`, sum(case when `so`.`status` in ('unpaid','pending_verification') then 1 else 0 end) AS `obligations_pending`, coalesce(sum(`so`.`amount_due`),0) AS `total_amount_due`, coalesce(sum(case when `ps`.`payment_status` = 'approved' then `ps`.`amount_paid` else 0 end),0) AS `total_collected`, coalesce(sum(case when `so`.`status` not in ('paid','waived') then `so`.`amount_due` else 0 end),0) AS `remaining_balance`, round(coalesce(sum(case when `ps`.`payment_status` = 'approved' then `ps`.`amount_paid` else 0 end),0) / nullif(sum(`so`.`amount_due`),0) * 100,2) AS `collection_rate_pct` FROM (((((`programs` `p` left join `sections` `sec` on(`sec`.`program_id` = `p`.`program_id`)) left join `students` `s` on(`s`.`section_id` = `sec`.`section_id`)) left join `users` `u` on(`u`.`user_id` = `s`.`user_id` and `u`.`deleted_at` is null)) left join `student_obligations` `so` on(`so`.`student_id` = `s`.`student_id`)) left join `payment_submissions` `ps` on(`ps`.`student_obligation_id` = `so`.`student_obligation_id`)) GROUP BY `p`.`program_id`, `p`.`code`, `p`.`name` ;
-
--- --------------------------------------------------------
-
---
--- Structure for view `v_registered_accounts`
---
-DROP TABLE IF EXISTS `v_registered_accounts`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_registered_accounts`  AS SELECT count(0) AS `total_accounts`, sum(`r`.`role_name` = 'student') AS `student_accounts`, sum(`r`.`role_name` <> 'student') AS `admin_accounts`, sum(`u`.`status` = 'active') AS `active_accounts`, sum(`u`.`status` = 'inactive') AS `inactive_accounts`, sum(`u`.`status` = 'suspended') AS `suspended_accounts` FROM (`users` `u` join `roles` `r` on(`r`.`role_id` = `u`.`role_id`)) WHERE `u`.`deleted_at` is null ;
-
--- --------------------------------------------------------
-
---
--- Structure for view `v_section_stats`
---
-DROP TABLE IF EXISTS `v_section_stats`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_section_stats`  AS SELECT `sec`.`section_id` AS `section_id`, `sec`.`section_name` AS `section_name`, `sec`.`year_level` AS `year_level`, `sec`.`school_year` AS `school_year`, `sec`.`semester` AS `semester`, `p`.`program_id` AS `program_id`, `p`.`code` AS `program_code`, `p`.`name` AS `program_name`, count(distinct `s`.`student_id`) AS `total_students`, count(distinct case when `s`.`is_enrolled` = 1 then `s`.`student_id` end) AS `enrolled_students`, count(distinct `so`.`student_obligation_id`) AS `total_obligations`, sum(case when `so`.`status` in ('paid','waived') then 1 else 0 end) AS `obligations_settled`, sum(case when `so`.`status` in ('unpaid','pending_verification') then 1 else 0 end) AS `obligations_pending`, coalesce(sum(`so`.`amount_due`),0) AS `total_amount_due`, coalesce(sum(case when `ps`.`payment_status` = 'approved' then `ps`.`amount_paid` else 0 end),0) AS `total_collected`, coalesce(sum(case when `so`.`status` not in ('paid','waived') then `so`.`amount_due` else 0 end),0) AS `total_remaining` FROM ((((`sections` `sec` join `programs` `p` on(`p`.`program_id` = `sec`.`program_id`)) left join `students` `s` on(`s`.`section_id` = `sec`.`section_id`)) left join `student_obligations` `so` on(`so`.`student_id` = `s`.`student_id`)) left join `payment_submissions` `ps` on(`ps`.`student_obligation_id` = `so`.`student_obligation_id`)) GROUP BY `sec`.`section_id`, `sec`.`section_name`, `sec`.`year_level`, `sec`.`school_year`, `sec`.`semester`, `p`.`program_id`, `p`.`code`, `p`.`name` ;
 
 --
 -- Indexes for dumped tables
 --
-
---
--- Indexes for table `academic_years`
---
-ALTER TABLE `academic_years`
-  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `admins`
@@ -832,14 +903,6 @@ ALTER TABLE `admins`
   ADD KEY `idx_admins_deleted` (`deleted_at`);
 
 --
--- Indexes for table `admissions`
---
-ALTER TABLE `admissions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_admission_student` (`student_id`),
-  ADD KEY `fk_admission_curriculum` (`curriculum_id`);
-
---
 -- Indexes for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
@@ -848,6 +911,16 @@ ALTER TABLE `audit_logs`
   ADD KEY `idx_audit_action` (`action`),
   ADD KEY `idx_audit_target` (`target_type`,`target_id`),
   ADD KEY `idx_audit_date` (`created_at`);
+
+--
+-- Indexes for table `budgets`
+--
+ALTER TABLE `budgets`
+  ADD PRIMARY KEY (`budget_id`),
+  ADD KEY `idx_budgets_semester` (`semester`),
+  ADD KEY `idx_budgets_school_year` (`school_year`),
+  ADD KEY `idx_budgets_deleted_at` (`deleted_at`),
+  ADD KEY `fk_budgets_created_by` (`created_by`);
 
 --
 -- Indexes for table `clearances`
@@ -869,17 +942,21 @@ ALTER TABLE `clearance_verifications`
   ADD KEY `idx_cv_step` (`status`,`step_order`);
 
 --
--- Indexes for table `curricula`
---
-ALTER TABLE `curricula`
-  ADD PRIMARY KEY (`id`);
-
---
 -- Indexes for table `document_templates`
 --
 ALTER TABLE `document_templates`
   ADD PRIMARY KEY (`template_id`),
   ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD PRIMARY KEY (`expense_id`),
+  ADD KEY `idx_expenses_semester` (`semester`),
+  ADD KEY `idx_expenses_school_year` (`school_year`),
+  ADD KEY `idx_expenses_recorded_by` (`recorded_by`),
+  ADD KEY `idx_expenses_deleted_at` (`deleted_at`);
 
 --
 -- Indexes for table `guardian`
@@ -932,31 +1009,11 @@ ALTER TABLE `programs`
   ADD UNIQUE KEY `code` (`code`);
 
 --
--- Indexes for table `registrations`
---
-ALTER TABLE `registrations`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_reg_admission` (`admission_id`),
-  ADD KEY `fk_reg_adviser` (`enrollment_adviser_id`),
-  ADD KEY `fk_reg_acad_year` (`academic_year_id`),
-  ADD KEY `fk_reg_year_term` (`year_term_id`),
-  ADD KEY `fk_reg_type` (`student_type_id`),
-  ADD KEY `fk_reg_class` (`student_class_id`);
-
---
 -- Indexes for table `roles`
 --
 ALTER TABLE `roles`
   ADD PRIMARY KEY (`role_id`),
   ADD UNIQUE KEY `role_name` (`role_name`);
-
---
--- Indexes for table `sections`
---
-ALTER TABLE `sections`
-  ADD PRIMARY KEY (`section_id`),
-  ADD UNIQUE KEY `uq_section` (`program_id`,`section_name`,`year_level`,`school_year`,`semester`),
-  ADD KEY `idx_sections_school` (`school_year`,`semester`);
 
 --
 -- Indexes for table `students`
@@ -969,12 +1026,6 @@ ALTER TABLE `students`
   ADD KEY `idx_students_sy` (`school_year`,`semester`),
   ADD KEY `idx_students_deleted` (`deleted_at`),
   ADD KEY `idx_students_section` (`section_id`);
-
---
--- Indexes for table `student_classes`
---
-ALTER TABLE `student_classes`
-  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `student_imports`
@@ -994,12 +1045,6 @@ ALTER TABLE `student_obligations`
   ADD KEY `idx_so_status` (`status`);
 
 --
--- Indexes for table `student_types`
---
-ALTER TABLE `student_types`
-  ADD PRIMARY KEY (`id`);
-
---
 -- Indexes for table `system_settings`
 --
 ALTER TABLE `system_settings`
@@ -1017,20 +1062,16 @@ ALTER TABLE `users`
   ADD KEY `idx_users_deleted` (`deleted_at`);
 
 --
--- Indexes for table `year_terms`
+-- Indexes for table `year_sections`
 --
-ALTER TABLE `year_terms`
-  ADD PRIMARY KEY (`id`);
+ALTER TABLE `year_sections`
+  ADD PRIMARY KEY (`section_id`),
+  ADD UNIQUE KEY `uq_section` (`program_id`,`section_name`,`year_level`,`school_year`,`semester`),
+  ADD KEY `idx_sections_school` (`school_year`,`semester`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
-
---
--- AUTO_INCREMENT for table `academic_years`
---
-ALTER TABLE `academic_years`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `admins`
@@ -1039,70 +1080,70 @@ ALTER TABLE `admins`
   MODIFY `admin_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
--- AUTO_INCREMENT for table `admissions`
---
-ALTER TABLE `admissions`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `audit_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `audit_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+
+--
+-- AUTO_INCREMENT for table `budgets`
+--
+ALTER TABLE `budgets`
+  MODIFY `budget_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `clearances`
 --
 ALTER TABLE `clearances`
-  MODIFY `clearance_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `clearance_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `clearance_verifications`
 --
 ALTER TABLE `clearance_verifications`
-  MODIFY `clearance_verification_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `curricula`
---
-ALTER TABLE `curricula`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `clearance_verification_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
 -- AUTO_INCREMENT for table `document_templates`
 --
 ALTER TABLE `document_templates`
-  MODIFY `template_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `template_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `expenses`
+--
+ALTER TABLE `expenses`
+  MODIFY `expense_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `guardian`
 --
 ALTER TABLE `guardian`
-  MODIFY `guardian_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `guardian_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `notification_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
+  MODIFY `notification_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=137;
 
 --
 -- AUTO_INCREMENT for table `obligations`
 --
 ALTER TABLE `obligations`
-  MODIFY `obligation_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `obligation_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `payment_submissions`
 --
 ALTER TABLE `payment_submissions`
-  MODIFY `payment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `payment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `payment_verifications`
 --
 ALTER TABLE `payment_verifications`
-  MODIFY `payment_verification_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `payment_verification_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `programs`
@@ -1111,34 +1152,16 @@ ALTER TABLE `programs`
   MODIFY `program_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT for table `registrations`
---
-ALTER TABLE `registrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
   MODIFY `role_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
--- AUTO_INCREMENT for table `sections`
---
-ALTER TABLE `sections`
-  MODIFY `section_id` smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `students`
 --
 ALTER TABLE `students`
-  MODIFY `student_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
---
--- AUTO_INCREMENT for table `student_classes`
---
-ALTER TABLE `student_classes`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `student_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `student_imports`
@@ -1150,13 +1173,7 @@ ALTER TABLE `student_imports`
 -- AUTO_INCREMENT for table `student_obligations`
 --
 ALTER TABLE `student_obligations`
-  MODIFY `student_obligation_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
-
---
--- AUTO_INCREMENT for table `student_types`
---
-ALTER TABLE `student_types`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `student_obligation_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=112;
 
 --
 -- AUTO_INCREMENT for table `system_settings`
@@ -1168,13 +1185,13 @@ ALTER TABLE `system_settings`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1170;
+  MODIFY `user_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1185;
 
 --
--- AUTO_INCREMENT for table `year_terms`
+-- AUTO_INCREMENT for table `year_sections`
 --
-ALTER TABLE `year_terms`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE `year_sections`
+  MODIFY `section_id` smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
@@ -1187,17 +1204,16 @@ ALTER TABLE `admins`
   ADD CONSTRAINT `fk_admins_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `admissions`
---
-ALTER TABLE `admissions`
-  ADD CONSTRAINT `fk_admission_curriculum` FOREIGN KEY (`curriculum_id`) REFERENCES `curricula` (`id`),
-  ADD CONSTRAINT `fk_admission_student` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`);
-
---
 -- Constraints for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
   ADD CONSTRAINT `fk_audit_user` FOREIGN KEY (`performed_by`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `budgets`
+--
+ALTER TABLE `budgets`
+  ADD CONSTRAINT `fk_budgets_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`);
 
 --
 -- Constraints for table `clearances`
@@ -1218,6 +1234,12 @@ ALTER TABLE `clearance_verifications`
 --
 ALTER TABLE `document_templates`
   ADD CONSTRAINT `document_templates_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD CONSTRAINT `fk_expenses_recorded_by` FOREIGN KEY (`recorded_by`) REFERENCES `users` (`user_id`);
 
 --
 -- Constraints for table `guardian`
@@ -1254,21 +1276,10 @@ ALTER TABLE `payment_verifications`
   ADD CONSTRAINT `fk_pv_payment` FOREIGN KEY (`payment_id`) REFERENCES `payment_submissions` (`payment_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `registrations`
---
-ALTER TABLE `registrations`
-  ADD CONSTRAINT `fk_reg_acad_year` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`),
-  ADD CONSTRAINT `fk_reg_admission` FOREIGN KEY (`admission_id`) REFERENCES `admissions` (`id`),
-  ADD CONSTRAINT `fk_reg_adviser` FOREIGN KEY (`enrollment_adviser_id`) REFERENCES `users` (`user_id`),
-  ADD CONSTRAINT `fk_reg_class` FOREIGN KEY (`student_class_id`) REFERENCES `student_classes` (`id`),
-  ADD CONSTRAINT `fk_reg_type` FOREIGN KEY (`student_type_id`) REFERENCES `student_types` (`id`),
-  ADD CONSTRAINT `fk_reg_year_term` FOREIGN KEY (`year_term_id`) REFERENCES `year_terms` (`id`);
-
---
 -- Constraints for table `students`
 --
 ALTER TABLE `students`
-  ADD CONSTRAINT `fk_students_section` FOREIGN KEY (`section_id`) REFERENCES `sections` (`section_id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_students_section` FOREIGN KEY (`section_id`) REFERENCES `year_sections` (`section_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_students_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
