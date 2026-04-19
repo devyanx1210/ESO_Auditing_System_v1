@@ -1,6 +1,6 @@
 import { apiFetch } from "./api";
 
-const BASE_URL = "http://localhost:5000/api/v1";
+const BASE_URL = "/api/v1";
 
 export interface ObligationData {
     obligationId: number;
@@ -84,5 +84,5 @@ export const obligationService = {
 };
 
 export function qrUrl(path: string): string {
-    return `http://localhost:5000/uploads/${path}`;
+    return `/uploads/${path}`;
 }

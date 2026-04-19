@@ -3,11 +3,12 @@ import pool from "../config/db.js";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AuditSummary {
-    totalIncome:   number;
-    totalExpenses: number;
-    netBalance:    number;
-    expenseCount:  number;
-    incomeCount:   number;
+    totalIncome:    number;
+    totalPotential: number;   // total amount due across all assigned student_obligations
+    totalExpenses:  number;
+    netBalance:     number;
+    expenseCount:   number;
+    incomeCount:    number;
 }
 
 export interface IncomeItem {
@@ -67,6 +68,19 @@ export const getAuditSummary = async (
         incParams
     );
 
+    // Total potential = sum of all amount_due across all assigned student_obligations for the period
+    const potParams: any[] = [];
+    let potWhere = "WHERE 1=1";
+    if (semester)   { potWhere += " AND o.semester = ?";    potParams.push(semester); }
+    if (schoolYear) { potWhere += " AND o.school_year = ?"; potParams.push(schoolYear); }
+    const [[potRow]]: any = await pool.execute(
+        `SELECT COALESCE(SUM(so.amount_due),0) AS total
+         FROM student_obligations so
+         JOIN obligations o ON o.obligation_id = so.obligation_id
+         ${potWhere}`,
+        potParams
+    );
+
     const [[expRow]]: any = await pool.execute(
         `SELECT COALESCE(SUM(e.amount),0) AS total, COUNT(*) AS cnt
          FROM expenses e
@@ -74,15 +88,17 @@ export const getAuditSummary = async (
         expParams
     );
 
-    const totalIncome   = Number(incRow.total);
-    const totalExpenses = Number(expRow.total);
+    const totalIncome    = Number(incRow.total);
+    const totalPotential = Number(potRow.total);
+    const totalExpenses  = Number(expRow.total);
 
     return {
         totalIncome,
+        totalPotential,
         totalExpenses,
-        netBalance:    totalIncome - totalExpenses,
-        expenseCount:  Number(expRow.cnt),
-        incomeCount:   Number(incRow.cnt),
+        netBalance:   totalIncome - totalExpenses,
+        expenseCount: Number(expRow.cnt),
+        incomeCount:  Number(incRow.cnt),
     };
 };
 

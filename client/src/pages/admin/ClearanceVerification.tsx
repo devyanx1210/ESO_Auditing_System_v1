@@ -8,6 +8,8 @@ import { adminStudentService } from "../../services/admin-student.service";
 import type { PendingClearanceItem, ClearanceHistoryItem } from "../../services/admin-student.service";
 import { documentService, printDocuments } from "../../services/document.service";
 import type { DocumentTemplate } from "../../services/document.service";
+import { AlertModal } from "../../components/ui/AlertModal";
+import { ConfirmModal } from "../../components/ui/ConfirmModal";
 
 // ─── Program lookup ───────────────────────────────────────────────────────────
 
@@ -33,16 +35,14 @@ function fmtTime(d: string) {
 
 function statusLabel(s: number | null) {
     if (s === 2) return "Approved";
-    if (s === 3) return "Disapproved";
-    if (s === 1) return "Processing";
-    return "Pending";
+    if (s === 3) return "Rejected";
+    return "Processing"; // 0 and 1 both = Processing
 }
 
 function historyStatusLabel(s: number | null) {
-    if (s === 2) return "Fully Cleared";
-    if (s === 3) return "Disapproved";
-    if (s === 1) return "Approved";
-    return "Pending";
+    if (s === 2) return "Approved";
+    if (s === 3) return "Rejected";
+    return "Processing"; // 0 and 1 both = Processing
 }
 
 // ─── Print report (opens a new window, long bond paper) ───────────────────────
@@ -50,10 +50,11 @@ function historyStatusLabel(s: number | null) {
 function printReport(
     data: (PendingClearanceItem | ClearanceHistoryItem)[],
     type: "pending" | "history",
-    filterDesc: string
+    filterDesc: string,
+    onAlert?: (msg: string) => void
 ) {
     const win = window.open("", "_blank");
-    if (!win) { alert("Please allow pop-ups to print."); return; }
+    if (!win) { onAlert?.("Please allow pop-ups to print."); return; }
 
     const now = new Date().toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     const title = type === "pending" ? "Pending Clearance Report" : "Clearance History Report";
@@ -74,7 +75,7 @@ function printReport(
                 <td class="c">${p.schoolYear}</td>
                 <td class="c">${p.semester}</td>
                 <td class="c">${p.obligationsPaid}&nbsp;/&nbsp;${p.obligationsTotal}</td>
-                <td class="c"><span class="badge s-${p.clearanceStatus === 2 ? "cleared" : p.clearanceStatus === 1 ? "in_progress" : p.clearanceStatus === 3 ? "rejected" : "pending"}">${statusLabel(p.clearanceStatus)}</span></td>
+                <td class="c"><span class="badge s-${p.clearanceStatus === 2 ? "approved" : p.clearanceStatus === 3 ? "rejected" : "processing"}">${statusLabel(p.clearanceStatus)}</span></td>
             </tr>`).join("");
     } else {
         thHtml = ["#", "Student Name", "Student No.", "Program", "Yr / Sec", "School Year", "Sem", "Status", "Approved On", "Remarks"]
@@ -88,7 +89,7 @@ function printReport(
                 <td class="c">${h.yearLevel}–${h.section}</td>
                 <td class="c">${h.schoolYear}</td>
                 <td class="c">${h.semester}</td>
-                <td class="c"><span class="badge s-${h.clearanceStatus === 1 ? "signed" : h.clearanceStatus === 2 ? "cleared" : h.clearanceStatus === 3 ? "rejected" : "pending"}">${historyStatusLabel(h.clearanceStatus)}</span></td>
+                <td class="c"><span class="badge s-${h.clearanceStatus === 2 ? "approved" : h.clearanceStatus === 3 ? "rejected" : "processing"}">${historyStatusLabel(h.clearanceStatus)}</span></td>
                 <td class="c">${fmtDate(h.signedAt)}</td>
                 <td>${(h.remarks ?? "—").replace(/</g, "&lt;")}</td>
             </tr>`).join("");
@@ -132,7 +133,7 @@ tr.alt td{background:#f9fafb}
 </style></head>
 <body>
 <div class="no-print">
-  <button class="btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <button class="btn" onclick="window.print()">Print / Save as PDF</button>
   <span class="info">${data.length} record(s) · Long Bond Paper (8.5 × 13 in)</span>
 </div>
 <div class="hdr">
@@ -257,7 +258,7 @@ function UserAvatar({ size = "md", src }: { size?: "sm" | "md"; src?: string | n
     return (
         <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
             {src
-                ? <img src={src.startsWith("http") ? src : src.startsWith("/") ? `http://localhost:5000${src}` : `http://localhost:5000/uploads/${src}`} alt="" className="w-full h-full object-cover" />
+                ? <img src={src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`} alt="" className="w-full h-full object-cover" />
                 : <DefaultAvatarSvg />}
         </div>
     );
@@ -275,7 +276,7 @@ interface SubTabsProps {
 }
 function SubTabs({ active, onChange, reviewCount, historyCount, reviewLabel = "For Review", historyLabel = "History" }: SubTabsProps) {
     return (
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1 w-fit mb-5">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1 w-fit">
             <button
                 onClick={() => onChange("review")}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
@@ -393,8 +394,9 @@ const ClearanceVerification = () => {
     const [signAllMsg,         setSignAllMsg]         = useState("");
     const [selectedClearanceIds, setSelectedClearanceIds] = useState<Set<number>>(new Set());
     const [selectedHistoryIds, setSelectedHistoryIds] = useState<Set<number>>(new Set());
-    const [bulkUnapproving, setBulkUnapproving] = useState(false);
-    const [bulkDeletingClr, setBulkDeletingClr] = useState(false);
+    const [bulkUnapproving,  setBulkUnapproving]  = useState(false);
+    const [bulkDeletingClr,  setBulkDeletingClr]  = useState(false);
+    const [markingPrinted,   setMarkingPrinted]   = useState(false);
     const [historyBulkMsg, setHistoryBulkMsg] = useState("");
     const [search,        setSearch]        = useState((location.state as any)?.search ?? "");
     const [sortKey,       setSortKey]       = useState<ClrSortKey>("name");
@@ -408,6 +410,8 @@ const ClearanceVerification = () => {
     const [printSchoolYear, setPrintSchoolYear] = useState("");
     const [printSemester,   setPrintSemester]   = useState("");
     const [printing,        setPrinting]        = useState(false);
+    const [alertMsg,        setAlertMsg]        = useState<string | null>(null);
+    const [confirmState,    setConfirmState]    = useState<{ message: string; onConfirm: () => void } | null>(null);
 
     const hasClearanceRole = CLEARANCE_ROLES.includes(user?.role ?? "");
     const canSignClearance = user?.role !== "system_admin";
@@ -455,33 +459,58 @@ const ClearanceVerification = () => {
         finally { setBulkUnapproving(false); }
     }
 
-    async function handleDeleteClearanceHistory() {
+    async function handleMarkPrinted() {
         if (!accessToken || !selectedHistoryIds.size) return;
-        if (!window.confirm(`Delete ${selectedHistoryIds.size} clearance record(s)? This cannot be undone.`)) return;
-        setBulkDeletingClr(true); setHistoryBulkMsg("");
+        setMarkingPrinted(true); setHistoryBulkMsg("");
         try {
             const ids = [...selectedHistoryIds];
-            await adminStudentService.deleteClearanceHistory(accessToken, ids);
-            setHistoryBulkMsg(`${ids.length} record(s) deleted.`);
+            await adminStudentService.markClearancePrinted(accessToken, ids);
+            setHistoryBulkMsg(`${ids.length} clearance(s) marked as printed.`);
             setSelectedHistoryIds(new Set());
             load();
         } catch (e: any) { setHistoryBulkMsg(e.message); }
-        finally { setBulkDeletingClr(false); }
+        finally { setMarkingPrinted(false); }
+    }
+
+    function handleDeleteClearanceHistory() {
+        if (!accessToken || !selectedHistoryIds.size) return;
+        setConfirmState({
+            message: `Delete ${selectedHistoryIds.size} clearance record(s)? This cannot be undone.`,
+            onConfirm: async () => {
+                setConfirmState(null);
+                setBulkDeletingClr(true); setHistoryBulkMsg("");
+                try {
+                    const ids = [...selectedHistoryIds];
+                    await adminStudentService.deleteClearanceHistory(accessToken, ids);
+                    setHistoryBulkMsg(`${ids.length} record(s) deleted.`);
+                    setSelectedHistoryIds(new Set());
+                    load();
+                } catch (e: any) { setHistoryBulkMsg(e.message); }
+                finally { setBulkDeletingClr(false); }
+            },
+        });
     }
 
     const load = useCallback(() => {
         if (!accessToken || !hasClearanceRole) return;
         setLoading(true);
+        setError("");
         Promise.all([
-            adminStudentService.getPendingClearance(accessToken).catch(() => [] as PendingClearanceItem[]),
-            adminStudentService.getClearanceHistory(accessToken).catch(() => [] as ClearanceHistoryItem[]),
+            adminStudentService.getPendingClearance(accessToken),
+            adminStudentService.getClearanceHistory(accessToken),
         ])
             .then(([c, ch]) => { setClearance(c); setClrHistory(ch); })
-            .catch(e => setError(e.message))
+            .catch(e => setError(e.message ?? "Failed to load clearance data"))
             .finally(() => setLoading(false));
     }, [accessToken, hasClearanceRole]);
 
     useEffect(() => { load(); }, [load]);
+
+    // Auto-refresh every 20 seconds
+    useEffect(() => {
+        const id = setInterval(load, 20_000);
+        return () => clearInterval(id);
+    }, [load]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -524,7 +553,7 @@ const ClearanceVerification = () => {
                 const win = window.open(objUrl, "_blank");
                 // revoke after a short delay
                 setTimeout(() => URL.revokeObjectURL(objUrl), 60_000);
-                if (!win) alert("Please allow pop-ups to view the print preview.");
+                if (!win) setAlertMsg("Please allow pop-ups to view the print preview.");
             } else {
                 // HTML template — client-side fill + print window
                 const students = await documentService.getApprovedStudents(
@@ -534,7 +563,7 @@ const ClearanceVerification = () => {
                 );
                 printDocuments(tpl.content, students);
             }
-        } catch (e: any) { alert(e.message); }
+        } catch (e: any) { setAlertMsg(e.message); }
         finally { setPrinting(false); }
     }
 
@@ -562,11 +591,12 @@ const ClearanceVerification = () => {
     }
     function applyClrStatus<T extends { clearanceStatus: number | string | null }>(items: T[]) {
         if (statusFilter === "all") return items;
-        const map: Record<string, number | null> = { pending: 0, in_progress: 1, approved: 2, disapproved: 3 };
-        const target = map[statusFilter] ?? null;
         return items.filter(i => {
             const s = i.clearanceStatus ?? 0;
-            return s === target;
+            if (statusFilter === "processing") return s === 0 || s === 1;
+            if (statusFilter === "approved")   return s === 2;
+            if (statusFilter === "rejected")   return s === 3;
+            return true;
         });
     }
     function applyClrSort(items: typeof clearance) {
@@ -583,14 +613,13 @@ const ClearanceVerification = () => {
     const filteredPendingCount = filteredPending.length;
     const filteredHistoryCount = filteredHistory.length;
     const activeResultCount    = clrSubTab === "review" ? filteredPendingCount : filteredHistoryCount;
-    const activeFilterCount    = [programFilter !== "all", sortKey !== "name", statusFilter !== "all"].filter(Boolean).length;
+    const activeFilterCount    = [programFilter !== "all", statusFilter !== "all"].filter(Boolean).length;
 
     function buildFilterDesc() {
         const parts: string[] = [];
         if (programFilter !== "all") parts.push(`Program: ${programLabel(programFilter)}`);
         if (statusFilter  !== "all") parts.push(`Status: ${statusFilter.replace(/_/g, " ")}`);
         if (search)                  parts.push(`Search: "${search}"`);
-        parts.push(`Sort: ${sortKey === "year" ? "Year Level" : "Name A–Z"}`);
         return parts.join("  ·  ");
     }
 
@@ -614,15 +643,14 @@ const ClearanceVerification = () => {
     return (
         <div className={`p-4 sm:p-6 md:p-8 min-h-screen ${bg}`}>
             <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg(null)} darkMode={darkMode} />}
+            {confirmState && <ConfirmModal message={confirmState.message} confirmLabel="Delete" danger onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(null)} darkMode={darkMode} />}
             {/* ── Page Header ── */}
             <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
-                    <h1 className={`font-bold text-lg sm:text-xl ${darkMode ? "text-white" : "text-gray-800"}`}>
+                    <h1 className={`text-lg sm:text-2xl lg:text-3xl font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>
                         Clearance Approval
                     </h1>
-                    <p className={`text-xs mt-0.5 ${darkMode ? "text-gray-400" : "text-gray-400"}`}>
-                        {clearance.length} student{clearance.length !== 1 ? "s" : ""} pending clearance signature
-                    </p>
                 </div>
                 <button onClick={load} disabled={loading} title="Refresh"
                     className={`p-2 border-2 rounded-xl transition shadow-sm disabled:opacity-50 ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "bg-white border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}>
@@ -630,7 +658,7 @@ const ClearanceVerification = () => {
                 </button>
             </div>
 
-            {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4">{error}</div>}
+            {error && <div className="bg-white shadow-[0_4px_16px_rgba(0,0,0,0.08)] text-red-500 text-sm rounded-xl px-4 py-3 mb-4">{error}</div>}
 
             {/* ── Search + Filter Bar ── */}
             <div className="flex items-center gap-2 mb-4">
@@ -648,7 +676,7 @@ const ClearanceVerification = () => {
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition shrink-0 shadow-sm
                             ${showFilters || activeFilterCount > 0 ? "bg-orange-500 text-white" : "bg-orange-500 text-white hover:bg-orange-600"}`}>
                         <FiFilter className="w-4 h-4" />
-                        <span className="hidden sm:inline">Sort &amp; Filter</span>
+                        <span className="hidden sm:inline">Filter</span>
                         {activeFilterCount > 0 && (
                             <span className="bg-white text-orange-600 text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{activeFilterCount}</span>
                         )}
@@ -658,17 +686,7 @@ const ClearanceVerification = () => {
                     {showFilters && (
                         <div className={`absolute right-0 top-full mt-2 z-30 rounded-2xl shadow-2xl ring-1 ring-black/5 p-4 w-64 flex flex-col gap-3
                             ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Sort &amp; Filter</p>
-
-                            <div>
-                                <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Sort by</label>
-                                <select value={sortKey} onChange={e => setSortKey(e.target.value as ClrSortKey)}
-                                    className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
-                                        ${darkMode ? "bg-[#222] border-gray-600 text-gray-100" : "bg-white border-gray-200"}`}>
-                                    <option value="name">Name (A–Z)</option>
-                                    <option value="year">Year Level</option>
-                                </select>
-                            </div>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Filter</p>
 
                             <div>
                                 <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Program</label>
@@ -686,15 +704,14 @@ const ClearanceVerification = () => {
                                     className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
                                         ${darkMode ? "bg-[#222] border-gray-600 text-gray-100" : "bg-white border-gray-200"}`}>
                                     <option value="all">All Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="in_progress">In Progress</option>
+                                    <option value="processing">Processing</option>
                                     <option value="approved">Approved</option>
-                                    <option value="disapproved">Disapproved</option>
+                                    <option value="rejected">Rejected</option>
                                 </select>
                             </div>
 
                             {activeFilterCount > 0 && (
-                                <button onClick={() => { setSortKey("name"); setProgramFilter("all"); setStatusFilter("all"); }}
+                                <button onClick={() => { setProgramFilter("all"); setStatusFilter("all"); }}
                                     className="w-full text-xs text-red-500 hover:text-red-600 font-semibold py-1.5 border border-red-200 rounded-xl hover:bg-red-50 transition">
                                     Clear all filters
                                 </button>
@@ -710,50 +727,50 @@ const ClearanceVerification = () => {
                 </span>
             </div>
 
-            {/* ── Sub-tabs ── */}
-            <SubTabs
-                active={clrSubTab} onChange={setClrSubTab}
-                reviewCount={filteredPendingCount}
-                historyCount={filteredHistoryCount}
-                reviewLabel="Pending" historyLabel="History" />
+            {/* ── Sub-tabs + inline actions ── */}
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pt-1">
+                <SubTabs
+                    active={clrSubTab} onChange={setClrSubTab}
+                    reviewCount={filteredPendingCount}
+                    historyCount={filteredHistoryCount}
+                    reviewLabel="Pending" historyLabel="History" />
+
+                {clrSubTab === "review" && (
+                    <div className="flex items-center gap-3 flex-wrap pt-1 pb-1 pr-2">
+                        {signAllMsg && <p className="text-sm text-green-600">{signAllMsg}</p>}
+                        <PrintDropdown
+                            darkMode={darkMode}
+                            onPrint={() => printReport(filteredPending, "pending", buildFilterDesc(), setAlertMsg)}
+                            onExport={() => exportCSV(filteredPending, "pending")} />
+                        {clearance.length > 0 && canSignClearance && (
+                            <button onClick={handleSignAll} disabled={signingAll}
+                                className="relative px-4 py-2 text-sm bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 disabled:opacity-60 transition">
+                                {signingAll ? "Approving..." : "Approve All"}
+                                {!signingAll && (
+                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-orange-600 rounded-full text-[9px] font-black flex items-center justify-center leading-none px-1 shadow ring-1 ring-orange-200">
+                                        {clearance.length}
+                                    </span>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* ── Pending Signature ── */}
             {clrSubTab === "review" && (() => {
                 const filtered = filteredPending;
                 return (
                 <>
-                    <div className="flex items-center justify-between mb-3">
-                        <div>
-                            <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                {filtered.length === 0
-                                    ? (canSignClearance ? "No students pending approval at your step." : "No students pending approval.")
-                                    : `${filtered.length} student${filtered.length !== 1 ? "s" : ""} ${canSignClearance ? "pending your approval" : "ready for clearance"}`}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {signAllMsg && <p className="text-sm text-green-600">{signAllMsg}</p>}
-                            <PrintDropdown
-                                darkMode={darkMode}
-                                onPrint={() => printReport(filtered, "pending", buildFilterDesc())}
-                                onExport={() => exportCSV(filtered, "pending")} />
-                            {clearance.length > 0 && canSignClearance && (
-                                <button onClick={handleSignAll} disabled={signingAll}
-                                    className="px-4 py-2 text-sm bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 disabled:opacity-60 transition">
-                                    {signingAll ? "Approving..." : `Approve All (${clearance.length})`}
-                                </button>
-                            )}
-                        </div>
-                    </div>
 
                     {filtered.length === 0 ? (
-                        <div className={`rounded-2xl p-10 text-center text-sm shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a] text-gray-400" : "bg-white text-gray-400"}`}>
+                        <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${darkMode ? "bg-[#1a1a1a] text-gray-400" : "bg-white text-gray-400"}`}>
                             <p className={`font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-500"}`}>No pending approvals</p>
                             <p>Students will appear here once all obligations are paid.</p>
                         </div>
                     ) : (
                         <>
-                            <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
-                                <div className="overflow-x-auto">
+                            <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                                 <table className="eso-table w-full min-w-[700px] border-collapse">
                                     <thead className={darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-500"}>
                                         <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
@@ -769,6 +786,7 @@ const ClearanceVerification = () => {
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Year / Section</th>
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Semester</th>
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Obligations</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Printed</th>
                                             {canSignClearance && <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Action</th>}
                                         </tr>
                                     </thead>
@@ -795,6 +813,11 @@ const ClearanceVerification = () => {
                                                 <td className={`px-3 py-2.5 text-center text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{c.yearLevel}-{c.section}</td>
                                                 <td className={`px-3 py-2.5 text-center text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{c.schoolYear} · Sem {c.semester}</td>
                                                 <td className={`px-3 py-2.5 text-center text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{c.obligationsPaid}/{c.obligationsTotal}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    {c.isPrinted
+                                                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-semibold">Printed</span>
+                                                        : <span className={`text-[10px] ${darkMode ? "text-gray-600" : "text-gray-300"}`}>—</span>}
+                                                </td>
                                                 {canSignClearance && (
                                                     <td className="px-3 py-2.5 text-center">
                                                         <button onClick={() => setSignTarget(c)}
@@ -807,7 +830,6 @@ const ClearanceVerification = () => {
                                         ))}
                                     </tbody>
                                 </table>
-                                </div>
                             </div>
                         </>
                     )}
@@ -820,22 +842,22 @@ const ClearanceVerification = () => {
                 const allHistSelected = filtered.length > 0 && filtered.every(h => selectedHistoryIds.has(h.clearanceId));
                 return (
                     filtered.length === 0 ? (
-                        <div className={`rounded-2xl p-10 text-center text-sm shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a] text-gray-400" : "bg-white text-gray-400"}`}>
+                        <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${darkMode ? "bg-[#1a1a1a] text-gray-400" : "bg-white text-gray-400"}`}>
                             No approvals yet.
                         </div>
                     ) : (
                         <>
                             {/* History Action Bar */}
-                            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+                            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap pt-1 pb-1">
                                 <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                     {filtered.length} record{filtered.length !== 1 ? "s" : ""}
                                     {selectedHistoryIds.size > 0 && ` · ${selectedHistoryIds.size} selected`}
                                 </p>
-                                <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap pt-1 pr-2">
                                     {historyBulkMsg && <p className="text-sm text-green-600">{historyBulkMsg}</p>}
                                     <PrintDropdown
                                         darkMode={darkMode}
-                                        onPrint={() => printReport(filtered, "history", buildFilterDesc())}
+                                        onPrint={() => printReport(filtered, "history", buildFilterDesc(), setAlertMsg)}
                                         onExport={() => exportCSV(filtered, "history")} />
                                     <button onClick={openPrintModal}
                                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition shadow-sm
@@ -844,20 +866,38 @@ const ClearanceVerification = () => {
                                     </button>
                                     {selectedHistoryIds.size > 0 && (
                                         <>
+                                            <button onClick={handleMarkPrinted} disabled={markingPrinted}
+                                                className="relative px-4 py-2 text-sm bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-60 transition">
+                                                {markingPrinted ? "Marking..." : "Mark Printed"}
+                                                {!markingPrinted && (
+                                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-green-700 rounded-full text-[9px] font-black flex items-center justify-center leading-none px-1 shadow ring-1 ring-green-200">
+                                                        {selectedHistoryIds.size}
+                                                    </span>
+                                                )}
+                                            </button>
                                             <button onClick={handleUnapproveHistory} disabled={bulkUnapproving}
-                                                className="px-4 py-2 text-sm bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600 disabled:opacity-60 transition">
-                                                {bulkUnapproving ? "Processing..." : `Unapprove (${selectedHistoryIds.size})`}
+                                                className="relative px-4 py-2 text-sm bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600 disabled:opacity-60 transition">
+                                                {bulkUnapproving ? "Processing..." : "Unapprove"}
+                                                {!bulkUnapproving && (
+                                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-yellow-700 rounded-full text-[9px] font-black flex items-center justify-center leading-none px-1 shadow ring-1 ring-yellow-200">
+                                                        {selectedHistoryIds.size}
+                                                    </span>
+                                                )}
                                             </button>
                                             <button onClick={handleDeleteClearanceHistory} disabled={bulkDeletingClr}
-                                                className="px-4 py-2 text-sm bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-60 transition">
-                                                {bulkDeletingClr ? "Deleting..." : `Delete (${selectedHistoryIds.size})`}
+                                                className="relative px-4 py-2 text-sm bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-60 transition">
+                                                {bulkDeletingClr ? "Deleting..." : "Delete"}
+                                                {!bulkDeletingClr && (
+                                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-red-600 rounded-full text-[9px] font-black flex items-center justify-center leading-none px-1 shadow ring-1 ring-red-200">
+                                                        {selectedHistoryIds.size}
+                                                    </span>
+                                                )}
                                             </button>
                                         </>
                                     )}
                                 </div>
                             </div>
-                            <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
-                                <div className="overflow-x-auto">
+                            <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                                 <table className="eso-table w-full min-w-[700px] border-collapse">
                                     <thead className={darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-500"}>
                                         <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
@@ -874,6 +914,7 @@ const ClearanceVerification = () => {
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Approved</th>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Verified By</th>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Remarks</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Printed</th>
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Status</th>
                                         </tr>
                                     </thead>
@@ -910,6 +951,14 @@ const ClearanceVerification = () => {
                                                 <td className={`px-3 py-2.5 text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>—</td>
                                                 <td className={`px-3 py-2.5 text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{h.remarks ?? "—"}</td>
                                                 <td className="px-3 py-2.5 text-center">
+                                                    {h.isPrinted
+                                                        ? <div className="flex flex-col items-center gap-0.5">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-semibold">Printed</span>
+                                                            {h.printedAt && <span className={`text-[9px] ${darkMode ? "text-gray-600" : "text-gray-400"}`}>{fmtDate(h.printedAt)}</span>}
+                                                          </div>
+                                                        : <span className={`text-[10px] ${darkMode ? "text-gray-600" : "text-gray-300"}`}>—</span>}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center">
                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${h.clearanceStatus === 2 ? "bg-green-100 text-green-700" : h.clearanceStatus === 3 ? "bg-red-100 text-red-700" : h.clearanceStatus === 1 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
                                                         {historyStatusLabel(h.clearanceStatus)}
                                                     </span>
@@ -918,7 +967,6 @@ const ClearanceVerification = () => {
                                         ))}
                                     </tbody>
                                 </table>
-                                </div>
                             </div>
                         </>
                     )
@@ -934,12 +982,19 @@ const ClearanceVerification = () => {
 
             {/* ── Print Modal ── */}
             {showPrintModal && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-                    <div className={`rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-sm p-6 ${darkMode ? "bg-[#1a1a1a] text-gray-100" : "bg-white text-gray-900"}`}
-                        style={{ animation: "fadeInUp 0.2s ease both" }}>
-                        <h3 className="font-bold text-lg mb-1">Print All Approved</h3>
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowPrintModal(false)}>
+                    <div className={`relative rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-sm p-5 ${darkMode ? "bg-[#1a1a1a] text-gray-100" : "bg-white text-gray-900"}`}
+                        style={{ animation: "fadeInUp 0.2s ease both" }}
+                        onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowPrintModal(false)}
+                            className={`absolute top-3 right-3 p-1.5 rounded-lg transition
+                                ${darkMode ? "text-gray-400 hover:text-gray-200 hover:bg-[#252525]" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}>
+                            <FiX className="w-4 h-4" />
+                        </button>
+                        <h3 className="font-bold text-base mb-1 pr-8">Print All Approved</h3>
                         <p className={`text-xs mb-4 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                            Choose a template and optional filters. All approved students matching the filters will be printed.
+                            Choose a template and optional filters.
                         </p>
                         <div className="flex flex-col gap-3">
                             <div>
@@ -951,7 +1006,7 @@ const ClearanceVerification = () => {
                                         ? <option value="">No templates — create one in Documents</option>
                                         : printTemplates.map(t => (
                                             <option key={t.templateId} value={t.templateId}>
-                                                {t.isDefault ? "★ " : ""}{t.name}
+                                                {t.isDefault ? "[Default] " : ""}{t.name}
                                             </option>
                                         ))
                                     }
@@ -976,15 +1031,15 @@ const ClearanceVerification = () => {
                                 </select>
                             </div>
                         </div>
-                        <div className="flex justify-between gap-3 mt-5">
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
                             <button type="button" onClick={() => setShowPrintModal(false)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium ${darkMode ? "bg-[#333] text-gray-300" : "bg-gray-200 text-gray-700"}`}>
+                                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-medium ${darkMode ? "bg-[#333] text-gray-300 hover:bg-[#3a3a3a]" : "bg-gray-100 text-gray-700 hover:bg-gray-200"} transition`}>
                                 Cancel
                             </button>
                             <button type="button" onClick={handlePrint} disabled={printing || !printTplId}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-60 transition">
-                                <FiPrinter className="w-4 h-4" />
-                                {printing ? "Loading…" : "Open Print Preview"}
+                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-60 transition">
+                                <FiPrinter className="w-4 h-4 shrink-0" />
+                                {printing ? "Loading…" : "Print Preview"}
                             </button>
                         </div>
                     </div>

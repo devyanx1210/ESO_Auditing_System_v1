@@ -86,6 +86,55 @@ export const getPendingPayments = async (
     return rows;
 };
 
+// ─── Pending proof-of-compliance submissions for admin review ─────────────────
+
+export interface PendingProofItem {
+    studentObligationId: number;
+    studentName: string;
+    studentNo: string;
+    programCode: string;
+    obligationName: string;
+    proofImage: string;
+    submittedAt: string;
+    avatarPath: string | null;
+}
+
+export const getPendingProofs = async (
+    userId: number,
+    role: string
+): Promise<PendingProofItem[]> => {
+    const { programId } = await getAdminRecord(userId);
+
+    let sql = `
+        SELECT
+            so.student_obligation_id          AS studentObligationId,
+            CONCAT(s.first_name,' ',s.last_name) AS studentName,
+            s.student_no                      AS studentNo,
+            d.code                            AS programCode,
+            o.obligation_name                 AS obligationName,
+            so.proof_image                    AS proofImage,
+            so.updated_at                     AS submittedAt,
+            s.avatar_path                     AS avatarPath
+        FROM student_obligations so
+        JOIN students s    ON s.student_id    = so.student_id
+        JOIN programs d    ON d.program_id    = s.program_id
+        JOIN obligations o ON o.obligation_id = so.obligation_id
+        WHERE so.status = 1
+          AND so.amount_due = 0
+          AND so.proof_image IS NOT NULL
+    `;
+    const params: any[] = [];
+
+    if (!ALL_DEPT_ROLES.includes(role) && programId) {
+        sql += " AND s.program_id = ?";
+        params.push(programId);
+    }
+    sql += " ORDER BY so.updated_at ASC";
+
+    const [rows]: any = await pool.execute(sql, params);
+    return rows;
+};
+
 // ─── Verify (approve / reject) a GCash submission ────────────────────────────
 
 export const verifyPayment = async (
@@ -192,10 +241,10 @@ export const recordCashPayment = async (
         const [result]: any = await conn.execute(
             `INSERT INTO payment_submissions
                 (student_id, obligation_id, student_obligation_id,
-                 payment_receipt_path, amount_paid, notes,
-                 payment_type, recorded_by_admin_id,
+                 payment_receipt_path, receipt_filename, amount_paid, notes,
+                 payment_type, recorded_by,
                  payment_status, submitted_at, updated_at)
-             VALUES (?, ?, ?, NULL, ?, ?, 2, ?, 1, NOW(), NOW())`,
+             VALUES (?, ?, ?, NULL, '', ?, ?, 2, ?, 1, NOW(), NOW())`,
             [so.student_id, so.obligation_id, studentObligationId, amountPaid, notes ?? null, adminId]
         );
         const paymentId = result.insertId;

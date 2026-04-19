@@ -56,16 +56,20 @@ export const getDashboardStats = async (
     yearLevel?: number | null,
     section?: string | null
 ): Promise<DashboardStats> => {
-    const isClassOfficer = role === "class_officer";
+    const isClassOfficer   = role === "class_officer";
     const isProgramOfficer = role === "program_officer";
-    const isProgramHead = false; // program_head now sees all programs
-    const isAllRoles = ["eso_officer", "dean", "signatory", "system_admin", "program_head"].includes(role ?? "");
 
     // ─── Build program stats query ───────────────────────────────────────────────
+    // Class officer: filter by their programId + yearLevel + section
+    // Program officer: filter by their programId only
     const studentFilter = isClassOfficer
         ? "AND s.year_level = ? AND s.section = ?"
         : "";
-    const programWhere = isProgramOfficer ? "WHERE p.program_id = ?" : "";
+    const programWhere = (isClassOfficer && programId)
+        ? "WHERE p.program_id = ?"
+        : (isProgramOfficer && programId)
+        ? "WHERE p.program_id = ?"
+        : "";
 
     const programSql = `
         SELECT
@@ -87,8 +91,8 @@ export const getDashboardStats = async (
     `;
 
     const programParams: any[] = [];
-    if (isClassOfficer)  programParams.push(yearLevel ?? null, section ?? null);
-    if (isProgramOfficer) programParams.push(programId ?? null);
+    if (isClassOfficer)  { programParams.push(yearLevel ?? null, section ?? null); if (programId) programParams.push(programId); }
+    if (isProgramOfficer && programId) programParams.push(programId);
 
     const [programRows]: any = await pool.execute(programSql, programParams);
 
@@ -122,6 +126,7 @@ export const getDashboardStats = async (
     const ylConditions: string[] = [];
     const ylParams: any[] = [];
     if (isClassOfficer) {
+        if (programId) { ylConditions.push("s.program_id = ?"); ylParams.push(programId); }
         ylConditions.push("s.year_level = ?", "s.section = ?");
         ylParams.push(yearLevel ?? null, section ?? null);
     } else if (isProgramOfficer && programId) {
@@ -194,9 +199,9 @@ export const getDashboardStats = async (
     const obligationConditions: string[] = [];
 
     if (isClassOfficer) {
-        obligationConditions.push("s.year_level = ?", "s.section = ?");
-        obligationParams.push(yearLevel ?? null, section ?? null);
-    } else if (isProgramHead && programId) {
+        obligationConditions.push("s.program_id = ?", "s.year_level = ?", "s.section = ?");
+        obligationParams.push(programId ?? null, yearLevel ?? null, section ?? null);
+    } else if (isProgramOfficer && programId) {
         obligationConditions.push("s.program_id = ?");
         obligationParams.push(programId);
     }

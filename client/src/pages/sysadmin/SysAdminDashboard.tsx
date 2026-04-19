@@ -37,7 +37,7 @@ function StatCard({ title, value, icon, active, clickable = true, animDelay = 0,
                 ${clickable ? "cursor-pointer" : "cursor-default"}
                 ${active
                     ? "bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.45)] text-white"
-                    : `bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] text-gray-800 ${clickable ? "hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]" : ""}`
+                    : `bg-white shadow-[0_6px_24px_rgba(0,0,0,0.13)] text-gray-800 ${clickable ? "hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]" : ""}`
                 }`}
         >
             <div className="flex justify-between items-start gap-2">
@@ -92,7 +92,7 @@ export default function SysAdminDashboard() {
 
             {/* Header */}
             <div className="mb-5 sm:mb-6" style={{ animation: "fadeInUp 0.35s ease both" }}>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">System Admin Dashboard</h1>
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">System Admin Dashboard</h1>
             </div>
 
             {/* Stat Cards */}
@@ -136,7 +136,7 @@ export default function SysAdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animation: "fadeInUp 0.4s ease both 0.18s" }}>
 
                 {/* Current Semester */}
-                <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-5">
+                <div className="bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <MdCalendarToday className="text-orange-500" size={18} />
                         <h2 className="text-gray-700 font-semibold text-sm">Current Semester</h2>
@@ -158,7 +158,7 @@ export default function SysAdminDashboard() {
                 </div>
 
                 {/* Maintenance Status */}
-                <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-5">
+                <div className="bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <MdBuild className="text-orange-500" size={18} />
                         <h2 className="text-gray-700 font-semibold text-sm">Maintenance Mode</h2>

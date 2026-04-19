@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5000/api/v1";
+const API_BASE = "/api/v1";
 
 export interface AdminProfile {
     adminId:     number;
@@ -17,7 +17,7 @@ export interface AdminProfile {
 }
 
 export const adminAvatarUrl = (p: string) =>
-    p.startsWith("http") ? p : p.startsWith("/") ? `http://localhost:5000${p}` : `http://localhost:5000/uploads/${p}`;
+    p.startsWith("http") ? p : p.startsWith("/uploads") ? p : `/uploads/${p}`;
 
 export const adminProfileService = {
     getProfile: async (token: string): Promise<AdminProfile> => {

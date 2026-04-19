@@ -22,12 +22,16 @@ router.post  ("/",                        ctrl.handleCreateTemplate);
 router.put   ("/:id",                     ctrl.handleUpdateTemplate);
 router.delete("/:id",                     ctrl.handleDeleteTemplate);
 router.patch ("/:id/set-default",         ctrl.handleSetDefault);
+router.patch ("/:id/unset-default",       ctrl.handleUnsetDefault);
 
 // PDF template
 router.get   ("/:id/pdf-file",            ctrl.handleGetPdfFile);
 router.post  ("/:id/upload-pdf",          uploadPdfTemplate, ctrl.handleUploadPdf);
 router.delete("/:id/pdf",                 ctrl.handleRemovePdf);
 router.patch ("/:id/positions",           ctrl.handleSavePositions);
+
+// PDF preview with dummy data
+router.get   ("/:id/preview-pdf",         ctrl.handlePreviewPdf);
 
 // Print merge — returns a PDF stream
 router.get   ("/:id/print-merge",         ctrl.handlePrintMerge);

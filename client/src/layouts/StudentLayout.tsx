@@ -3,6 +3,8 @@ import {
     FaCog,
     FaSignOutAlt,
     FaTimes,
+    FaChevronLeft,
+    FaChevronRight,
 } from "react-icons/fa";
 
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -14,12 +16,13 @@ import { useTheme } from "../hooks/useTheme";
 
 
 export default function StudentLayout() {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     useTheme(); // ensure theme class is applied on mount
     const location = useLocation();
     const navigate = useNavigate();
 
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [collapsed,       setCollapsed]       = useState(false);
 
     const navItems = [
         { path: "/student/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
@@ -35,38 +38,54 @@ export default function StudentLayout() {
         <div className="main-student-layout flex flex-col md:flex-row h-screen bg-white dark:bg-[#111111]">
 
             {/* Desktop Sidebar */}
-            <div className="desktop-sidebar hidden md:flex w-52 p-5 flex-col bg-gray-100 dark:bg-[#0d0d0d] dark:border-r dark:border-[#2a2a2a]">
-                <div className="logo-container flex w-full items-center justify-center">
-                    <img src={logo} className="logo object-contain mb-5"
-                        style={{ width: "clamp(36px,20vw,64px)", height: "clamp(36px,20vw,64px)" }} />
+            <div className={`desktop-sidebar hidden md:flex flex-col bg-orange-800 dark:bg-gray-900 transition-all duration-300 ease-in-out ${collapsed ? "w-16 p-2" : "w-52 p-5"}`}>
+                <div className={`flex flex-col items-center justify-center mb-5 mt-1 ${collapsed ? "gap-1" : "gap-3"}`}>
+                    <img src={logo} className="object-contain transition-all duration-300 drop-shadow-lg"
+                        style={{ width: collapsed ? "32px" : "64px", height: collapsed ? "32px" : "64px" }} />
+                    {!collapsed && (
+                        <div className="text-center">
+                            <p className="text-white font-extrabold text-sm tracking-wide leading-tight">ESO Auditing System</p>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-white/15 text-orange-200 text-[10px] font-semibold tracking-widest uppercase">
+                                {user?.role === "student" ? "Student" : (user?.role ?? "")}
+                            </span>
+                        </div>
+                    )}
                 </div>
-                <nav className="nav-container flex flex-col gap-2">
+                <nav className="nav-container flex flex-col gap-2 flex-1">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.path}
                             to={item.path}
                             end={item.path === "/student/dashboard"}
+                            title={collapsed ? item.label : ""}
                             className={({ isActive }) =>
-                                `nav-items flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition font-medium text-sm ${
+                                `nav-items flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition font-medium text-sm ${collapsed ? "justify-center" : ""} ${
                                     isActive
-                                        ? "bg-orange-500/20 text-orange-500 dark:text-orange-400 font-bold"
-                                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#1e1e1e]"
+                                        ? "bg-white/15 text-white font-bold dark:bg-orange-500/20 dark:text-orange-400"
+                                        : "text-orange-100/70 hover:bg-white/10 hover:text-white dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
                                 }`
                             }
                         >
                             {item.icon}
-                            <span>{item.label}</span>
+                            {!collapsed && <span>{item.label}</span>}
                         </NavLink>
                     ))}
 
                     <button
                         onClick={() => setShowLogoutModal(true)}
-                        className="logout-btn flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#1e1e1e]"
+                        title={collapsed ? "Sign Out" : ""}
+                        className={`logout-btn flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition font-medium text-sm text-orange-100/70 hover:bg-white/10 hover:text-white dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white ${collapsed ? "justify-center" : ""}`}
                     >
                         <FaSignOutAlt />
-                        <span>Sign Out</span>
+                        {!collapsed && <span>Sign Out</span>}
                     </button>
                 </nav>
+
+                {/* Collapse toggle */}
+                <button onClick={() => setCollapsed(c => !c)}
+                    className={`mt-3 flex items-center gap-2 py-2 rounded-lg text-orange-100/60 hover:bg-white/10 hover:text-white dark:text-gray-500 dark:hover:text-gray-300 transition-colors text-xs font-medium ${collapsed ? "justify-center px-2" : "px-3"}`}>
+                    {collapsed ? <FaChevronRight className="shrink-0" /> : <><FaChevronLeft className="shrink-0" /><span>Collapse</span></>}
+                </button>
             </div>
 
             {/* Main Content */}
@@ -75,27 +94,26 @@ export default function StudentLayout() {
             </div>
 
             {/* Mobile Bottom Navigation */}
-            <div className="mobile-bottom-nav-container fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-[#0d0d0d] border-t-2 border-gray-300 dark:border-[#2a2a2a] shadow-lg flex justify-around items-center z-50" style={{ height: "4.5rem" }}>
+            <div className="mobile-bottom-nav-container fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-[#0d0d0d] border-t border-gray-200 dark:border-[#2a2a2a] shadow-lg flex justify-around items-center h-14 z-50">
                 {navItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
                         end={item.path === "/student/dashboard"}
                         className={({ isActive }) =>
-                            `mobile-bottom-nav flex flex-col items-center justify-center gap-1 px-4 ${isActive ? "text-orange-500 font-bold" : "text-gray-500 dark:text-gray-400"}`
+                            `flex items-center justify-center w-10 h-10 rounded-xl transition-colors
+                            ${isActive ? "bg-orange-500/15 text-orange-500" : "text-gray-400 dark:text-gray-500 hover:text-orange-500"}`
                         }
                     >
                         <span className="text-xl">{item.icon}</span>
-                        <span className="text-[11px] font-medium">{item.label}</span>
                     </NavLink>
                 ))}
 
                 <button
                     onClick={() => setShowLogoutModal(true)}
-                    className="mobile-logout-button flex flex-col items-center justify-center gap-1 px-4 text-gray-500 dark:text-gray-400 hover:text-orange-500"
+                    className="flex items-center justify-center w-10 h-10 rounded-xl text-gray-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
                 >
-                    <span className="text-xl"><FaSignOutAlt /></span>
-                    <span className="text-[11px] font-medium">Sign Out</span>
+                    <FaSignOutAlt className="text-xl" />
                 </button>
             </div>
 

@@ -1,37 +1,39 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { FiRefreshCw, FiSearch, FiFilter, FiChevronDown, FiChevronUp, FiChevronRight, FiImage } from "react-icons/fi";
+import { createPortal } from "react-dom";
+import { FiRefreshCw, FiSearch, FiFilter, FiChevronDown, FiChevronUp, FiChevronRight, FiImage, FiX } from "react-icons/fi";
 import { receiptUrl } from "../../services/admin-student.service";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
+import { useOfflineCache } from "../../hooks/useOfflineCache";
 
 import { adminStudentService } from "../../services/admin-student.service";
 import type { AdminStudentItem, AdminObligationItem } from "../../services/admin-student.service";
 
 // ─── Cash Modal ───────────────────────────────────────────────────────────────
 
-interface CashModalProps { studentObligationId: number; obligationName: string; token: string; onClose: () => void; onDone: () => void; }
-function CashModal({ studentObligationId, obligationName, token, onClose, onDone }: CashModalProps) {
-    const [amount, setAmount] = useState("");
+interface CashModalProps { studentObligationId: number; obligationName: string; amount: number; token: string; onClose: () => void; onDone: () => void; }
+function CashModal({ studentObligationId, obligationName, amount, token, onClose, onDone }: CashModalProps) {
     const [notes, setNotes] = useState("");
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
     async function submit() {
-        if (!amount || isNaN(Number(amount))) return setErr("Enter a valid amount");
         setSaving(true);
         try {
-            await adminStudentService.recordCash(token, studentObligationId, Number(amount), notes);
+            await adminStudentService.recordCash(token, studentObligationId, amount, notes);
             onDone();
         } catch (e: any) { setErr(e.message); } finally { setSaving(false); }
     }
-    return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-xl w-full max-w-sm p-6" style={{ animation: 'fadeInUp 0.2s ease both' }}>
+    return createPortal(
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-xl w-full max-w-sm p-6 relative" style={{ animation: 'fadeInUp 0.2s ease both' }} onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition"><FiX className="w-4 h-4" /></button>
                 <h3 className="font-bold text-gray-800 mb-1">Record Cash Payment</h3>
                 <p className="text-sm text-gray-500 mb-4">{obligationName}</p>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Amount Paid (PHP)</label>
-                <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)}
-                    className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm mb-3" placeholder="0.00" />
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Amount (PHP)</label>
+                <div className="w-full border-2 border-gray-100 bg-gray-50 rounded-xl px-3 py-2 text-sm mb-3 font-semibold text-gray-800">
+                    ₱{Number(amount).toFixed(2)}
+                </div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Notes (optional)</label>
                 <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
                     className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm mb-4" placeholder="Notes..." />
@@ -43,7 +45,8 @@ function CashModal({ studentObligationId, obligationName, token, onClose, onDone
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 
@@ -59,58 +62,62 @@ const PROGRAM_NAMES: Record<string, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusBadge(status: number) {
-    const map: Record<number, string> = {
-        2: "bg-green-100 text-green-700",
-        3: "bg-blue-100 text-blue-700",
-        1: "bg-yellow-100 text-yellow-700",
-        0: "bg-red-100 text-red-700",
+function statusBadge(status: number, paymentStatus?: number | null) {
+    // Payment was rejected — overrides obligation status
+    if (paymentStatus === 2 && status === 0) {
+        return <span className="text-xs font-semibold text-red-500">Rejected</span>;
+    }
+    const colors: Record<number, string> = {
+        2: "text-green-600",
+        3: "text-blue-500",
+        1: "text-yellow-500",
+        0: "text-gray-400",
     };
     const labels: Record<number, string> = {
         2: "Verified", 3: "Waived",
-        1: "For Verification", 0: "Not Submitted",
+        1: "Pending", 0: "Pending",
     };
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] ?? "bg-gray-100 text-gray-600"}`}>
+        <span className={`text-xs font-semibold ${colors[status] ?? "text-gray-400"}`}>
             {labels[status] ?? String(status)}
         </span>
     );
 }
 
 function proofStatusBadge(status: number) {
-    const map: Record<number, string> = {
-        2: "bg-green-100 text-green-700",
-        3: "bg-blue-100 text-blue-700",
-        1: "bg-yellow-100 text-yellow-700",
-        0: "bg-yellow-100 text-yellow-700",
+    const colors: Record<number, string> = {
+        2: "text-green-600",
+        3: "text-blue-500",
+        1: "text-yellow-500",
+        0: "text-gray-400",
     };
     const labels: Record<number, string> = {
         2: "Verified",
         3: "Waived",
-        1: "For Verification",
-        0: "Not Submitted",
+        1: "Pending",
+        0: "Pending",
     };
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] ?? "bg-gray-100 text-gray-600"}`}>
+        <span className={`text-xs font-semibold ${colors[status] ?? "text-gray-400"}`}>
             {labels[status] ?? String(status)}
         </span>
     );
 }
 
 function clearanceBadge(s: number | null) {
-    const map: Record<number, string> = {
-        2: "bg-green-100 text-green-700",
-        1: "bg-blue-100 text-blue-700",
-        3: "bg-red-100 text-red-700",
-        0: "bg-gray-100 text-gray-500",
+    const colors: Record<number, string> = {
+        2: "text-green-600",
+        1: "text-blue-500",
+        3: "text-red-500",
+        0: "text-blue-500",
     };
     const val = s ?? 0;
     const labels: Record<number, string> = {
         2: "Approved", 1: "Processing",
-        3: "Disapproved", 0: "Pending",
+        3: "Rejected", 0: "Processing",
     };
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[val] ?? "bg-gray-100 text-gray-600"}`}>
+        <span className={`text-xs font-semibold ${colors[val] ?? "text-gray-400"}`}>
             {labels[val] ?? String(val)}
         </span>
     );
@@ -133,7 +140,7 @@ function UserAvatar({ size = "md", src }: { size?: "sm" | "md"; src?: string | n
     return (
         <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
             {src
-                ? <img src={src.startsWith("http") ? src : src.startsWith("/") ? `http://localhost:5000${src}` : `http://localhost:5000/uploads/${src}`} alt="" className="w-full h-full object-cover" />
+                ? <img src={src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`} alt="" className="w-full h-full object-cover" />
                 : <DefaultAvatarSvg />}
         </div>
     );
@@ -170,10 +177,19 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
     const [loading, setLoading] = useState(false);
     const [verifyingId, setVerifyingId] = useState<number | null>(null);
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
-    const [cashTarget, setCashTarget] = useState<{ soId: number; name: string } | null>(null);
+    const [cashTarget, setCashTarget] = useState<{ soId: number; name: string; amount: number } | null>(null);
 
     useEffect(() => {
         if (cache[studentId] !== undefined) return;
+        // Try localStorage cache first (supports offline mode)
+        try {
+            const raw = localStorage.getItem(`eso_cache_admin_obs_${studentId}`);
+            if (raw) {
+                const { data, cachedAt } = JSON.parse(raw);
+                if (Date.now() - cachedAt < 3600000) { onCache(studentId, data); return; }
+            }
+        } catch {}
+        if (!navigator.onLine) return;
         setLoading(true);
         adminStudentService.getStudentObligations(token, studentId)
             .then(data => onCache(studentId, data))
@@ -198,7 +214,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
     const thCls      = darkMode ? "text-gray-400 border-gray-700" : "text-gray-500 border-gray-200";
 
     if (loading) return (
-        <tr><td colSpan={9} className={`${panelOuter} px-6 py-6`}>
+        <tr><td colSpan={8} className={`${panelOuter} px-6 py-6`}>
             <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-orange-500" />
             </div>
@@ -206,7 +222,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
     );
 
     if (!obs || obs.length === 0) return (
-        <tr><td colSpan={9} className={`${panelOuter} px-6 py-4`}>
+        <tr><td colSpan={8} className={`${panelOuter} px-6 py-4`}>
             <p className="text-sm text-center text-gray-400">No obligations assigned.</p>
         </td></tr>
     );
@@ -221,6 +237,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
             <CashModal
                 studentObligationId={cashTarget.soId}
                 obligationName={cashTarget.name}
+                amount={cashTarget.amount}
                 token={token}
                 onClose={() => setCashTarget(null)}
                 onDone={() => {
@@ -232,7 +249,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                 }} />
         )}
         {viewImageUrl && (
-            <tr><td colSpan={9} className="p-0">
+            <tr><td colSpan={8} className="p-0">
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewImageUrl(null)}>
                     <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setViewImageUrl(null)}
@@ -243,7 +260,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
             </td></tr>
         )}
         <tr>
-            <td colSpan={9} className={`${panelOuter} px-4 py-3`}>
+            <td colSpan={8} className={`${panelOuter} px-4 py-3`}>
                 <div className={`${panelInner} overflow-x-auto`}>
                     <table className="eso-table w-full text-xs border-collapse">
                         <thead>
@@ -252,9 +269,9 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                 <th className={`px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-20 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Method</th>
                                 <th className={`px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-20 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Proof</th>
                                 <th className={`px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wide w-20 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Amount</th>
-                                <th className={`px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Verified By</th>
-                                <th className={`px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-32 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Verified At</th>
-                                <th className={`px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-24 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Status</th>
+                                <th className={`px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide w-36 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Verified By</th>
+                                <th className={`px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-40 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Verified At</th>
+                                <th className={`px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-32 border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>Status</th>
                                 <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Action</th>
                             </tr>
                         </thead>
@@ -277,8 +294,8 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                                 {ob.isOverdue && <span className="ml-1.5 text-red-500 bg-red-50 px-1.5 py-0.5 rounded text-[10px] font-normal">overdue</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
-                                                {ob.paymentType === 1 && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">GCash</span>}
-                                                {ob.paymentType === 2  && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold">Cash</span>}
+                                                {ob.paymentType === 1 && <span className="text-xs font-semibold text-blue-500">GCash</span>}
+                                                {ob.paymentType === 2  && <span className="text-xs font-semibold text-orange-500">Cash</span>}
                                                 {!ob.paymentType && <span className={darkMode ? "text-gray-600" : "text-gray-300"}>—</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
@@ -292,9 +309,12 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                             <td className={`px-3 py-2 text-right font-semibold border-r ${darkMode ? "text-gray-300 border-gray-600" : "text-gray-700 border-gray-300"}`}>
                                                 {ob.amountPaid != null ? `₱${Number(ob.amountPaid).toFixed(2)}` : `₱${Number(ob.amount).toFixed(2)}`}
                                             </td>
-                                            <td className={`px-3 py-2 border-r ${darkMode ? "text-gray-300 border-gray-600" : "text-gray-700 border-gray-300"}`}>
+                                            <td className={`px-3 py-2 border-r max-w-[9rem] ${darkMode ? "text-gray-300 border-gray-600" : "text-gray-700 border-gray-300"}`}>
                                                 {ob.verifiedByName
-                                                    ? <><span className="font-medium">{ob.verifiedByName}</span>{ob.verifiedByRole && <span className={`ml-1 text-[10px] ${darkMode ? "text-gray-500" : "text-gray-400"}`}>({ob.verifiedByRole})</span>}</>
+                                                    ? <div className="min-w-0">
+                                                        <p className="font-medium truncate text-xs">{ob.verifiedByName}</p>
+                                                        {ob.verifiedByRole && <p className={`text-[10px] truncate ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{ob.verifiedByRole}</p>}
+                                                      </div>
                                                     : <span className={darkMode ? "text-gray-600" : "text-gray-300"}>—</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "text-gray-400 border-gray-600" : "text-gray-500 border-gray-300"}`}>
@@ -302,10 +322,14 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>{statusBadge(ob.status)}</td>
                                             <td className="px-3 py-2 text-center">
-                                                <button onClick={() => setCashTarget({ soId: ob.studentObligationId, name: ob.obligationName })}
-                                                    className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">
-                                                    Cash
-                                                </button>
+                                                {ob.paymentType !== 1 && ob.status !== 2 ? (
+                                                    <button onClick={() => setCashTarget({ soId: ob.studentObligationId, name: ob.obligationName, amount: ob.amount })}
+                                                        className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">
+                                                        Cash
+                                                    </button>
+                                                ) : (
+                                                    <span className={`text-xs ${darkMode ? "text-gray-600" : "text-gray-300"}`}>—</span>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -340,9 +364,12 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                                     : <span className={darkMode ? "text-gray-600" : "text-gray-300"}>—</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-right border-r ${darkMode ? "text-gray-400 border-gray-600" : "text-gray-400 border-gray-300"}`}>—</td>
-                                            <td className={`px-3 py-2 border-r ${darkMode ? "text-gray-300 border-gray-600" : "text-gray-700 border-gray-300"}`}>
+                                            <td className={`px-3 py-2 border-r max-w-[9rem] ${darkMode ? "text-gray-300 border-gray-600" : "text-gray-700 border-gray-300"}`}>
                                                 {ob.verifiedByName
-                                                    ? <><span className="font-medium">{ob.verifiedByName}</span>{ob.verifiedByRole && <span className={`ml-1 text-[10px] ${darkMode ? "text-gray-500" : "text-gray-400"}`}>({ob.verifiedByRole})</span>}</>
+                                                    ? <div className="min-w-0">
+                                                        <p className="font-medium truncate text-xs">{ob.verifiedByName}</p>
+                                                        {ob.verifiedByRole && <p className={`text-[10px] truncate ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{ob.verifiedByRole}</p>}
+                                                      </div>
                                                     : <span className={darkMode ? "text-gray-600" : "text-gray-300"}>—</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "text-gray-400 border-gray-600" : "text-gray-500 border-gray-300"}`}>
@@ -390,19 +417,19 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                         <td className={`${cellCls} text-center`}>—</td>
                                         <td className={cellCls}>
                                             <div className="flex flex-col items-end gap-0.5">
-                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Payable</span>
+                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Assessment</span>
                                                 <span>₱{totalPayable.toFixed(2)}</span>
                                             </div>
                                         </td>
                                         <td colSpan={2} className={cellCls}>
                                             <div className="flex flex-col items-end gap-0.5">
-                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Paid</span>
+                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Collected</span>
                                                 <span className="text-green-600">₱{totalPaid.toFixed(2)}</span>
                                             </div>
                                         </td>
                                         <td className={`${cellCls} ${remaining > 0 ? "text-red-500" : "text-green-600"}`}>
                                             <div className="flex flex-col items-end gap-0.5">
-                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Balance</span>
+                                                <span className={`text-[10px] font-normal ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Outstanding</span>
                                                 <span>₱{remaining.toFixed(2)}</span>
                                             </div>
                                         </td>
@@ -434,6 +461,15 @@ function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode 
 
     useEffect(() => {
         if (cache[studentId] !== undefined) return;
+        // Try localStorage cache first (supports offline mode)
+        try {
+            const raw = localStorage.getItem(`eso_cache_admin_obs_${studentId}`);
+            if (raw) {
+                const { data, cachedAt } = JSON.parse(raw);
+                if (Date.now() - cachedAt < 3600000) { onCache(studentId, data); return; }
+            }
+        } catch {}
+        if (!navigator.onLine) return;
         setLoading(true);
         adminStudentService.getStudentObligations(token, studentId)
             .then(data => onCache(studentId, data))
@@ -483,8 +519,8 @@ function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode 
                                             {ob.isOverdue && <span className="ml-1 text-red-500 text-[10px]">(overdue)</span>}
                                         </p>
                                         <div className={`flex items-center gap-2 mt-0.5 text-[11px] ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                            {ob.paymentType === 1 && <span className="px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold">GCash</span>}
-                                            {ob.paymentType === 2  && <span className="px-1 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-semibold">Cash</span>}
+                                            {ob.paymentType === 1 && <span className="text-[10px] font-semibold text-blue-500">GCash</span>}
+                                            {ob.paymentType === 2  && <span className="text-[10px] font-semibold text-orange-500">Cash</span>}
                                             {ob.amountPaid != null
                                                 ? <span className="font-semibold">₱{Number(ob.amountPaid).toFixed(2)}</span>
                                                 : <span>₱{Number(ob.amount).toFixed(2)}</span>}
@@ -561,17 +597,17 @@ function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode 
                 return (
                     <div className={`mt-3 rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 ${darkMode ? "bg-[#222]/60 border border-gray-700" : "bg-white border border-gray-200"}`}>
                         <div className="text-center flex-1">
-                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Payable</p>
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Assessment</p>
                             <p className={`text-xs font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>₱{totalPayable.toFixed(2)}</p>
                         </div>
                         <div className={`w-px h-8 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
                         <div className="text-center flex-1">
-                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Paid</p>
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Collected</p>
                             <p className="text-xs font-bold text-green-600">₱{totalPaid.toFixed(2)}</p>
                         </div>
                         <div className={`w-px h-8 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
                         <div className="text-center flex-1">
-                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Balance</p>
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Outstanding</p>
                             <p className={`text-xs font-bold ${remaining > 0 ? "text-red-500" : "text-green-600"}`}>₱{remaining.toFixed(2)}</p>
                         </div>
                     </div>
@@ -592,11 +628,15 @@ const StudentObligationList = () => {
     const { darkMode } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
-    const [students,   setStudents]   = useState<AdminStudentItem[]>([]);
-    const [loading,    setLoading]    = useState(true);
-    const [error,      setError]      = useState("");
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [obsCache,   setObsCache]   = useState<Record<number, AdminObligationItem[]>>({});
+
+    const { data: studentsData, loading, error, refresh: load } = useOfflineCache<AdminStudentItem[]>(
+        `admin_students_${accessToken ?? ""}`,
+        () => adminStudentService.listStudents(accessToken!),
+        [accessToken]
+    );
+    const students = studentsData ?? [];
 
     const [search,           setSearch]           = useState((location.state as any)?.search ?? "");
     const [obligationFilter, setObligationFilter] = useState<string>((location.state as any)?.obligationFilter ?? "");
@@ -620,17 +660,6 @@ const StudentObligationList = () => {
 
     const isRestricted = ["class_officer", "program_head"].includes(user?.role ?? "");
 
-    const load = useCallback(() => {
-        if (!accessToken) return;
-        setLoading(true);
-        adminStudentService.listStudents(accessToken)
-            .then(setStudents)
-            .catch(e => setError(e.message))
-            .finally(() => setLoading(false));
-    }, [accessToken]);
-
-    useEffect(() => { load(); }, [load]);
-
     // Auto-expand first student row when arriving with an obligation filter
     useEffect(() => {
         if (obligationFilter && students.length > 0 && expandedId === null) {
@@ -640,6 +669,10 @@ const StudentObligationList = () => {
 
     const handleCache = useCallback((id: number, data: AdminObligationItem[]) => {
         setObsCache(prev => ({ ...prev, [id]: data }));
+        try {
+            localStorage.setItem(`eso_cache_admin_obs_${id}`,
+                JSON.stringify({ data, cachedAt: Date.now() }));
+        } catch {}
     }, []);
 
     function toggleExpand(studentId: number) {
@@ -711,22 +744,45 @@ const StudentObligationList = () => {
         <div className={`p-4 sm:p-6 md:p-8 min-h-screen ${bg}`}>
             <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
             {/* ── Page Header ── */}
-            <div className="mb-6 flex items-start justify-between gap-4">
-                <div>
-                    <h1 className={`font-bold text-lg sm:text-xl ${darkMode ? "text-white" : "text-gray-800"}`}>
-                        Student Obligations
-                    </h1>
-                    <p className={`text-xs mt-0.5 ${darkMode ? "text-gray-400" : "text-gray-400"}`}>
-                        {isRestricted && students[0]
-                            ? `${students[0].programName} · ${students.length} student${students.length !== 1 ? "s" : ""}`
-                            : `${students.length} student${students.length !== 1 ? "s" : ""} across all programs`}
-                    </p>
-                </div>
-                <button onClick={load} disabled={loading} title="Refresh"
-                    className={`p-2 border-2 rounded-xl transition shadow-sm disabled:opacity-50 ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "bg-white border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}>
-                    <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                </button>
-            </div>
+            {(() => {
+                const grandPayable = filtered.reduce((s, st) => s + (st.totalPayable ?? 0), 0);
+                const grandPaid    = filtered.reduce((s, st) => s + (st.totalPaid    ?? 0), 0);
+                const grandBalance = grandPayable - grandPaid;
+                return (
+                    <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                            <h1 className={`text-base sm:text-lg font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>
+                                Student Obligations
+                            </h1>
+                        </div>
+
+                        <div className="flex items-center gap-2 ml-auto">
+                            {/* Financial Summary Card */}
+                            {grandPayable > 0 && (
+                                <div className={`flex items-stretch divide-x rounded-xl shadow-sm text-right text-xs ${darkMode ? "bg-[#1a1a1a] divide-gray-700" : "bg-white divide-gray-100"}`}>
+                                    <div className="px-3 py-2">
+                                        <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Total Assessment</p>
+                                        <p className={`font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>₱{grandPayable.toFixed(2)}</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Total Collected</p>
+                                        <p className="font-bold text-green-600">₱{grandPaid.toFixed(2)}</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Outstanding Balance</p>
+                                        <p className={`font-bold ${grandBalance > 0 ? "text-red-500" : "text-green-600"}`}>₱{grandBalance.toFixed(2)}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button onClick={load} disabled={loading} title="Refresh"
+                                className={`p-2 border-2 rounded-xl transition shadow-sm disabled:opacity-50 ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "bg-white border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}>
+                                <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                            </button>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-5">{error}</div>}
 
@@ -827,9 +883,6 @@ const StudentObligationList = () => {
                     )}
                 </div>
 
-                <span className={`hidden sm:flex items-center text-xs font-medium border px-2.5 py-2 rounded-xl whitespace-nowrap shadow-sm ${darkMode ? "bg-[#1a1a1a] border-gray-700 text-gray-400" : "bg-white border-gray-200 text-gray-400"}`}>
-                    {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-                </span>
             </div>
 
             {/* ── Student Accordion Table ── */}
@@ -839,12 +892,10 @@ const StudentObligationList = () => {
                 </div>
             ) : (
                 <>
-                    <div className={`rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)] ${card}`}>
-                        <div className="overflow-x-auto">
+                    <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
                         <table className="eso-table w-full min-w-[750px] border-collapse">
                             <thead className={`${th}`}>
                                 <tr className={`border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
-                                    <th className="pl-4 pr-2 py-2 w-8"></th>
                                     <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student Name</th>
                                     <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Student No.</th>
                                     <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Program</th>
@@ -868,8 +919,6 @@ const StudentObligationList = () => {
                                                 style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.05}s` }}
                                                 className={`transition-colors cursor-pointer ${darkMode ? "hover:bg-[#222]/60" : "hover:bg-gray-100"} ${rowBg} border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
                                                 onClick={() => toggleExpand(s.studentId)}>
-                                                <td className="pl-4 pr-2 py-2.5 w-8">
-                                                </td>
                                                 <td className="px-3 py-2.5">
                                                     <div className="flex items-center gap-3">
                                                         <UserAvatar src={s.avatarPath} />
@@ -911,36 +960,7 @@ const StudentObligationList = () => {
                                     );
                                 })}
                             </tbody>
-                            {(() => {
-                                const grandPayable  = filtered.reduce((s, st) => s + (st.totalPayable ?? 0), 0);
-                                const grandPaid     = filtered.reduce((s, st) => s + (st.totalPaid    ?? 0), 0);
-                                const grandBalance  = grandPayable - grandPaid;
-                                if (grandPayable === 0) return null;
-                                return (
-                                    <tfoot>
-                                        <tr className={`border-t-2 ${darkMode ? "border-orange-500/40 bg-[#1c1c1c]" : "border-orange-200 bg-orange-50/60"}`}>
-                                            <td colSpan={5} className={`pl-4 pr-3 py-3 text-xs font-bold uppercase tracking-wide ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                                Grand Total — {filtered.length} student{filtered.length !== 1 ? "s" : ""}
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <div className="flex flex-col items-center gap-0.5">
-                                                    <span className={`text-[10px] font-semibold ${darkMode ? "text-gray-500" : "text-gray-400"}`}>Payable / Paid / Balance</span>
-                                                    <span className={`text-xs font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
-                                                        ₱{grandPayable.toFixed(2)}
-                                                        <span className="mx-1 text-gray-400">·</span>
-                                                        <span className="text-green-600">₱{grandPaid.toFixed(2)}</span>
-                                                        <span className="mx-1 text-gray-400">·</span>
-                                                        <span className={grandBalance > 0 ? "text-red-500" : "text-green-600"}>₱{grandBalance.toFixed(2)}</span>
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td colSpan={2}></td>
-                                        </tr>
-                                    </tfoot>
-                                );
-                            })()}
                         </table>
-                        </div>
                     </div>
 
                 </>

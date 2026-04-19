@@ -252,6 +252,52 @@ export const getAllPrograms = async () => {
 
 // ─── Audit Logs ──────────────────────────────────────────────────────────────
 
+// ─── Roles ───────────────────────────────────────────────────────────────────
+
+export const getAllRoles = async () => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT role_id, role_name, role_label, clearance_step
+         FROM roles
+         WHERE role_name != 'student'
+         ORDER BY role_label`
+    );
+    return rows;
+};
+
+// ─── Clearance Workflow ──────────────────────────────────────────────────────
+
+export const getClearanceWorkflow = async () => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT role_id, role_name, role_label, clearance_step
+         FROM roles
+         ORDER BY CASE WHEN clearance_step IS NULL THEN 1 ELSE 0 END, clearance_step, role_label`
+    );
+    return rows;
+};
+
+export const updateClearanceWorkflow = async (
+    steps: { roleId: number; clearanceStep: number | null }[]
+) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        for (const { roleId, clearanceStep } of steps) {
+            await conn.execute(
+                `UPDATE roles SET clearance_step = ? WHERE role_id = ?`,
+                [clearanceStep ?? null, roleId]
+            );
+        }
+        await conn.commit();
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
+    }
+};
+
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+
 export const getAuditLogs = async (page: number = 1, limit: number = 50) => {
     const offset = (page - 1) * limit;
     const [rows] = await pool.execute<RowDataPacket[]>(

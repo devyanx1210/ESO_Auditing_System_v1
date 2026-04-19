@@ -73,6 +73,12 @@ export const setDefaultTemplate = async (id: number) => {
     }
 };
 
+export const unsetDefaultTemplate = async (id: number) => {
+    await pool.execute(
+        `UPDATE document_templates SET is_default = 0 WHERE template_id = ?`, [id]
+    );
+};
+
 // ─── PDF template helpers ─────────────────────────────────────────────────────
 
 export const updateTemplatePdf = async (
@@ -138,13 +144,15 @@ export const stampPdfTemplate = async (
 
         const pageHeight = page.getHeight();
 
+        const prog = student.programName || student.programCode;
         const values: Record<string, string> = {
-            full_name:    `${student.lastName}, ${student.firstName}`,
-            student_no:   student.studentNo,
-            program:      student.programName || student.programCode,
-            year_section: `${student.yearLevel}${student.section}`,
-            school_year:  student.schoolYear,
-            semester:     student.semester,
+            full_name:       `${student.lastName}, ${student.firstName}`,
+            student_no:      student.studentNo,
+            program_section: `${prog} ${student.yearLevel}${student.section}`,
+            program:         prog,
+            year_section:    `${student.yearLevel}${student.section}`,
+            school_year:     student.schoolYear,
+            semester:        String(student.semester) === "1" ? "1st Semester" : String(student.semester) === "2" ? "2nd Semester" : "Summer",
             date,
         };
 
@@ -181,7 +189,7 @@ export const getApprovedStudents = async (schoolYear?: string, semester?: string
             p.name          AS programName,
             p.code          AS programCode,
             cl.clearance_id AS clearanceId,
-            cl.signed_at    AS signedAt
+            cl.updated_at   AS signedAt
         FROM clearances cl
         JOIN students s ON s.student_id = cl.student_id
         JOIN users    u ON u.user_id    = s.user_id

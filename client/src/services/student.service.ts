@@ -1,6 +1,6 @@
 import { apiFetch } from "./api";
 
-const UPLOADS_BASE = "http://localhost:5000/uploads";
+const UPLOADS_BASE = "/uploads";
 
 export interface StudentListItem {
     studentId: number;

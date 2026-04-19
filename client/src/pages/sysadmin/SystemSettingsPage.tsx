@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MdSave, MdSettings, MdBuild, MdSchool, MdClose } from "react-icons/md";
-import { FiArrowUp, FiUserCheck, FiUser, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiArrowUp, FiUserCheck, FiUser, FiLock, FiEye, FiEyeOff, FiGitBranch, FiTrash2, FiPlus } from "react-icons/fi";
 import { useAuth } from "../../hooks/useAuth";
 import { sysadminService } from "../../services/sysadmin.service";
 import { adminProfileService, adminAvatarUrl } from "../../services/admin-profile.service";
@@ -80,6 +80,13 @@ export default function SystemSettingsPage() {
     const [savingS,  setSavingS]  = useState(false);
     const [toast,    setToast]    = useState("");
 
+    // Clearance workflow state
+    const [allRoles,       setAllRoles]       = useState<{ role_id: number; role_name: string; role_label: string; clearance_step: number | null }[]>([]);
+    const [workflowSteps,  setWorkflowSteps]  = useState<{ roleId: number; roleLabel: string; roleName: string; clearanceStep: number }[]>([]);
+    const [unassignedRoles, setUnassignedRoles] = useState<{ role_id: number; role_name: string; role_label: string }[]>([]);
+    const [workflowSaving, setWorkflowSaving] = useState(false);
+    const [addRoleId,      setAddRoleId]      = useState<number | "">("");
+
     // Advancement modal state
     const [preview,       setPreview]       = useState<AdvancementPreview | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
@@ -140,6 +147,55 @@ export default function SystemSettingsPage() {
             setSavedSchoolYear(s.school_year);
         }).finally(() => setLoading(false));
     }, [accessToken]);
+
+    // Load workflow
+    useEffect(() => {
+        if (!accessToken) return;
+        sysadminService.getWorkflow(accessToken).then(roles => {
+            setAllRoles(roles);
+            const assigned = roles
+                .filter(r => r.clearance_step !== null)
+                .sort((a, b) => (a.clearance_step ?? 0) - (b.clearance_step ?? 0) || a.role_label.localeCompare(b.role_label))
+                .map(r => ({ roleId: r.role_id, roleLabel: r.role_label, roleName: r.role_name, clearanceStep: r.clearance_step! }));
+            setWorkflowSteps(assigned);
+            setUnassignedRoles(roles.filter(r => r.clearance_step === null && r.role_name !== 'student'));
+        }).catch(() => {});
+    }, [accessToken]);
+
+    const handleWorkflowStepChange = (roleId: number, newStep: number) => {
+        setWorkflowSteps(prev => prev.map(s => s.roleId === roleId ? { ...s, clearanceStep: newStep } : s));
+    };
+
+    const handleRemoveFromWorkflow = (roleId: number) => {
+        const role = workflowSteps.find(s => s.roleId === roleId);
+        if (!role) return;
+        setWorkflowSteps(prev => prev.filter(s => s.roleId !== roleId));
+        setUnassignedRoles(prev => [...prev, { role_id: role.roleId, role_name: role.roleName, role_label: role.roleLabel }]);
+    };
+
+    const handleAddToWorkflow = () => {
+        if (!addRoleId) return;
+        const role = unassignedRoles.find(r => r.role_id === Number(addRoleId));
+        if (!role) return;
+        const maxStep = workflowSteps.length ? Math.max(...workflowSteps.map(s => s.clearanceStep)) : 0;
+        setWorkflowSteps(prev => [...prev, { roleId: role.role_id, roleLabel: role.role_label, roleName: role.role_name, clearanceStep: maxStep + 1 }]);
+        setUnassignedRoles(prev => prev.filter(r => r.role_id !== Number(addRoleId)));
+        setAddRoleId("");
+    };
+
+    const handleSaveWorkflow = async () => {
+        if (!accessToken) return;
+        setWorkflowSaving(true);
+        try {
+            const steps = [
+                ...workflowSteps.map(s => ({ roleId: s.roleId, clearanceStep: s.clearanceStep })),
+                ...unassignedRoles.map(r => ({ roleId: r.role_id, clearanceStep: null })),
+            ];
+            await sysadminService.updateWorkflow(accessToken, steps);
+            showToast("Clearance workflow saved.");
+        } catch (e: any) { showToast(e.message); }
+        finally { setWorkflowSaving(false); }
+    };
 
     const showToast = (t: string) => { setToast(t); setTimeout(() => setToast(""), 3500); };
 
@@ -222,7 +278,7 @@ export default function SystemSettingsPage() {
         finally { setSavingAdvance(false); }
     };
 
-    const inp = "w-full rounded-xl bg-white border border-gray-300 px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500";
+    const inp = "w-full rounded-xl bg-white border border-gray-300 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500";
     const lbl = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2";
 
     const currentYear = new Date().getFullYear();
@@ -249,11 +305,11 @@ export default function SystemSettingsPage() {
             `}</style>
 
             <div className="mb-5 sm:mb-6" style={{ animation: "fadeInUp 0.35s ease both" }}>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">System Settings</h1>
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">System Settings</h1>
             </div>
 
             {loading ? (
-                <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-6">
+                <div className="bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] p-6">
                     <p className="text-gray-400 text-sm">Loading...</p>
                 </div>
             ) : (
@@ -325,7 +381,7 @@ export default function SystemSettingsPage() {
                             <FiLock className="text-orange-500" size={16} />
                             <h2 className="text-gray-700 font-semibold text-sm">Change Password</h2>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {[
                                 { label: "Current Password", key: "current" as const },
                                 { label: "New Password", key: "next" as const },
@@ -474,15 +530,110 @@ export default function SystemSettingsPage() {
                             {loadingPreview ? "Checking..." : savingS ? "Saving..." : "Save"}
                         </button>
                     </div>
+                    {/* ── Clearance Workflow ── */}
+                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
+                        style={{ animation: "fadeInUp 0.4s ease both 0.15s" }}>
+                        <div className="flex items-center gap-2">
+                            <FiGitBranch className="text-orange-500" size={16} />
+                            <h2 className="text-gray-700 font-semibold text-sm">Clearance Workflow</h2>
+                        </div>
+
+                        <p className="text-xs text-gray-500">
+                            Configure the sequential signing order for the clearance process.
+                            Roles at the same step number must all approve before advancing.
+                        </p>
+
+                        {/* Step list */}
+                        <div className="space-y-2">
+                            {workflowSteps
+                                .slice()
+                                .sort((a, b) => a.clearanceStep - b.clearanceStep || a.roleLabel.localeCompare(b.roleLabel))
+                                .map((step) => (
+                                    <div key={step.roleId}
+                                        className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2.5">
+                                        {/* Step number badge */}
+                                        <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold shrink-0">
+                                            {step.clearanceStep}
+                                        </div>
+
+                                        {/* Role label */}
+                                        <span className="flex-1 text-sm text-gray-800 font-medium">{step.roleLabel}</span>
+
+                                        {/* Step number editor */}
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-xs text-gray-400">Step</span>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={20}
+                                                value={step.clearanceStep}
+                                                onChange={e => handleWorkflowStepChange(step.roleId, Math.max(1, Number(e.target.value)))}
+                                                className="w-14 rounded-lg border border-gray-300 px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                            />
+                                        </div>
+
+                                        {/* Remove button */}
+                                        <button
+                                            onClick={() => handleRemoveFromWorkflow(step.roleId)}
+                                            className="text-gray-400 hover:text-red-500 transition shrink-0">
+                                            <FiTrash2 size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+
+                            {workflowSteps.length === 0 && (
+                                <div className="text-center py-6 text-gray-400 text-sm">
+                                    No roles assigned to clearance workflow yet.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Add role row */}
+                        {unassignedRoles.length > 0 && (
+                            <div className="flex items-center gap-2 pt-1">
+                                <select
+                                    value={addRoleId}
+                                    onChange={e => setAddRoleId(Number(e.target.value) || "")}
+                                    className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+                                    <option value="">Select role to add...</option>
+                                    {unassignedRoles.map(r => (
+                                        <option key={r.role_id} value={r.role_id}>{r.role_label}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={handleAddToWorkflow}
+                                    disabled={!addRoleId}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-100 text-orange-600 text-sm font-semibold hover:bg-orange-200 transition disabled:opacity-40">
+                                    <FiPlus size={14} />
+                                    Add
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="bg-amber-50 rounded-xl px-4 py-3">
+                            <p className="text-amber-700 text-xs">
+                                <strong>Note:</strong> Roles with the same step number will all need to approve before the clearance advances. Changes take effect immediately for new clearances.
+                            </p>
+                        </div>
+
+                        <button onClick={handleSaveWorkflow} disabled={workflowSaving}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition disabled:opacity-60">
+                            <MdSave size={16} />
+                            {workflowSaving ? "Saving..." : "Save Workflow"}
+                        </button>
+                    </div>
+
                 </div>
             )}
 
             {/* ── Advancement Confirmation Modal ── */}
             {preview && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto"
-                    style={{ animation: "fadeInScrim 0.2s ease both" }}>
+                    style={{ animation: "fadeInScrim 0.2s ease both" }}
+                    onClick={() => setPreview(null)}>
                     <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-lg my-4"
-                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}>
+                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}
+                        onClick={e => e.stopPropagation()}>
 
                         {/* Modal Header */}
                         <div className="flex items-center justify-between p-5 pb-4">

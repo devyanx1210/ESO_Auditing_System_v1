@@ -1,6 +1,9 @@
 import { apiFetch } from "./api";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+// Use relative paths so Vite proxy routes them correctly on any device/tunnel
+const API_BASE = "/api/v1";
+// Static files (/uploads/...) are also proxied through Vite
+const SERVER_ORIGIN = "";
 
 export interface FieldPosition {
     x:    number;
@@ -18,6 +21,7 @@ export interface DocumentTemplate {
     content:         string;
     isDefault:       boolean;
     pdfPath:         string | null;
+    pdfUrl:          string | null;   // e.g. /uploads/pdf-templates/xxx.pdf
     fieldPositions:  FieldPositions | null;
     createdByName:   string;
     createdAt:       string;
@@ -44,14 +48,16 @@ export function fillTemplate(html: string, student: ApprovedStudent): string {
     const date = new Date().toLocaleDateString("en-PH", {
         year: "numeric", month: "long", day: "numeric",
     });
+    const prog = student.programName || student.programCode;
     return html
-        .replace(/\{\{full_name\}\}/gi,    `${student.lastName}, ${student.firstName}`)
-        .replace(/\{\{student_no\}\}/gi,   student.studentNo)
-        .replace(/\{\{program\}\}/gi,      student.programName || student.programCode)
-        .replace(/\{\{year_section\}\}/gi, `${student.yearLevel}${student.section}`)
-        .replace(/\{\{school_year\}\}/gi,  student.schoolYear)
-        .replace(/\{\{semester\}\}/gi,     student.semester)
-        .replace(/\{\{date\}\}/gi,         date);
+        .replace(/\{\{full_name\}\}/gi,       `${student.lastName}, ${student.firstName}`)
+        .replace(/\{\{student_no\}\}/gi,      student.studentNo)
+        .replace(/\{\{program_section\}\}/gi, `${prog} ${student.yearLevel}${student.section}`)
+        .replace(/\{\{program\}\}/gi,         prog)
+        .replace(/\{\{year_section\}\}/gi,    `${student.yearLevel}${student.section}`)
+        .replace(/\{\{school_year\}\}/gi,     student.schoolYear)
+        .replace(/\{\{semester\}\}/gi,        String(student.semester) === "1" ? "1st Semester" : String(student.semester) === "2" ? "2nd Semester" : "Summer")
+        .replace(/\{\{date\}\}/gi,            date);
 }
 
 // Strip editor-only span wrappers before printing
@@ -122,7 +128,7 @@ export function printDocuments(templateHtml: string, students: ApprovedStudent[]
 </head>
 <body>
     <div class="no-print">
-        <button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+        <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
         <span class="info">${students.length} document(s) ready · Use browser print dialog to save as PDF</span>
     </div>
     <div class="pages-wrapper">
@@ -160,6 +166,9 @@ export const documentService = {
     setDefault: (token: string, id: number) =>
         apiFetch<null>(`/admin/documents/${id}/set-default`, { method: "PATCH" }, token),
 
+    unsetDefault: (token: string, id: number) =>
+        apiFetch<null>(`/admin/documents/${id}/unset-default`, { method: "PATCH" }, token),
+
     getApprovedStudents: (token: string, schoolYear?: string, semester?: string) => {
         const p = new URLSearchParams();
         if (schoolYear) p.set("schoolYear", schoolYear);
@@ -172,7 +181,7 @@ export const documentService = {
 
     /** Fetch the raw PDF file for preview (returns a blob URL) */
     fetchPdfBlob: async (token: string, id: number): Promise<string> => {
-        const resp = await fetch(`${API_BASE}/api/v1/admin/documents/${id}/pdf-file`, {
+        const resp = await fetch(`${API_BASE}/admin/documents/${id}/pdf-file`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         if (!resp.ok) throw new Error("Could not load PDF preview");
@@ -198,12 +207,25 @@ export const documentService = {
             body:   JSON.stringify({ fieldPositions }),
         }, token),
 
+    /** Fetch a stamped preview PDF using dummy student data, returns a blob URL */
+    fetchPreviewPdf: async (token: string, id: number): Promise<string> => {
+        const resp = await fetch(`${API_BASE}/admin/documents/${id}/preview-pdf`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!resp.ok) {
+            const body = await resp.json().catch(() => ({}));
+            throw new Error(body?.message ?? `Server error ${resp.status}`);
+        }
+        const blob = await resp.blob();
+        return URL.createObjectURL(blob);
+    },
+
     /** Returns a URL to the print-merge PDF (opens directly in browser/tab) */
     printMergeUrl: (id: number, schoolYear?: string, semester?: string) => {
         const p = new URLSearchParams();
         if (schoolYear) p.set("schoolYear", schoolYear);
         if (semester)   p.set("semester",   semester);
         const qs = p.toString();
-        return `${API_BASE}/api/v1/admin/documents/${id}/print-merge${qs ? "?" + qs : ""}`;
+        return `${API_BASE}/admin/documents/${id}/print-merge${qs ? "?" + qs : ""}`;
     },
 };

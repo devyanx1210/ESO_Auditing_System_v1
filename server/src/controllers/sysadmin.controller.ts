@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import * as svc from "../services/sysadmin.service.js";
+import { logAction } from "../services/audit.service.js";
 
 export const handleMaintenanceStatus = async (_req: Request, res: Response) => {
     try {
@@ -50,6 +51,7 @@ export const handleCreateAccount = async (req: Request, res: Response) => {
         if (!firstName || !lastName || !email || !password || !role)
             return sendError(res, "firstName, lastName, email, password, role are required", 400);
         const id = await svc.createAdminAccount({ firstName, lastName, email, password, role, programId, position });
+        logAction({ performedBy: req.user!.userId, action: "create_account", targetType: "user", targetId: id, details: { email, role } });
         sendSuccess(res, { userId: id, message: "Account created" }, "Account created", 201);
     } catch (e: any) { sendError(res, e.message); }
 };
@@ -78,6 +80,7 @@ export const handleUpdateAccount = async (req: Request, res: Response) => {
             position:  position ?? "",
             password,
         });
+        logAction({ performedBy: req.user!.userId, action: "update_account", targetType: "user", targetId: userId, details: { email } });
         sendSuccess(res, null, "Account updated");
     } catch (e: any) { sendError(res, e.message); }
 };
@@ -86,6 +89,7 @@ export const handleDeleteAccount = async (req: Request, res: Response) => {
     try {
         const userId = Number(req.params.userId);
         await svc.deleteAccount(userId);
+        logAction({ performedBy: req.user!.userId, action: "delete_account", targetType: "user", targetId: userId });
         sendSuccess(res, { message: "Account deleted" });
     } catch (e: any) { sendError(res, e.message); }
 };
@@ -115,9 +119,34 @@ export const handleGetAuditLogs = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
+export const handleGetRoles = async (_req: Request, res: Response) => {
+    try {
+        const roles = await svc.getAllRoles();
+        sendSuccess(res, roles);
+    } catch (e: any) { sendError(res, e.message); }
+};
+
 export const handleGetPrograms = async (_req: Request, res: Response) => {
     try {
         const programs = await svc.getAllPrograms();
         sendSuccess(res, programs);
+    } catch (e: any) { sendError(res, e.message); }
+};
+
+export const handleGetWorkflow = async (_req: Request, res: Response) => {
+    try {
+        const roles = await svc.getClearanceWorkflow();
+        sendSuccess(res, roles);
+    } catch (e: any) { sendError(res, e.message); }
+};
+
+export const handleUpdateWorkflow = async (req: Request, res: Response) => {
+    try {
+        const { steps } = req.body;
+        if (!Array.isArray(steps)) {
+            return sendError(res, "steps must be an array", 400);
+        }
+        await svc.updateClearanceWorkflow(steps);
+        sendSuccess(res, { message: "Workflow updated successfully" });
     } catch (e: any) { sendError(res, e.message); }
 };

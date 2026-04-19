@@ -86,12 +86,15 @@ export interface StudentProfile {
     studentNo:        string;
     firstName:        string;
     lastName:         string;
+    middleName:       string | null;
+    email:            string;
     programCode:      string;
     programName:      string;
     yearLevel:        number;
     section:          string;
     schoolYear:       string;
     semester:         number;
+    gender:           string | null;
     avatarPath:       string | null;
     address:          string | null;
     contactNumber:    string | null;

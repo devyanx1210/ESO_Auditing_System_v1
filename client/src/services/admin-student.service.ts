@@ -64,12 +64,23 @@ export interface PendingPaymentItem {
     avatarPath: string | null;
 }
 
+export interface PendingProofItem {
+    studentObligationId: number;
+    studentName: string;
+    studentNo: string;
+    programCode: string;
+    obligationName: string;
+    proofImage: string;
+    submittedAt: string;
+    avatarPath: string | null;
+}
+
 // Cloudinary URLs are already absolute; legacy local paths get the uploads prefix
 export const receiptUrl = (p: string) =>
-    p.startsWith("http") ? p : `http://localhost:5000/uploads/${p}`;
+    p.startsWith("http") ? p : `/uploads/${p}`;
 
 export const avatarUrl = (p: string) =>
-    p.startsWith("http") ? p : `http://localhost:5000/uploads/${p}`;
+    p.startsWith("http") ? p : `/uploads/${p}`;
 
 export const adminStudentService = {
     listStudents: (token: string) =>
@@ -80,6 +91,9 @@ export const adminStudentService = {
 
     getPendingPayments: (token: string) =>
         apiFetch<PendingPaymentItem[]>("/admin/payments/pending", {}, token),
+
+    getPendingProofs: (token: string) =>
+        apiFetch<PendingProofItem[]>("/admin/payments/pending-proofs", {}, token),
 
     verifyPayment: (token: string, paymentId: number, status: number, remarks: string) =>
         apiFetch<null>(`/admin/payments/${paymentId}/verify`, {
@@ -150,6 +164,12 @@ export const adminStudentService = {
             method: "POST",
             body: JSON.stringify({ clearanceIds }),
         }, token),
+
+    markClearancePrinted: (token: string, clearanceIds: number[]) =>
+        apiFetch<{ count: number }>("/admin/clearance/mark-printed", {
+            method: "POST",
+            body: JSON.stringify({ clearanceIds }),
+        }, token),
 };
 
 export interface PaymentHistoryItem {
@@ -185,6 +205,8 @@ export interface ClearanceHistoryItem {
     signedAt: string;
     remarks: string | null;
     avatarPath: string | null;
+    isPrinted: boolean;
+    printedAt: string | null;
 }
 
 export interface PendingClearanceItem {
@@ -204,4 +226,6 @@ export interface PendingClearanceItem {
     obligationsTotal: number;
     obligationsPaid: number;
     avatarPath: string | null;
+    isPrinted: boolean;
+    printedAt: string | null;
 }

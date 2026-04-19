@@ -11,10 +11,10 @@ async function getAdminClearanceStep(userId: number): Promise<{
 }> {
     const [rows]: any = await pool.execute(
         `SELECT a.admin_id, u.program_id, a.year_level, a.section, r.role_id, r.clearance_step
-         FROM admins a
-         JOIN users u  ON u.user_id = a.user_id
-         JOIN roles r  ON r.role_id = u.role_id
-         WHERE a.user_id = ?`,
+         FROM users u
+         JOIN roles r        ON r.role_id = u.role_id
+         LEFT JOIN admins a  ON a.user_id = u.user_id
+         WHERE u.user_id = ?`,
         [userId]
     );
     if (!rows.length) throw new Error("Admin not found");
@@ -47,9 +47,13 @@ export interface PendingClearanceItem {
     obligationsTotal: number;
     obligationsPaid: number;
     avatarPath: string | null;
+    isPrinted: boolean;
+    printedAt: string | null;
 }
 
 // Shared SELECT columns for clearance queries
+// Use MIN() on clearance columns to satisfy ONLY_FULL_GROUP_BY (there is at most
+// one clearance row per student/school_year/semester due to the unique key).
 const CLEARANCE_SELECT = `
     SELECT
         s.student_id    AS studentId,
@@ -62,12 +66,14 @@ const CLEARANCE_SELECT = `
         s.section,
         s.school_year   AS schoolYear,
         s.semester,
-        cl.clearance_id     AS clearanceId,
-        cl.clearance_status AS clearanceStatus,
-        cl.current_step     AS currentStep,
+        MIN(cl.clearance_id)     AS clearanceId,
+        MIN(cl.clearance_status) AS clearanceStatus,
+        MIN(cl.current_step)     AS currentStep,
         COUNT(so.student_obligation_id)          AS obligationsTotal,
-        SUM(so.status IN (2,3))                   AS obligationsPaid,
-        s.avatar_path                            AS avatarPath
+        COALESCE(SUM(so.status IN (2,3)), 0)     AS obligationsPaid,
+        s.avatar_path                            AS avatarPath,
+        COALESCE(MIN(cl.is_printed), 0)          AS isPrinted,
+        MIN(cl.printed_at)                       AS printedAt
     FROM students s
     JOIN users u       ON u.user_id       = s.user_id
     JOIN programs d ON d.program_id = s.program_id
@@ -150,6 +156,8 @@ export const getPendingClearance = async (
         ...r,
         obligationsTotal: Number(r.obligationsTotal),
         obligationsPaid:  Number(r.obligationsPaid),
+        isPrinted:        Boolean(r.isPrinted),
+        printedAt:        r.printedAt ?? null,
     }));
 };
 
@@ -198,22 +206,65 @@ export const signClearance = async (
             clearanceId = cl.clearance_id;
         }
 
-        // Insert or update clearance_verification for this step
+        // Guard: prevent the same admin from signing twice at this step
+        const [alreadySigned]: any = await conn.execute(
+            `SELECT 1 FROM clearance_verifications
+             WHERE clearance_id = ? AND admin_id = ? AND step_order = ? AND status = 1 LIMIT 1`,
+            [clearanceId, adminId, clearanceStep]
+        );
+        if (alreadySigned.length > 0) throw new Error("You have already signed this clearance");
+
+        // Insert this admin's verification record
         await conn.execute(
             `INSERT INTO clearance_verifications
                 (clearance_id, admin_id, role_id, step_order, status, remarks, verified_at, created_at)
-             VALUES (?, ?, ?, ?, 1, ?, NOW(), NOW())
-             ON DUPLICATE KEY UPDATE status = 1, remarks = ?, verified_at = NOW()`,
-            [clearanceId, adminId, roleId, clearanceStep, remarks ?? null, remarks ?? null]
+             VALUES (?, ?, ?, ?, 1, ?, NOW(), NOW())`,
+            [clearanceId, adminId, roleId, clearanceStep, remarks ?? null]
         );
 
-        // Advance clearance — find the next step that has active admins.
-        // No hardcoded "last step": the last step is dynamically whoever
-        // has no successor with an active admin.
+        // Check how many active admins exist at this step vs how many have signed
+        const [totalRows]: any = await conn.execute(
+            `SELECT COUNT(*) AS total
+             FROM admins a
+             JOIN users u ON u.user_id = a.user_id
+             JOIN roles r ON r.role_id = u.role_id
+             WHERE r.clearance_step = ? AND u.status = 'active' AND u.deleted_at IS NULL AND a.deleted_at IS NULL`,
+            [clearanceStep]
+        );
+        const totalAtStep = Number(totalRows[0].total);
+
+        const [signedRows]: any = await conn.execute(
+            `SELECT COUNT(DISTINCT cv.admin_id) AS signed
+             FROM clearance_verifications cv
+             WHERE cv.clearance_id = ? AND cv.step_order = ? AND cv.status = 1`,
+            [clearanceId, clearanceStep]
+        );
+        const signedAtStep = Number(signedRows[0].signed);
+
+        if (signedAtStep < totalAtStep) {
+            // Still waiting for other approvers at this step — stay at current step, notify student of partial progress
+            await conn.execute(
+                `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+                 VALUES (?, 'Clearance Update', ?, 6, ?, 'clearance', 0, NOW())`,
+                [studentUserId,
+                 `An approver has signed your clearance (${signedAtStep}/${totalAtStep} at step ${clearanceStep}). Waiting for remaining approvals.`,
+                 clearanceId]
+            );
+            await conn.commit();
+            return;
+        }
+
+        // All admins at this step have signed — advance to next step
         let targetStep = clearanceStep + 1;
         let finalStatus: number = 1;
 
-        while (targetStep <= 6) {
+        // Get the maximum configured clearance step dynamically
+        const [maxRows]: any = await conn.execute(
+            `SELECT COALESCE(MAX(clearance_step), 1) AS maxStep FROM roles WHERE clearance_step IS NOT NULL`
+        );
+        const maxStep = Number(maxRows[0].maxStep);
+
+        while (targetStep <= maxStep) {
             const [stepAdmins]: any = await conn.execute(
                 `SELECT 1 FROM admins a
                  JOIN users u ON u.user_id = a.user_id
@@ -225,7 +276,7 @@ export const signClearance = async (
             if (stepAdmins.length > 0) break;
             targetStep++;
         }
-        if (targetStep > 6) {
+        if (targetStep > maxStep) {
             finalStatus = 2;
             targetStep = clearanceStep;
         }
@@ -237,7 +288,7 @@ export const signClearance = async (
             [targetStep, finalStatus, clearanceId]
         );
 
-        // Notify student
+        // Notify student of full step completion
         const message = finalStatus === 2
             ? "Your clearance has been fully cleared!"
             : `Your clearance has been approved at step ${clearanceStep}. Proceeding to next step.`;
@@ -273,6 +324,8 @@ export interface ClearanceHistoryItem {
     signedAt: string;
     remarks: string | null;
     avatarPath: string | null;
+    isPrinted: boolean;
+    printedAt: string | null;
 }
 
 export const getClearanceHistory = async (
@@ -294,10 +347,12 @@ export const getClearanceHistory = async (
             s.section,
             s.school_year       AS schoolYear,
             s.semester,
-            cl.clearance_status AS clearanceStatus,
-            cv.verified_at      AS signedAt,
+            cl.clearance_status          AS clearanceStatus,
+            cv.verified_at               AS signedAt,
             cv.remarks,
-            s.avatar_path       AS avatarPath
+            s.avatar_path                AS avatarPath,
+            COALESCE(cl.is_printed, 0)   AS isPrinted,
+            cl.printed_at                AS printedAt
         FROM clearance_verifications cv
         JOIN clearances cl  ON cl.clearance_id  = cv.clearance_id
         JOIN students s     ON s.student_id      = cl.student_id
@@ -373,7 +428,34 @@ export const signAllClearance = async (userId: number, role: string): Promise<nu
         try {
             await signClearance(userId, student.studentId, null);
             count++;
-        } catch { /* skip individual errors */ }
+        } catch { /* skip individual errors, including already-signed */ }
     }
     return count;
+};
+
+// ─── Mark clearances as printed ───────────────────────────────────────────────
+
+export const markClearancePrinted = async (
+    clearanceIds: number[],
+    adminId: number
+): Promise<number> => {
+    if (!clearanceIds.length) return 0;
+    const placeholders = clearanceIds.map(() => "?").join(",");
+    const [result]: any = await pool.execute(
+        `UPDATE clearances
+         SET is_printed = 1, printed_at = NOW(), printed_by = ?
+         WHERE clearance_id IN (${placeholders})`,
+        [adminId, ...clearanceIds]
+    );
+    return result.affectedRows;
+};
+
+// ─── Get admin_id from user_id (helper for controller) ────────────────────────
+
+export const getAdminIdFromUser = async (userId: number): Promise<number | null> => {
+    const [rows]: any = await pool.execute(
+        "SELECT admin_id FROM admins WHERE user_id = ? AND deleted_at IS NULL LIMIT 1",
+        [userId]
+    );
+    return rows.length ? rows[0].admin_id : null;
 };

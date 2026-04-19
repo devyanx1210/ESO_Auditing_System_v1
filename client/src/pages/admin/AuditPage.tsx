@@ -3,8 +3,9 @@ import {
     FiRefreshCw, FiPlus, FiEdit2, FiTrash2, FiDollarSign,
     FiTrendingUp, FiTrendingDown, FiActivity, FiChevronDown,
     FiArrowUpCircle, FiArrowDownCircle, FiFileText, FiExternalLink,
-    FiInfo, FiX,
+    FiInfo, FiX, FiPrinter,
 } from "react-icons/fi";
+import { AlertModal } from "../../components/ui/AlertModal";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -48,22 +49,24 @@ function fmtDateTime(d: string | null) {
         + " " + dt.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
 }
 const receiptUrl = (p: string | null) =>
-    !p ? null : p.startsWith("http") ? p : `http://localhost:5000/uploads/${p}`;
+    !p ? null : p.startsWith("http") ? p : `/uploads/${p}`;
 
 // ─── Stat Card (matches Dashboard style) ─────────────────────────────────────
 
 interface StatCardProps {
     label: string; value: string; icon: React.ReactNode;
     sub?: string; darkMode: boolean; highlight?: boolean;
-    animDelay?: number;
+    animDelay?: number; onClick?: () => void;
 }
-function StatCard({ label, value, icon, sub, darkMode, highlight, animDelay = 0 }: StatCardProps) {
+function StatCard({ label, value, icon, sub, darkMode, highlight, animDelay = 0, onClick }: StatCardProps) {
     return (
         <div
+            onClick={onClick}
             style={{ animationDelay: `${animDelay}ms` }}
             className={`anim-card-pop rounded-2xl p-4 sm:p-5 flex flex-col gap-2 sm:gap-3
-                transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.08)]
+                transition-all duration-200 shadow-[0_6px_24px_rgba(0,0,0,0.13)]
                 hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]
+                ${onClick ? "cursor-pointer active:scale-[0.98]" : ""}
                 ${highlight
                     ? "bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.40)] text-white"
                     : darkMode ? "bg-[#1a1a1a] text-white" : "bg-white text-gray-800"
@@ -111,9 +114,9 @@ function InfoModal({ onClose, darkMode }: { onClose: () => void; darkMode: boole
     const dotCls     = `mt-1 w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0`;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div ref={ref}
-                className={`rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
+                className={`rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.55)] w-full max-w-lg max-h-[85vh] flex flex-col ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
                 style={{ animation: "fadeInUp 0.2s ease both" }}>
 
                 {/* Header */}
@@ -267,9 +270,16 @@ function RecordModal({ token, schoolYears, editing, mode, onClose, onDone, darkM
     const inp = `w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm ${darkMode ? "bg-[#222] border-gray-600 text-gray-100 placeholder-gray-600" : "bg-white border-gray-200"}`;
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className={`rounded-2xl shadow-xl w-full max-w-sm p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
-                style={{ animation: "fadeInUp 0.2s ease both" }}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={onClose}>
+            <div className={`relative rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.55)] w-full max-w-sm p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
+                style={{ animation: "fadeInUp 0.2s ease both" }}
+                onClick={e => e.stopPropagation()}>
+                <button onClick={onClose}
+                    className={`absolute top-3 right-3 p-1.5 rounded-lg transition
+                        ${darkMode ? "text-gray-400 hover:text-gray-200 hover:bg-[#252525]" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}>
+                    <FiX className="w-4 h-4" />
+                </button>
                 <h3 className={`font-bold text-base mb-1 ${darkMode ? "text-white" : "text-gray-800"}`}>
                     {editing ? "Edit" : "Add"} {isExpense ? "Expense" : "Budget Proposal"}
                 </h3>
@@ -327,8 +337,8 @@ function RecordModal({ token, schoolYears, editing, mode, onClose, onDone, darkM
 
 function DeleteConfirm({ onConfirm, onCancel, loading, darkMode }: { onConfirm: () => void; onCancel: () => void; loading: boolean; darkMode: boolean }) {
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className={`rounded-2xl shadow-xl w-full max-w-xs p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className={`rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.55)] w-full max-w-xs p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                 <p className={`font-bold text-base mb-2 ${darkMode ? "text-white" : "text-gray-800"}`}>Confirm Delete?</p>
                 <p className={`text-sm mb-5 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>This action cannot be undone.</p>
                 <div className="flex gap-3 justify-end">
@@ -344,13 +354,19 @@ function DeleteConfirm({ onConfirm, onCancel, loading, darkMode }: { onConfirm: 
 
 // ─── Tab Button ───────────────────────────────────────────────────────────────
 
-function Tab({ label, active, onClick, darkMode }: { label: string; active: boolean; onClick: () => void; darkMode: boolean }) {
+function Tab({ label, count, active, onClick, darkMode }: { label: string; count?: number; active: boolean; onClick: () => void; darkMode: boolean }) {
     return (
         <button onClick={onClick}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${
+            className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${
                 active ? "bg-orange-500 text-white shadow" : darkMode ? "text-gray-400 hover:text-gray-200 hover:bg-white/5" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
             }`}>
             {label}
+            {count !== undefined && (
+                <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-black leading-none px-1
+                    ${active ? "bg-white/25 text-white" : darkMode ? "bg-white/10 text-gray-300" : "bg-gray-200 text-gray-600"}`}>
+                    {count}
+                </span>
+            )}
         </button>
     );
 }
@@ -382,6 +398,7 @@ const AuditPage = () => {
     const [showModal,    setShowModal]    = useState(false);
     const [editingItem,  setEditingItem]  = useState<ExpenseItem | BudgetItem | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<{ id: number; type: "expense" | "budget" } | null>(null);
+    const [alertMsg,     setAlertMsg]     = useState<string | null>(null);
     const [deleting,     setDeleting]     = useState(false);
     const [showInfo,     setShowInfo]     = useState(false);
 
@@ -409,6 +426,12 @@ const AuditPage = () => {
     }, [accessToken]);
 
     useEffect(() => { loadAll(); }, [loadAll]);
+
+    // Auto-refresh every 20 seconds
+    useEffect(() => {
+        const id = setInterval(loadAll, 20_000);
+        return () => clearInterval(id);
+    }, [loadAll]);
 
     async function handleDelete() {
         if (!deleteTarget || !accessToken) return;
@@ -442,7 +465,7 @@ const AuditPage = () => {
     const barOptions = {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-            legend: { labels: { color: darkMode ? "#9ca3af" : "#6b7280", font: { size: 11 } } },
+            legend: { position: "top" as const, align: "start" as const, labels: { color: darkMode ? "#9ca3af" : "#6b7280", font: { size: 11 }, padding: 16 } },
             tooltip: { callbacks: { label: (ctx: any) => ` ₱${Number(ctx.raw).toLocaleString("en-PH", { minimumFractionDigits: 2 })}` } },
         },
         scales: {
@@ -466,16 +489,136 @@ const AuditPage = () => {
         setModalMode("budget"); setEditingItem(item ?? null); setShowModal(true);
     }
 
+    function printAuditReport() {
+        const win = window.open("", "_blank");
+        if (!win) { setAlertMsg("Please allow pop-ups to print."); return; }
+        const now = new Date().toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+        const filterLine = [schoolYear, semester ? `Semester ${semester}` : ""].filter(Boolean).join(" · ") || "All Periods";
+
+        const incomeRows = incomeList.map((item, i) => `
+            <tr class="${i % 2 !== 0 ? "alt" : ""}">
+                <td>${i + 1}</td>
+                <td><b>${item.studentName}</b><br><small>${item.programCode}</small></td>
+                <td>${item.obligationName}</td>
+                <td class="r green">${fmt(item.amountPaid)}</td>
+                <td class="c">${item.verifiedAt ? new Date(item.verifiedAt).toLocaleDateString("en-PH") : ""}</td>
+            </tr>`).join("");
+
+        const expenseRows = expList.map((item, i) => `
+            <tr class="${i % 2 !== 0 ? "alt" : ""}">
+                <td>${i + 1}</td>
+                <td><b>${item.title}</b></td>
+                <td>${semLabel(item.semester)} · ${item.schoolYear}</td>
+                <td class="r red">${fmt(item.amount)}</td>
+                <td class="c">${item.receiptPath ? "Yes" : "No"}</td>
+            </tr>`).join("");
+
+        const budgetRows = budgets.map((item, i) => `
+            <tr class="${i % 2 !== 0 ? "alt" : ""}">
+                <td>${i + 1}</td>
+                <td><b>${item.title}</b></td>
+                <td>${semLabel(item.semester)} · ${item.schoolYear}</td>
+                <td class="r">${fmt(item.allocatedAmount)}</td>
+                <td class="r red">${fmt(item.actualAmount)}</td>
+                <td class="r ${item.allocatedAmount - item.actualAmount >= 0 ? "green" : "red"}">${fmt(item.allocatedAmount - item.actualAmount)}</td>
+            </tr>`).join("");
+
+        const ledgerRows = ledger.slice().reverse().map((item, i) => `
+            <tr class="${i % 2 !== 0 ? "alt" : ""}">
+                <td>${i + 1}</td>
+                <td>${item.description ?? item.reference ?? ""}</td>
+                <td class="c">${fmtDate(item.date)}</td>
+                <td class="r ${item.type === "income" ? "green" : "red"}">${item.type === "income" ? "+" : "-"}${fmt(Math.abs(item.amount))}</td>
+                <td class="r ${item.balance >= 0 ? "green" : "red"}">${fmt(item.balance)}</td>
+            </tr>`).join("");
+
+        win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Financial Audit Report</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Times New Roman',serif;font-size:11pt;color:#111;background:#fff;padding:30px}
+  h1{font-size:16pt;text-align:center;margin-bottom:4px}
+  .sub{font-size:10pt;text-align:center;color:#555;margin-bottom:20px}
+  h2{font-size:12pt;margin:20px 0 8px;border-bottom:1.5px solid #333;padding-bottom:4px}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .scard{border:1px solid #ddd;border-radius:4px;padding:10px 14px}
+  .scard-label{font-size:8pt;text-transform:uppercase;letter-spacing:.05em;color:#666;margin-bottom:4px}
+  .scard-value{font-size:14pt;font-weight:700}
+  .green{color:#16a34a}.red{color:#dc2626}
+  table{width:100%;border-collapse:collapse;margin-bottom:4px;font-size:9.5pt}
+  th{background:#f3f4f6;text-align:left;padding:5px 8px;font-size:8pt;text-transform:uppercase;letter-spacing:.04em;color:#555;border-bottom:1.5px solid #ccc}
+  td{padding:4px 8px;border-bottom:1px solid #eee;vertical-align:top}
+  tr.alt td{background:#f9fafb}
+  .c{text-align:center}.r{text-align:right}
+  .footer{margin-top:24px;font-size:8pt;color:#888;text-align:center;border-top:1px solid #ddd;padding-top:8px}
+  @media print{body{padding:10px}}
+</style></head>
+<body>
+<h1>ESO Financial Audit Report</h1>
+<div class="sub">Period: ${filterLine} &nbsp;|&nbsp; Generated: ${now}</div>
+
+<div class="summary-grid">
+  <div class="scard">
+    <div class="scard-label">Total Collections</div>
+    <div class="scard-value green">${summary ? fmt(summary.totalIncome) : "—"}</div>
+    <div style="font-size:8pt;color:#666;margin-top:2px">${summary ? summary.incomeCount + " verified payments" : ""}</div>
+  </div>
+  <div class="scard">
+    <div class="scard-label">Total Expenses</div>
+    <div class="scard-value red">${summary ? fmt(summary.totalExpenses) : "—"}</div>
+    <div style="font-size:8pt;color:#666;margin-top:2px">${summary ? summary.expenseCount + " recorded" : ""}</div>
+  </div>
+  <div class="scard">
+    <div class="scard-label">Current Fund Balance</div>
+    <div class="scard-value ${currentBalance >= 0 ? "green" : "red"}">${fmt(currentBalance)}</div>
+    <div style="font-size:8pt;color:#666;margin-top:2px">${currentBalance >= 0 ? "Funds available" : "Deficit"}</div>
+  </div>
+</div>
+
+<h2>Collections (Verified Payments)</h2>
+<table>
+  <thead><tr><th>#</th><th>Student</th><th>Obligation</th><th class="r">Amount</th><th class="c">Date Verified</th></tr></thead>
+  <tbody>${incomeRows || '<tr><td colspan="5" class="c" style="color:#999;padding:10px">No collections recorded.</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="3" style="padding:5px 8px;font-weight:700;font-size:9pt">Total</td><td class="r green" style="padding:5px 8px;font-weight:700">${summary ? fmt(summary.totalIncome) : "—"}</td><td></td></tr></tfoot>
+</table>
+
+<h2>Expenses</h2>
+<table>
+  <thead><tr><th>#</th><th>Title</th><th>Semester / Year</th><th class="r">Amount</th><th class="c">OR</th></tr></thead>
+  <tbody>${expenseRows || '<tr><td colspan="5" class="c" style="color:#999;padding:10px">No expenses recorded.</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="3" style="padding:5px 8px;font-weight:700;font-size:9pt">Total</td><td class="r red" style="padding:5px 8px;font-weight:700">${summary ? fmt(summary.totalExpenses) : "—"}</td><td></td></tr></tfoot>
+</table>
+
+<h2>Budget Proposals</h2>
+<table>
+  <thead><tr><th>#</th><th>Title</th><th>Semester / Year</th><th class="r">Allocated</th><th class="r">Actual</th><th class="r">Variance</th></tr></thead>
+  <tbody>${budgetRows || '<tr><td colspan="6" class="c" style="color:#999;padding:10px">No budget proposals.</td></tr>'}</tbody>
+</table>
+
+<h2>Fund Ledger</h2>
+<table>
+  <thead><tr><th>#</th><th>Description</th><th class="c">Date</th><th class="r">Transaction</th><th class="r">Running Balance</th></tr></thead>
+  <tbody>${ledgerRows || '<tr><td colspan="5" class="c" style="color:#999;padding:10px">No ledger entries.</td></tr>'}</tbody>
+</table>
+
+<div class="footer">ESO Auditing System &mdash; This report was generated automatically. Verify data with official records.</div>
+</body></html>`);
+        win.document.close();
+        setTimeout(() => { try { win.print(); } catch(e) {} }, 500);
+    }
+
     return (
         <div className={`p-4 sm:p-6 md:p-8 min-h-screen ${bg}`}>
             <style>{`@keyframes fadeInUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }`}</style>
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg(null)} darkMode={darkMode} />}
 
             {/* ── Header ── */}
-            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <div>
                         <div className="flex items-center gap-2">
-                            <h1 className={`font-bold text-lg sm:text-xl ${darkMode ? "text-white" : "text-gray-800"}`}>Financial Audit</h1>
+                            <h1 className={`text-lg sm:text-2xl lg:text-3xl font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>Financial Audit</h1>
                             <button
                                 onClick={() => setShowInfo(true)}
                                 title="About this section"
@@ -483,19 +626,21 @@ const AuditPage = () => {
                                 <FiInfo className="w-3.5 h-3.5" />
                             </button>
                         </div>
-                        <p className={`text-xs mt-0.5 ${darkMode ? "text-gray-400" : "text-gray-400"}`}>
-                            Collections · Expenses · Fund Balance · Budget Proposals
-                        </p>
+
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     <button onClick={() => openExpenseModal()}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 shadow-sm">
-                        <FiPlus className="w-4 h-4" /> Record Expenses
+                        className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-orange-600 shadow-sm">
+                        <FiPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Expenses
                     </button>
                     <button onClick={() => openBudgetModal()}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 shadow-sm">
-                        <FiFileText className="w-4 h-4" /> Add Budget Proposal
+                        className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-orange-600 shadow-sm">
+                        <FiFileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Budget
+                    </button>
+                    <button onClick={printAuditReport} title="Print Audit Report"
+                        className={`p-2 border-2 rounded-xl transition shadow-sm ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "bg-white border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-500"}`}>
+                        <FiPrinter className="w-4 h-4" />
                     </button>
                     <button onClick={loadAll} disabled={loading} title="Refresh"
                         className={`p-2 border-2 rounded-xl transition shadow-sm disabled:opacity-50 ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-300 hover:border-orange-400" : "bg-white border-gray-200 text-gray-600 hover:border-orange-400"}`}>
@@ -529,25 +674,39 @@ const AuditPage = () => {
                 {(semester !== null || schoolYear !== null) && (
                     <button onClick={() => { setSemester(null); setSchoolYear(null); }}
                         className="text-xs text-orange-500 hover:text-orange-600 font-semibold px-2 py-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition">
-                        Clear filters
+                        Clear
                     </button>
                 )}
-                <span className={`ml-auto text-xs font-medium px-3 py-2 rounded-xl ${darkMode ? "bg-[#1a1a1a] text-gray-400" : "bg-white text-gray-400 shadow-sm"}`}>
-                    {semester ? semLabelFull(semester) : "All Semesters"}{schoolYear ? ` · ${schoolYear}` : ""}
-                </span>
             </div>
 
             {/* ── Stat Cards ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                <StatCard
-                    label="Total Collections"
-                    value={summary ? fmt(summary.totalIncome) : "—"}
-                    icon={<FiArrowUpCircle />}
-                    sub={summary ? `${summary.incomeCount} verified payment${summary.incomeCount !== 1 ? "s" : ""}` : undefined}
-                    darkMode={darkMode}
-                    highlight={true}
-                    animDelay={0}
-                />
+                {/* Collections card — custom layout to avoid long value wrapping */}
+                <div onClick={() => setActiveTab("income")}
+                    className="anim-card-pop rounded-2xl p-4 sm:p-5 flex flex-col gap-2 sm:gap-3
+                    transition-all duration-200 cursor-pointer active:scale-[0.98]
+                    bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.40)] text-white
+                    hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]">
+                    <div className="flex justify-between items-start gap-2">
+                        <p className="text-[9px] sm:text-[10px] lg:text-xs font-semibold uppercase tracking-wide leading-snug text-white/75">
+                            Total Collections
+                        </p>
+                        <span className="text-base sm:text-lg lg:text-xl shrink-0 text-white"><FiArrowUpCircle /></span>
+                    </div>
+                    <div>
+                        <p className="text-xl sm:text-2xl lg:text-[1.6rem] leading-tight font-black tracking-tight">
+                            {summary ? fmt(summary.totalIncome) : "—"}
+                        </p>
+                        <p className="text-xs font-semibold text-white/70 mt-0.5">
+                            of {summary ? fmt(summary.totalPotential) : "—"} target
+                        </p>
+                    </div>
+                    <p className="text-[10px] text-white/60">
+                        {summary
+                            ? `${summary.incomeCount} verified · ${summary.totalPotential > 0 ? Math.round((summary.totalIncome / summary.totalPotential) * 100) : 0}% collected`
+                            : ""}
+                    </p>
+                </div>
                 <StatCard
                     label="Total Expenses"
                     value={summary ? fmt(summary.totalExpenses) : "—"}
@@ -555,6 +714,7 @@ const AuditPage = () => {
                     sub={summary ? `${summary.expenseCount} recorded expense${summary.expenseCount !== 1 ? "s" : ""}` : undefined}
                     darkMode={darkMode}
                     animDelay={75}
+                    onClick={() => setActiveTab("expenses")}
                 />
                 <StatCard
                     label="Current Fund Balance"
@@ -563,6 +723,7 @@ const AuditPage = () => {
                     sub={currentBalance >= 0 ? "Funds available" : "Deficit detected"}
                     darkMode={darkMode}
                     animDelay={150}
+                    onClick={() => setActiveTab("ledger")}
                 />
                 <StatCard
                     label="Budget Utilization"
@@ -573,6 +734,7 @@ const AuditPage = () => {
                     sub={budgets.length > 0 ? `${budgets.length} active proposal${budgets.length !== 1 ? "s" : ""}` : "Add a budget proposal to track spending"}
                     darkMode={darkMode}
                     animDelay={225}
+                    onClick={() => setActiveTab("budget")}
                 />
             </div>
 
@@ -603,12 +765,13 @@ const AuditPage = () => {
                     plugins: {
                         legend: {
                             position: "bottom" as const,
+                            align: "start" as const,
                             labels: {
                                 color: darkMode ? "#9ca3af" : "#6b7280",
                                 font: { size: 11 },
-                                padding: 12,
-                                boxWidth: 10,
-                                boxHeight: 10,
+                                padding: 10,
+                                boxWidth: 8,
+                                boxHeight: 8,
                             },
                         },
                         tooltip: {
@@ -624,7 +787,7 @@ const AuditPage = () => {
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
                         {/* Bar chart — takes 2/3 */}
-                        <div className={`lg:col-span-2 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${card}`}>
+                        <div className={`lg:col-span-2 rounded-2xl p-5 shadow-[0_6px_24px_rgba(0,0,0,0.13)] ${card}`}>
                             <p className={`font-bold text-sm mb-4 flex items-center gap-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
                                 <FiTrendingUp className="w-4 h-4 text-orange-500 shrink-0" />
                                 Collections vs. Expenses{schoolYear ? ` — ${schoolYear}` : ""}
@@ -635,7 +798,7 @@ const AuditPage = () => {
                         </div>
 
                         {/* Doughnut — takes 1/3 */}
-                        <div className={`rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex flex-col ${card}`}>
+                        <div className={`rounded-2xl p-5 shadow-[0_6px_24px_rgba(0,0,0,0.13)] flex flex-col ${card}`}>
                             <p className={`font-bold text-sm mb-1 flex items-center gap-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
                                 <FiActivity className="w-4 h-4 text-orange-500 shrink-0" />
                                 Collections by Program
@@ -671,19 +834,19 @@ const AuditPage = () => {
             })()}
 
             {/* ── Tabs ── */}
-            <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
-                <Tab label="Overview"        active={activeTab === "overview"}       onClick={() => setActiveTab("overview")}       darkMode={darkMode} />
-                <Tab label="Fund Ledger"     active={activeTab === "ledger"}         onClick={() => setActiveTab("ledger")}         darkMode={darkMode} />
-                <Tab label={`Collections (${incomeList.length})`} active={activeTab === "income"} onClick={() => setActiveTab("income")} darkMode={darkMode} />
-                <Tab label={`Expenses (${expList.length})`}  active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} darkMode={darkMode} />
-                <Tab label={`Budget Proposals (${budgets.length})`} active={activeTab === "budget"} onClick={() => setActiveTab("budget")} darkMode={darkMode} />
+            <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1 scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
+                <Tab label="Overview"     active={activeTab === "overview"}  onClick={() => setActiveTab("overview")}  darkMode={darkMode} />
+                <Tab label="Fund Ledger"  active={activeTab === "ledger"}    onClick={() => setActiveTab("ledger")}    darkMode={darkMode} />
+                <Tab label="Collections"  count={incomeList.length}  active={activeTab === "income"}   onClick={() => setActiveTab("income")}   darkMode={darkMode} />
+                <Tab label="Expenses"     count={expList.length}     active={activeTab === "expenses"} onClick={() => setActiveTab("expenses")} darkMode={darkMode} />
+                <Tab label="Budget"       count={budgets.length}     active={activeTab === "budget"}   onClick={() => setActiveTab("budget")}   darkMode={darkMode} />
             </div>
 
             {/* ─── OVERVIEW TAB ─── */}
             {activeTab === "overview" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Recent Collections */}
-                    <div className={`rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] overflow-hidden ${card}`}>
+                    <div className={`rounded-xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] overflow-hidden ${card}`}>
                         <div className={`px-5 py-3 border-b flex items-center justify-between ${darkMode ? "border-gray-700/50" : "border-gray-100"}`}>
                             <p className={`text-sm font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>Recent Collections</p>
                             <span className="text-xs text-green-600 font-semibold">{fmt(summary?.totalIncome ?? 0)}</span>
@@ -715,7 +878,7 @@ const AuditPage = () => {
                     </div>
 
                     {/* Recent Disbursements */}
-                    <div className={`rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] overflow-hidden ${card}`}>
+                    <div className={`rounded-xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] overflow-hidden ${card}`}>
                         <div className={`px-5 py-3 border-b flex items-center justify-between ${darkMode ? "border-gray-700/50" : "border-gray-100"}`}>
                             <p className={`text-sm font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>Recent Expenses</p>
                             <button onClick={() => openExpenseModal()}
@@ -760,7 +923,7 @@ const AuditPage = () => {
 
             {/* ─── FUND LEDGER TAB ─── */}
             {activeTab === "ledger" && (
-                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden ${card}`}>
+                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden ${card}`}>
                     <div className={`px-5 py-4 border-b flex items-center justify-between ${darkMode ? "border-gray-700/50" : "border-gray-100"}`}>
                         <div>
                             <p className={`text-sm font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>Fund Ledger</p>
@@ -843,7 +1006,7 @@ const AuditPage = () => {
 
             {/* ─── COLLECTIONS TAB ─── */}
             {activeTab === "income" && (
-                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden ${card}`}>
+                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden ${card}`}>
                     <div className="overflow-x-auto">
                         <table className="eso-table w-full text-xs min-w-[680px]">
                             <thead className={th}>
@@ -901,7 +1064,7 @@ const AuditPage = () => {
 
             {/* ─── EXPENSES TAB ─── */}
             {activeTab === "expenses" && (
-                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden ${card}`}>
+                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden ${card}`}>
                     <div className={`px-5 py-3 border-b flex items-center justify-between ${darkMode ? "border-gray-700/50" : "border-gray-100"}`}>
                         <p className={`text-sm font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>Expense Records</p>
                         <button onClick={() => openExpenseModal()}
@@ -976,7 +1139,7 @@ const AuditPage = () => {
 
             {/* ─── BUDGET PROPOSALS TAB ─── */}
             {activeTab === "budget" && (
-                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden ${card}`}>
+                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden ${card}`}>
                     <div className={`px-5 py-3 border-b flex items-center justify-between ${darkMode ? "border-gray-700/50" : "border-gray-100"}`}>
                         <div>
                             <p className={`text-sm font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>Budget Proposals vs. Actual Spending</p>

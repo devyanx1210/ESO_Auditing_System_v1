@@ -331,7 +331,7 @@ export const deleteObligation = async (obligationId: number): Promise<void> => {
             await pool.execute(
                 `INSERT INTO notifications
                     (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Obligation Removed', ?, 'obligation_deleted', ?, 'obligation', 0, NOW())`,
+                 VALUES (?, 'Obligation Removed', ?, 3, ?, 'obligation', 0, NOW())`,
                 [s.user_id, `The obligation "${name}" has been removed.`, obligationId]
             );
         }

@@ -8,6 +8,7 @@ import {
     verifyPassword,
 } from "../services/auth.service.js";
 import { sendSuccess, sendError } from "../utils/response.js";
+import { logAction } from "../services/audit.service.js";
 
 export const login = async (req: Request, res: Response) => {
     try {
@@ -47,6 +48,7 @@ export const logout = async (req: Request, res: Response) => {
         if (!userId) return sendError(res, "Unauthorized", 401);
 
         await logoutUser(userId);
+        logAction({ performedBy: userId, action: "logout", ipAddress: req.ip });
         return sendSuccess(res, null, "Logged out successfully");
     } catch (error: any) {
         return sendError(res, error.message, 500);
@@ -144,6 +146,7 @@ export const register = async (req: Request, res: Response) => {
             semester: semesterNum,
         });
 
+        logAction({ performedBy: user.userId, action: "register", targetType: "student", targetId: user.userId, details: { email } });
         return sendSuccess(res, { user, tokens }, "Registration successful", 201);
     } catch (error: any) {
         return sendError(res, error.message, 400);

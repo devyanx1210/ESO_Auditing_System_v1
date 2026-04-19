@@ -137,6 +137,23 @@ export default function StudentDashboard() {
             .finally(() => setLoading(false));
     }, [accessToken]);
 
+    /* ── real-time: poll notifications + obligations every 15s ── */
+    useEffect(() => {
+        if (!accessToken) return;
+        const id = setInterval(() => {
+            Promise.all([
+                studentService.getMyObligations(accessToken),
+                studentService.getMyClearance(accessToken),
+                notificationService.getAll(accessToken),
+            ]).then(([o, c, n]) => {
+                setObligations(o);
+                setClearance(c);
+                setNotifications(n);
+            }).catch(() => { /* silent — keep stale data */ });
+        }, 15_000);
+        return () => clearInterval(id);
+    }, [accessToken]);
+
     /* ── close bell on outside click ── */
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -158,12 +175,13 @@ export default function StudentDashboard() {
     }, [bellOpen]);
 
     /* ── derived stats ── */
-    const paidCount    = obligations.filter(o => o.status === 2 || o.status === 3).length;
-    const totalCount   = obligations.length;
-    const progressPct  = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
-    const overdueCount = obligations.filter(o => o.isOverdue && o.status !== 2 && o.status !== 3).length;
-    const unreadCount  = notifications.filter(n => !n.isRead).length;
-    const pendingCount = obligations.filter(o => o.status === 1).length;
+    const paidCount      = obligations.filter(o => o.status === 2 || o.status === 3).length;
+    const totalCount     = obligations.length;
+    const progressPct    = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
+    const overdueCount   = obligations.filter(o => o.isOverdue && o.status !== 2 && o.status !== 3).length;
+    const unreadCount    = notifications.filter(n => !n.isRead).length;
+    const pendingCount   = obligations.filter(o => o.status === 1).length;
+    const allObligationsDone = totalCount > 0 && paidCount === totalCount;
 
     /* ── filtered obligations based on active stat card ── */
     const visibleObs =
@@ -218,13 +236,21 @@ export default function StudentDashboard() {
         setPaying(true);
         setPayError("");
         try {
-            await paymentService.submitReceipt(
-                accessToken,
-                payModal.studentObligationId,
-                payModal.requiresPayment ? payModal.amount : 0,
-                receiptFile,
-                payNotes || undefined,
-            );
+            if (payModal.requiresPayment) {
+                await paymentService.submitReceipt(
+                    accessToken,
+                    payModal.studentObligationId,
+                    payModal.amount,
+                    receiptFile,
+                    payNotes || undefined,
+                );
+            } else {
+                await paymentService.submitProof(
+                    accessToken,
+                    payModal.studentObligationId,
+                    receiptFile,
+                );
+            }
             const [updatedObs, updatedNotifs] = await Promise.all([
                 studentService.getMyObligations(accessToken),
                 notificationService.getAll(accessToken),
@@ -330,11 +356,10 @@ export default function StudentDashboard() {
                                             : dk ? "bg-[#1a1a1a] hover:bg-[#222]" : "bg-white hover:bg-gray-50"}`}
                                         style={{ animationDelay: `${idx * 40}ms` }}
                                     >
-                                        <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-start">
                                             <p className={`text-sm font-semibold leading-tight ${!n.isRead ? dk ? "text-orange-300" : "text-gray-900" : dk ? "text-gray-400" : "text-gray-600"}`}>
                                                 {n.title}
                                             </p>
-                                            <span className="shrink-0 mt-0.5">{notifTypeIcon(n.type)}</span>
                                         </div>
                                         <p className={`text-xs mt-1 line-clamp-2 ${dk ? "text-gray-500" : "text-gray-500"}`}>{cleanMessage(n.message)}</p>
                                         <div className="flex items-center justify-between mt-1.5">
@@ -360,7 +385,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* ── STAT CARDS ── */}
-            <div className="anim-section grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" style={{ animationDelay: "60ms", gridAutoRows: "1fr" }}>
+            <div className="anim-section grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6" style={{ animationDelay: "60ms", gridAutoRows: "1fr" }}>
                 <StatCard
                     label="Total Obligations"
                     value={totalCount}
@@ -421,57 +446,71 @@ export default function StudentDashboard() {
                     <h3 className={`font-semibold text-sm ${txt}`}>Clearance Status</h3>
                 </div>
 
-                {!clearance || clearance.clearanceId === null ? (
-                    <p className="text-xs text-gray-400 text-center py-3">
-                        Complete all obligations to begin clearance.
+                {/* Status message */}
+                {clearance?.clearanceId ? (
+                    clearance.status === 2
+                        ? <p className="text-xs text-green-600 font-semibold text-center mb-3">🎉 Clearance fully approved!</p>
+                        : <p className="text-xs text-orange-500 text-center mb-3">Clearance in progress. Step {clearance.currentStep} of {CLEARANCE_STEPS.length}</p>
+                ) : allObligationsDone ? (
+                    <p className="text-xs text-orange-500 font-medium text-center mb-3">
+                        All obligations complete. Awaiting class officer approval.
                     </p>
                 ) : (
-                    <div className="flex items-start">
-                        {CLEARANCE_STEPS.map((step, idx) => {
-                            const match      = clearance.steps.find(s => s.stepOrder === step.order);
-                            const isCurrent  = clearance.currentStep === step.order;
-                            const isDone     = match?.status === 1;
-                            const isRejected = match?.status === 2;
-
-                            return (
-                                <React.Fragment key={step.order}>
-                                    <div className="flex flex-col items-center flex-1">
-                                        {/* Step circle */}
-                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
-                                            isDone     ? "bg-green-500 border-green-500 text-white"  :
-                                            isRejected ? "bg-red-500   border-red-500   text-white"  :
-                                            isCurrent  ? "bg-orange-500 border-orange-500 text-white" :
-                                            "bg-white border-gray-300 text-gray-400"
-                                        }`}>
-                                            {isDone ? <FiCheckCircle className="w-4 h-4" /> : isRejected ? "✕" : idx + 1}
-                                        </div>
-                                        {/* Step label */}
-                                        <p className={`text-[10px] font-medium text-center mt-1.5 leading-tight max-w-[64px] ${
-                                            isDone     ? "text-green-600"  :
-                                            isRejected ? "text-red-500"    :
-                                            isCurrent  ? "text-orange-600" :
-                                            "text-gray-400"
-                                        }`}>
-                                            {step.label}
-                                        </p>
-                                        {match?.verifiedAt && (
-                                            <p className="text-[9px] text-gray-400 mt-0.5 text-center">
-                                                {new Date(match.verifiedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
-                                            </p>
-                                        )}
-                                        {match?.remarks && isRejected && (
-                                            <p className="text-[9px] text-red-500 mt-0.5 text-center leading-tight max-w-[64px]">{match.remarks}</p>
-                                        )}
-                                    </div>
-                                    {/* Connector line */}
-                                    {idx < CLEARANCE_STEPS.length - 1 && (
-                                        <div className={`flex-1 h-0.5 mt-4 mx-1 ${isDone ? "bg-green-400" : "bg-gray-200"}`} />
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
-                    </div>
+                    <p className="text-xs text-gray-400 text-center mb-3">
+                        Complete all obligations to begin clearance.
+                    </p>
                 )}
+
+                {/* Always show the stepper — gray if not started, active once clearance begins */}
+                <div className="flex items-start">
+                    {CLEARANCE_STEPS.map((step, idx) => {
+                        const match      = clearance?.steps.find(s => s.stepOrder === step.order);
+                        const isCurrent  = !!clearance?.clearanceId && clearance.currentStep === step.order;
+                        const isDone     = match?.status === 1;
+                        const isRejected = match?.status === 2;
+                        // When obligations are done but clearance not yet started, highlight step 1 as "up next"
+                        const isUpNext   = !clearance?.clearanceId && allObligationsDone && step.order === 1;
+
+                        return (
+                            <React.Fragment key={step.order}>
+                                <div className="flex flex-col items-center flex-1">
+                                    {/* Step circle */}
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+                                        isDone     ? "bg-green-500 border-green-500 text-white"   :
+                                        isRejected ? "bg-red-500   border-red-500   text-white"   :
+                                        isCurrent  ? "bg-orange-500 border-orange-500 text-white" :
+                                        isUpNext   ? "bg-orange-100 border-orange-400 text-orange-500" :
+                                        "bg-white border-gray-300 text-gray-400"
+                                    }`}>
+                                        {isDone ? <FiCheckCircle className="w-4 h-4" /> : isRejected ? "✕" : idx + 1}
+                                    </div>
+                                    {/* Step label */}
+                                    <p className={`text-[10px] font-medium text-center mt-1.5 leading-tight max-w-[64px] ${
+                                        isDone     ? "text-green-600"  :
+                                        isRejected ? "text-red-500"    :
+                                        isCurrent  ? "text-orange-600" :
+                                        isUpNext   ? "text-orange-500" :
+                                        "text-gray-400"
+                                    }`}>
+                                        {step.label}
+                                    </p>
+                                    {match?.verifiedAt && (
+                                        <p className="text-[9px] text-gray-400 mt-0.5 text-center">
+                                            {new Date(match.verifiedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                                        </p>
+                                    )}
+                                    {match?.remarks && isRejected && (
+                                        <p className="text-[9px] text-red-500 mt-0.5 text-center leading-tight max-w-[64px]">{match.remarks}</p>
+                                    )}
+                                </div>
+                                {/* Connector line */}
+                                {idx < CLEARANCE_STEPS.length - 1 && (
+                                    <div className={`flex-1 h-0.5 mt-4 mx-1 ${isDone ? "bg-green-400" : "bg-gray-200"}`} />
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -630,8 +669,8 @@ export default function StudentDashboard() {
 
             {/* ── PAYMENT / PROOF MODAL ── */}
             {payModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="anim-slide-up bg-white w-full max-w-xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setPayModal(null)}>
+                    <div className="anim-slide-up bg-white w-full max-w-xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
 
                         {/* Header */}
                         <div className="px-6 py-5 flex items-center justify-between shrink-0 bg-orange-500">
@@ -744,26 +783,28 @@ export default function StudentDashboard() {
                                     </div>
                                 )}
 
-                                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer transition border-gray-300 bg-gray-50 hover:bg-gray-100">
-                                    {receiptFile && !filePreview ? (
-                                        <div className="flex items-center gap-2 text-sm text-gray-700 font-medium px-4 text-center">
-                                            <FiFileText className="w-5 h-5 text-orange-500" />
-                                            <span className="truncate max-w-xs">{receiptFile.name}</span>
-                                        </div>
-                                    ) : !receiptFile ? (
-                                        <div className="flex flex-col items-center pointer-events-none">
-                                            <FiUpload className="w-6 h-6 mb-2 text-orange-400" />
-                                            <p className="text-sm font-medium text-gray-600">Click to upload</p>
-                                            <p className="text-xs text-gray-400 mt-0.5">JPG, PNG or PDF · Max 5MB</p>
-                                        </div>
-                                    ) : null}
-                                    <input
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.pdf"
-                                        className="hidden"
-                                        onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
-                                    />
-                                </label>
+                                {!filePreview && (
+                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer transition border-gray-300 bg-gray-50 hover:bg-gray-100">
+                                        {receiptFile ? (
+                                            <div className="flex items-center gap-2 text-sm text-gray-700 font-medium px-4 text-center">
+                                                <FiFileText className="w-5 h-5 text-orange-500" />
+                                                <span className="truncate max-w-xs">{receiptFile.name}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center pointer-events-none">
+                                                <FiUpload className="w-6 h-6 mb-2 text-orange-400" />
+                                                <p className="text-sm font-medium text-gray-600">Click to upload</p>
+                                                <p className="text-xs text-gray-400 mt-0.5">JPG, PNG or PDF · Max 5MB</p>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept=".jpg,.jpeg,.png,.pdf"
+                                            className="hidden"
+                                            onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
+                                        />
+                                    </label>
+                                )}
                             </div>
 
                             {/* Notes */}
@@ -880,7 +921,7 @@ function StatCard({
             className={`rounded-2xl p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer w-full h-full flex flex-col gap-2 sm:gap-3 relative overflow-hidden ${
                 active
                     ? `${ACTIVE_BG[color]}`
-                    : "bg-white dark:bg-[#1a1a1a] dark:border dark:border-[#2a2a2a] shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]"
+                    : "bg-white dark:bg-[#1a1a1a] dark:border dark:border-[#2a2a2a] shadow-[0_6px_24px_rgba(0,0,0,0.13)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.20)]"
             }`}
         >
             {/* Top row: label + icon */}

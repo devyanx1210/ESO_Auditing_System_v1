@@ -183,7 +183,7 @@ export default function StudentImportPage() {
 
             {/* ── Header ── */}
             <div className="mb-6 flex items-center gap-3">
-                <h1 className={`font-bold text-2xl sm:text-3xl ${darkMode ? "text-white" : "text-gray-800"}`}>Student CSV Import</h1>
+                <h1 className={`text-lg sm:text-2xl lg:text-3xl font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>Student CSV Import</h1>
                 <button
                     onClick={() => setShowInfo(true)}
                     className="flex items-center justify-center w-7 h-7 rounded-full bg-orange-100 text-orange-500 hover:bg-orange-200 transition shrink-0"
@@ -353,7 +353,7 @@ export default function StudentImportPage() {
                                             <span key={h} className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                                                 found ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
                                             }`}>
-                                                {found ? "✓" : "✗"} {h}
+                                                {found ? "+" : "-"} {h}
                                             </span>
                                         );
                                     })}
@@ -495,7 +495,7 @@ export default function StudentImportPage() {
                                 Default password = <strong>Student Number</strong>
                             </li>
                             <li className="flex gap-2 bg-amber-50 rounded-lg px-2 py-1.5">
-                                <span className="text-amber-500 font-bold shrink-0">⚠</span>
+                                <span className="text-amber-500 font-bold shrink-0">!</span>
                                 <div><strong>Fields with commas</strong> (names, addresses) must be wrapped in quotes in your CSV file. Save from <strong>Excel or Google Sheets</strong> — they do this automatically. Do not copy-paste raw text into a .csv file.</div>
                             </li>
                         </ul>
@@ -507,9 +507,12 @@ export default function StudentImportPage() {
             {deleteTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
                     onClick={() => { if (!deleting) setDeleteTarget(null); }}>
-                    <div className={`rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] p-6 w-full max-w-sm ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
+                    <div className={`rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] p-6 w-full max-w-sm relative ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
                         onClick={e => e.stopPropagation()}
                         style={{ animation: "fadeInUp 0.2s ease both" }}>
+                        <button onClick={() => { if (!deleting) setDeleteTarget(null); }} className={`absolute top-3 right-3 transition ${darkMode ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"}`}>
+                            <FiX className="w-4 h-4" />
+                        </button>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-2 bg-red-100 rounded-xl">
                                 <FiTrash2 className="w-5 h-5 text-red-500" />

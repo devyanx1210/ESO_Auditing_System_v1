@@ -28,6 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Auto-logout when any API call receives a 401 (expired/invalid token)
+    useEffect(() => {
+        const handler = () => {
+            setUser(null);
+            setAccessToken(null);
+            localStorage.removeItem(USER_KEY);
+            localStorage.removeItem(REFRESH_KEY);
+        };
+        window.addEventListener("eso:auth:expired", handler);
+        return () => window.removeEventListener("eso:auth:expired", handler);
+    }, []);
+
     // On mount: restore session from localStorage
     useEffect(() => {
         const init = async () => {

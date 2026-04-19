@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
 import { jwtConfig } from "../config/jwt.js";
+import { logAction } from "./audit.service.js";
 import {
     LoginInput,
     RegisterInput,
@@ -91,6 +92,9 @@ export const loginUser = async (
          WHERE user_id = ?`,
         [tokens.refreshToken, refreshExpiry, ipAddress, user.user_id]
     );
+    // Log successful login
+    logAction({ performedBy: user.user_id, action: "login", ipAddress });
+
     const authenticatedUser: AuthenticatedUser = {
         userId: user.user_id,
         firstName: user.first_name,

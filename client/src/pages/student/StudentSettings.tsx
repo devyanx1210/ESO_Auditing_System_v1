@@ -260,34 +260,34 @@ const StudentSettings = () => {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <Field label="First Name">
-                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
                                 </Field>
                                 <Field label="Last Name">
-                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" />
                                 </Field>
                                 <Field label="Middle Name">
-                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={middleName} onChange={e => setMiddleName(e.target.value)} placeholder="Middle name (optional)" />
                                 </Field>
                                 <Field label="Email">
-                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500">
                                         {profile.email}
                                     </div>
                                 </Field>
                                 <Field label="Student Number">
-                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-mono">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-mono">
                                         {profile.studentNo}
                                     </div>
                                 </Field>
                                 <Field label="Program">
-                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
                                         {profile.programName}
                                     </div>
                                 </Field>
                                 <Field label="Year Level">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={yearLevel} onChange={e => setYearLevel(e.target.value)}>
                                         <option value="1">1st Year</option>
                                         <option value="2">2nd Year</option>
@@ -297,15 +297,15 @@ const StudentSettings = () => {
                                     </select>
                                 </Field>
                                 <Field label="Section">
-                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={section} onChange={e => setSection(e.target.value)} placeholder="e.g. A" />
                                 </Field>
                                 <Field label="School Year">
-                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={schoolYear} onChange={e => setSchoolYear(e.target.value)} placeholder="e.g. 2025-2026" />
                                 </Field>
                                 <Field label="Semester">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={semester} onChange={e => setSemester(Number(e.target.value))}>
                                         <option value={1}>1st Semester</option>
                                         <option value={2}>2nd Semester</option>
@@ -313,7 +313,7 @@ const StudentSettings = () => {
                                     </select>
                                 </Field>
                                 <Field label="Gender">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={gender} onChange={e => setGender(e.target.value !== "" ? Number(e.target.value) : "")}>
                                         <option value="">— select —</option>
                                         <option value={1}>Male</option>
@@ -322,7 +322,7 @@ const StudentSettings = () => {
                                     </select>
                                 </Field>
                                 <Field label="Shirt Size">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                         value={shirtSize} onChange={e => setShirtSize(e.target.value)}>
                                         <option value="">— select —</option>
                                         <option value="XS">XS</option>
@@ -340,15 +340,15 @@ const StudentSettings = () => {
                                 <p className={`text-xs font-bold uppercase tracking-wide mb-4 ${sub}`}>Contact &amp; Guardian Information</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <Field label="Guardian Name">
-                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                             value={guardianName} onChange={e => setGuardianName(e.target.value)} placeholder="Guardian's full name" />
                                     </Field>
-                                    <Field label="Guardian Contact Number">
-                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <Field label="Emergency Contact Number">
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                             value={contactNumber} onChange={e => setContactNumber(e.target.value)} placeholder="e.g. 09XXXXXXXXX" />
                                     </Field>
                                     <Field label="Address">
-                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                             value={address} onChange={e => setAddress(e.target.value)} placeholder="Complete address" />
                                     </Field>
                                 </div>
@@ -365,7 +365,7 @@ const StudentSettings = () => {
                     </div>
                     <p className="text-xs text-gray-400 mb-4 mt-3">Leave these blank if you do not want to change your password.</p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <Field label="Current Password">
                             <input
                                 type="password"
@@ -442,19 +442,19 @@ const StudentSettings = () => {
                 {/* ── BOTTOM BUTTONS ── */}
                 {saveErr && <p className="text-red-500 text-sm -mt-2">{saveErr}</p>}
 
-                <div className="anim-section flex justify-between gap-3" style={{ animationDelay: "300ms" }}>
+                <div className="anim-section flex flex-wrap justify-between gap-3" style={{ animationDelay: "300ms" }}>
                     <button
                         type="button"
                         onClick={handleReset}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition text-sm ${dk ? "bg-[#2a2a2a] text-gray-300 hover:bg-[#333]" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+                        className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold transition text-xs sm:text-sm ${dk ? "bg-[#2a2a2a] text-gray-300 hover:bg-[#333]" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                     >
-                        <FiRotateCcw className="w-4 h-4" />
+                        <FiRotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Reset All
                     </button>
                     <button
                         type="submit"
                         disabled={saving}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-sm shadow-lg"
+                        className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-xs sm:text-sm shadow-lg"
                     >
                         <FiSave className="w-4 h-4" />
                         {saving ? "Saving..." : "Save Changes"}

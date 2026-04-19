@@ -21,11 +21,9 @@ const csvUpload = multer({
     },
 });
 
-const importRoles = ["eso_officer"];
-
-router.get("/check",        authenticate, authorize(importRoles), handleCheckImport);
-router.get("/sessions",     authenticate, authorize(importRoles), handleGetImportSessions);
-router.post("/",            authenticate, authorize(importRoles), csvUpload.single("csv"), handleImportCSV);
-router.delete("/:importId", authenticate, authorize(importRoles), handleDeleteImportSession);
+router.get("/check",        authenticate, authorize("eso_officer"), handleCheckImport);
+router.get("/sessions",     authenticate, authorize("eso_officer"), handleGetImportSessions);
+router.post("/",            authenticate, authorize("eso_officer"), csvUpload.single("csv"), handleImportCSV);
+router.delete("/:importId", authenticate, authorize("eso_officer"), handleDeleteImportSession);
 
 export default router;

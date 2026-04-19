@@ -1,0 +1,14 @@
+{
+  "name": "ESO Auditing System",
+  "short_name": "ESO Audit",
+  "description": "ESO Obligations and Clearance Management System",
+  "icons": [
+    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "theme_color": "#c2410c",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/"
+}

@@ -81,9 +81,9 @@ export default function Signup({ onCancel }: SignupProps) {
         }
     };
 
-    const inp = "w-full rounded-xl px-3.5 py-2.5 text-sm text-gray-800 bg-gray-200/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 border-2 border-transparent transition";
-    const lbl = "sm:block text-[10px] sm:text-xs font-semibold text-white/70 uppercase tracking-wide sm:mb-1.5 shrink-0";
-    const fld = "grid grid-cols-[6.5rem_1fr] sm:block items-center gap-x-2";
+    const inp = "w-full rounded-xl px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm text-gray-800 bg-gray-200/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 border-2 border-transparent transition";
+    const lbl = "block text-[10px] sm:text-xs font-semibold text-white/70 uppercase tracking-wide mb-1 sm:mb-1.5";
+    const fld = "flex flex-col";
 
     return (
         <div className="w-full min-h-full flex items-start justify-center py-4 px-4">
@@ -108,19 +108,19 @@ export default function Signup({ onCancel }: SignupProps) {
                 <form onSubmit={handleSubmit} className="px-5 sm:px-7 py-5 flex flex-col gap-3 sm:gap-4">
 
                     {/* Name row — First | Middle | Last */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div className={fld}>
-                            <label className={lbl}>First Name</label>
+                            <label className={lbl + " min-h-[2rem] flex items-end pb-1 sm:pb-1.5"}>First Name</label>
                             <input type="text" placeholder="Juan" value={form.firstName}
                                 onChange={e => set("firstName", e.target.value)} className={inp} />
                         </div>
                         <div className={fld}>
-                            <label className={lbl}>Middle Name <span className="normal-case font-normal text-white/40 tracking-normal">(opt.)</span></label>
+                            <label className={lbl + " min-h-[2rem] flex items-end pb-1 sm:pb-1.5"}>Middle Name <span className="normal-case font-normal text-white/40 tracking-normal ml-1">(opt.)</span></label>
                             <input type="text" placeholder="Santos" value={form.middleName}
                                 onChange={e => set("middleName", e.target.value)} className={inp} />
                         </div>
                         <div className={fld}>
-                            <label className={lbl}>Last Name</label>
+                            <label className={lbl + " min-h-[2rem] flex items-end pb-1 sm:pb-1.5"}>Last Name</label>
                             <input type="text" placeholder="Dela Cruz" value={form.lastName}
                                 onChange={e => set("lastName", e.target.value)} className={inp} />
                         </div>

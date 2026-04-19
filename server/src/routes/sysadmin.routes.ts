@@ -26,5 +26,8 @@ router.post  ("/students/advance-year",        ctrl.handleExecuteAdvancement);
 
 router.get   ("/audit-logs",                  ctrl.handleGetAuditLogs);
 router.get   ("/programs",                    ctrl.handleGetPrograms);
+router.get   ("/roles",                       ctrl.handleGetRoles);
+router.get   ("/workflow",                    ctrl.handleGetWorkflow);
+router.put   ("/workflow",                    ctrl.handleUpdateWorkflow);
 
 export default router;

@@ -7,11 +7,13 @@ import {
     signAllClearance,
     unapproveHistoryClearances,
     deleteHistoryClearances,
+    markClearancePrinted,
+    getAdminIdFromUser,
 } from "../services/admin-clearance.service.js";
 
 export const listPendingClearance = async (req: Request, res: Response) => {
     try {
-        const items = await getPendingClearance(req.user!.userId, req.user!.role, req.user!.yearLevel, req.user!.section);
+        const items = await getPendingClearance(req.user!.userId, req.user!.role);
         return sendSuccess(res, items);
     } catch (err: any) {
         return sendError(res, err.message, 400);
@@ -64,6 +66,20 @@ export const handleDeleteClearanceHistory = async (req: Request, res: Response) 
         if (!Array.isArray(clearanceIds)) return sendError(res, "clearanceIds must be an array", 400);
         const count = await deleteHistoryClearances(clearanceIds.map(Number));
         return sendSuccess(res, { count }, `${count} clearance record(s) deleted`);
+    } catch (err: any) {
+        return sendError(res, err.message, 400);
+    }
+};
+
+export const handleMarkPrinted = async (req: Request, res: Response) => {
+    try {
+        const { clearanceIds } = req.body;
+        if (!Array.isArray(clearanceIds) || !clearanceIds.length)
+            return sendError(res, "clearanceIds must be a non-empty array", 400);
+        const adminId = await getAdminIdFromUser(req.user!.userId);
+        if (!adminId) return sendError(res, "Admin record not found", 403);
+        const count = await markClearancePrinted(clearanceIds.map(Number), adminId);
+        return sendSuccess(res, { count }, `${count} clearance(s) marked as printed`);
     } catch (err: any) {
         return sendError(res, err.message, 400);
     }

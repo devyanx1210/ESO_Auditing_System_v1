@@ -3,6 +3,24 @@ import { FiTrash2, FiRefreshCw, FiEdit2, FiFilter, FiChevronDown, FiChevronUp } 
 import { useAuth } from "../../hooks/useAuth";
 import { obligationService, qrUrl } from "../../services/obligation.service";
 import type { ObligationData, CreateObligationInput } from "../../services/obligation.service";
+import { useOnlineStatus } from "../../hooks/useOfflineCache";
+import { AuthError } from "../../services/api";
+import { AlertModal } from "../../components/ui/AlertModal";
+import { ConfirmModal } from "../../components/ui/ConfirmModal";
+
+const OB_CACHE_KEY = "eso_cache_obligations";
+function readObCache(): ObligationData[] | null {
+    try {
+        const raw = localStorage.getItem(OB_CACHE_KEY);
+        if (!raw) return null;
+        const { data, cachedAt } = JSON.parse(raw);
+        if (Date.now() - cachedAt < 3600000) return data;
+    } catch {}
+    return null;
+}
+function writeObCache(data: ObligationData[]) {
+    try { localStorage.setItem(OB_CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() })); } catch {}
+}
 
 const DEPARTMENTS = [
     { id: 1, name: "Computer Engineering" },
@@ -117,8 +135,10 @@ function SchoolYearCombobox({ value, onChange }: SchoolYearComboboxProps) {
 
 const Obligations = () => {
     const { accessToken } = useAuth();
-    const [obligations, setObligations] = useState<ObligationData[]>([]);
-    const [loading, setLoading] = useState(true);
+    const online = useOnlineStatus();
+    const [obligations, setObligations] = useState<ObligationData[]>(() => readObCache() ?? []);
+    const [loading, setLoading] = useState(() => readObCache() === null); // skip spinner if cached
+    const [stale,   setStale]   = useState(() => readObCache() !== null);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [sortOption, setSortOption] = useState("newest");
@@ -136,6 +156,8 @@ const Obligations = () => {
     const [formError, setFormError] = useState("");
     const [syncing, setSyncing] = useState<number | null>(null);
     const [selectedObIds, setSelectedObIds] = useState<Set<number>>(new Set());
+    const [alertMsg, setAlertMsg] = useState<string | null>(null);
+    const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
     const qrInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -164,13 +186,29 @@ const Obligations = () => {
         }
     }
 
-    useEffect(() => {
+    const fetchObligations = () => {
         if (!accessToken) return;
+        if (!navigator.onLine) {
+            const cached = readObCache();
+            if (cached) { setObligations(cached); setStale(true); }
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
         obligationService.getAll(accessToken)
-            .then(setObligations)
-            .catch(e => setError(e.message))
+            .then(data => { setObligations(data); writeObCache(data); setStale(false); })
+            .catch(e => {
+                if (e instanceof AuthError) return; // AuthContext handles redirect
+                const cached = readObCache();
+                if (cached) { setObligations(cached); setStale(true); }
+                else setError(e.message);
+            })
             .finally(() => setLoading(false));
-    }, [accessToken]);
+    };
+
+    useEffect(() => { fetchObligations(); }, [accessToken]);
+    // Auto-refresh when coming back online
+    useEffect(() => { if (online) fetchObligations(); }, [online]);
 
     function openAdd() {
         setEditing(null);
@@ -234,10 +272,10 @@ const Obligations = () => {
             if (editing) {
                 await obligationService.update(accessToken, editing.obligationId, submitForm, qrFile);
                 const updated = await obligationService.getAll(accessToken);
-                setObligations(updated);
+                setObligations(updated); writeObCache(updated);
             } else {
                 const created = await obligationService.create(accessToken, submitForm, qrFile);
-                setObligations(prev => [created, ...prev]);
+                setObligations(prev => { const next = [created, ...prev]; writeObCache(next); return next; });
             }
             setShowModal(false);
         } catch (e: any) {
@@ -247,16 +285,21 @@ const Obligations = () => {
         }
     }
 
-    async function handleDelete(id: number) {
+    function handleDelete(id: number) {
         if (!accessToken) return;
-        if (!window.confirm("Delete this obligation? Students will be notified.")) return;
-        try {
-            await obligationService.remove(accessToken, id);
-            setObligations(prev => prev.filter(o => o.obligationId !== id));
-            setShowModal(false);
-        } catch (e: any) {
-            alert(e.message ?? "Failed to delete.");
-        }
+        setConfirmState({
+            message: "Delete this obligation? Students will be notified.",
+            onConfirm: async () => {
+                setConfirmState(null);
+                try {
+                    await obligationService.remove(accessToken, id);
+                    setObligations(prev => { const next = prev.filter(o => o.obligationId !== id); writeObCache(next); return next; });
+                    setShowModal(false);
+                } catch (e: any) {
+                    setAlertMsg(e.message ?? "Failed to delete.");
+                }
+            },
+        });
     }
 
     async function handleSync(id: number) {
@@ -264,12 +307,12 @@ const Obligations = () => {
         setSyncing(id);
         try {
             const res = await obligationService.sync(accessToken, id);
-            alert(res.inserted > 0
+            setAlertMsg(res.inserted > 0
                 ? `Synced! ${res.inserted} student(s) newly assigned.`
                 : "All matching students already have this obligation."
             );
         } catch (e: any) {
-            alert(e.message ?? "Sync failed.");
+            setAlertMsg(e.message ?? "Sync failed.");
         } finally {
             setSyncing(null);
         }
@@ -288,17 +331,20 @@ const Obligations = () => {
     else if (sortOption === "amount-high") filtered = [...filtered].sort((a, b) => b.amount - a.amount);
     else if (sortOption === "amount-low") filtered = [...filtered].sort((a, b) => a.amount - b.amount);
 
-    async function handleBulkDelete() {
+    function handleBulkDelete() {
         if (!accessToken || !selectedObIds.size) return;
-        if (!window.confirm(`Delete ${selectedObIds.size} obligation(s)? This cannot be undone.`)) return;
-        const ids = [...selectedObIds];
-        for (const id of ids) {
-            try {
-                await obligationService.remove(accessToken, id);
-            } catch { /* skip errors */ }
-        }
-        setObligations(prev => prev.filter(o => !ids.includes(o.obligationId)));
-        setSelectedObIds(new Set());
+        setConfirmState({
+            message: `Delete ${selectedObIds.size} obligation(s)? This cannot be undone.`,
+            onConfirm: async () => {
+                setConfirmState(null);
+                const ids = [...selectedObIds];
+                for (const id of ids) {
+                    try { await obligationService.remove(accessToken, id); } catch { /* skip */ }
+                }
+                setObligations(prev => { const next = prev.filter(o => !ids.includes(o.obligationId)); writeObCache(next); return next; });
+                setSelectedObIds(new Set());
+            },
+        });
     }
 
     if (loading) return (
@@ -310,26 +356,31 @@ const Obligations = () => {
     return (
         <div className="p-4 sm:p-6 md:p-10 bg-gray-50 dark:bg-[#111111] min-h-screen">
             <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-            <h1 className="font-bold text-gray-800 dark:text-gray-100 text-2xl sm:text-4xl mb-4">Obligations</h1>
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg(null)} />}
+            {confirmState && <ConfirmModal message={confirmState.message} confirmLabel="Delete" danger onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(null)} />}
+            <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">Obligations</h1>
 
             {/* TOP BAR */}
-            <div className="flex flex-col sm:flex-row justify-between gap-3 mb-6">
+            <div className="flex flex-row flex-wrap gap-3 mb-6 items-center">
                 <input
-                    className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 w-full sm:w-1/2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500 shadow-sm"
-                    placeholder="Search by name or created by..."
+                    className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500 shadow-sm flex-1 min-w-[180px] max-w-xs"
+                    placeholder="Search obligations..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
-                <div className="flex gap-2 flex-wrap items-center justify-between sm:justify-start w-full sm:w-auto">
+                <div className="flex gap-2 flex-wrap items-center">
                     {selectedObIds.size > 0 && (
                         <button onClick={handleBulkDelete}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
-                            <FiTrash2 className="w-3.5 h-3.5" />
-                            Delete Selected ({selectedObIds.size})
+                            className="relative px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
+                            Delete
+                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-red-600 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-red-200">
+                                {selectedObIds.size}
+                            </span>
                         </button>
                     )}
-                    <button onClick={openAdd} className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition">
-                        + Add Obligation
+                    <button onClick={openAdd} className="bg-primary text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition flex items-center gap-1.5">
+                        <span className="text-base leading-none">+</span>
+                        <span className="hidden sm:inline">Add Obligation</span>
                     </button>
                     <div ref={filterRef} className="relative">
                         <button
@@ -409,29 +460,28 @@ const Obligations = () => {
                     <p className="text-lg font-semibold">No obligations yet. Add one to get started.</p>
                 </div>
             ) : (
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
-                    <div className="overflow-x-auto">
-                    <table className="eso-table w-full text-[11px] border-collapse">
+                <div className="rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.08)] overflow-x-auto">
+                    <table className="eso-table w-full text-[11px] border-collapse bg-white dark:bg-[#1a1a1a]" style={{ minWidth: 1000 }}>
                         <thead className="bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400">
                             <tr>
-                                <th className="pl-3 pr-1 py-2 w-7">
+                                <th className="col-check py-2 w-8 shrink-0">
                                     <input type="checkbox"
                                         checked={filtered.length > 0 && selectedObIds.size === filtered.length}
                                         onChange={toggleObSelectAll}
                                         className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
                                 </th>
-                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Name</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Payment</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Scope</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Program</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Yr/Sec</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">School Year</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Sem</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Due Date</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">GCash QR</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Created By</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Status</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Actions</th>
+                                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap" style={{ minWidth: 160 }}>Name</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Payment</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Scope</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Program</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Yr/Sec</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">School Year</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Sem</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Due Date</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">GCash QR</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Created By</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Status</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -439,12 +489,12 @@ const Obligations = () => {
                                 <tr key={o.obligationId}
                                     style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.05}s` }}
                                     className={`transition-colors hover:bg-orange-50 dark:hover:bg-orange-500/10 ${selectedObIds.has(o.obligationId) ? "bg-orange-50 dark:bg-orange-500/10" : i % 2 === 0 ? "bg-white dark:bg-[#1a1a1a]" : "bg-gray-50/70 dark:bg-[#222]"}`}>
-                                    <td className="pl-3 pr-1 py-2 w-7" onClick={e => e.stopPropagation()}>
+                                    <td className="col-check py-2" onClick={e => e.stopPropagation()}>
                                         <input type="checkbox" checked={selectedObIds.has(o.obligationId)}
                                             onChange={() => toggleObSelect(o.obligationId)}
                                             className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
                                     </td>
-                                    <td className="px-2 py-2 font-medium text-gray-800 dark:text-gray-100">{o.obligationName}</td>
+                                    <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100 max-w-[200px] truncate" title={o.obligationName}>{o.obligationName}</td>
                                     <td className="px-2 py-2 text-center">
                                         {o.amount > 0
                                             ? <span className="font-semibold text-gray-800 dark:text-gray-100">₱{Number(o.amount).toFixed(2)}</span>
@@ -498,27 +548,32 @@ const Obligations = () => {
                             ))}
                         </tbody>
                     </table>
-                    </div>
                 </div>
             )}
 
             {/* ADD / EDIT MODAL */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ animation: 'fadeInUp 0.2s ease both' }}>
-                        <div className="flex items-center justify-between px-6 pt-6 pb-4">
-                            <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100">{editing ? "Edit Obligation" : "Add Obligation"}</h2>
-                            <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold leading-none">&times;</button>
-                        </div>
-                        <div className="p-6">
-                            {formError && <p className="text-red-500 text-sm mb-4">{formError}</p>}
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4"
+                    onClick={cancelEdit}>
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[88vh] sm:max-h-[90vh] overflow-y-auto" style={{ animation: 'fadeInUp 0.2s ease both' }}
+                        onClick={e => e.stopPropagation()}>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-gray-100 dark:border-gray-700">
+                            <h2 className="font-bold text-base sm:text-xl text-gray-800 dark:text-gray-100">{editing ? "Edit Obligation" : "Add Obligation"}</h2>
+                            <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold leading-none">&times;</button>
+                        </div>
+
+                        <div className="px-4 sm:px-6 py-3 sm:py-5">
+                            {formError && <p className="text-red-500 text-xs sm:text-sm mb-3">{formError}</p>}
+
+                            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5 sm:gap-4">
+
                                 {/* Name */}
-                                <div className="sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Obligation Name *</label>
+                                <div className="col-span-2">
+                                    <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Obligation Name *</label>
                                     <input
-                                        className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
+                                        className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
                                         placeholder="e.g. ESO T-Shirt Fee"
                                         value={form.obligationName}
                                         onChange={e => setForm({ ...form, obligationName: e.target.value })}
@@ -526,11 +581,11 @@ const Obligations = () => {
                                 </div>
 
                                 {/* Description */}
-                                <div className="sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                <div className="col-span-2">
+                                    <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Description</label>
                                     <textarea
-                                        className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm transition-colors resize-none bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
-                                        rows={5}
+                                        className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors resize-none bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
+                                        rows={3}
                                         placeholder="Optional details..."
                                         value={form.description ?? ""}
                                         onChange={e => setForm({ ...form, description: e.target.value })}
@@ -538,61 +593,52 @@ const Obligations = () => {
                                 </div>
 
                                 {/* Payment Required Toggle */}
-                                <div className="sm:col-span-2">
-                                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                                <div className="col-span-2">
+                                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                         <div
                                             onClick={() => {
                                                 setRequiresPayment(p => !p);
                                                 if (requiresPayment) setForm(f => ({ ...f, amount: 0 }));
                                             }}
-                                            className={`relative w-11 h-6 rounded-full transition-colors ${requiresPayment ? "bg-primary" : "bg-gray-300"}`}
+                                            className={`relative w-9 h-5 sm:w-11 sm:h-6 rounded-full transition-colors ${requiresPayment ? "bg-primary" : "bg-gray-300"}`}
                                         >
-                                            <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${requiresPayment ? "translate-x-5" : "translate-x-0"}`} />
+                                            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${requiresPayment ? "translate-x-4 sm:translate-x-5" : "translate-x-0"}`} />
                                         </div>
-                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Required</span>
+                                        <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Payment Required</span>
                                     </label>
                                 </div>
-
 
                                 {/* Amount + QR (shown only when payment required) */}
                                 {requiresPayment && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (₱) *</label>
+                                            <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Amount (₱) *</label>
                                             <input
                                                 type="number"
                                                 step="0.01"
                                                 min="0.01"
-                                                className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
+                                                className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
                                                 value={form.amount || ""}
                                                 onChange={e => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })}
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GCash QR Code</label>
+                                            <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">GCash QR Code</label>
                                             <button
                                                 type="button"
                                                 onClick={() => qrInputRef.current?.click()}
-                                                className="border-2 border-dashed border-gray-300 rounded-lg px-3 py-2 w-full text-sm text-gray-500 hover:border-orange-400 hover:text-orange-500 transition-colors text-left"
+                                                className="border-2 border-dashed border-gray-300 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm text-gray-500 hover:border-orange-400 hover:text-orange-500 transition-colors text-left"
                                             >
-                                                {qrFile ? qrFile.name : "Click to upload QR image"}
+                                                {qrFile ? qrFile.name : "Upload QR image"}
                                             </button>
-                                            <input
-                                                ref={qrInputRef}
-                                                type="file"
-                                                accept="image/jpeg,image/png"
-                                                className="hidden"
-                                                onChange={handleQrChange}
-                                            />
+                                            <input ref={qrInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={handleQrChange} />
                                             {qrPreview && (
-                                                <div className="mt-2 flex items-center gap-3">
-                                                    <img src={qrPreview} alt="QR Preview" className="w-20 h-20 object-contain border-2 border-gray-200 rounded" />
-                                                    <button
-                                                        type="button"
+                                                <div className="mt-1.5 flex items-center gap-2">
+                                                    <img src={qrPreview} alt="QR Preview" className="w-14 h-14 sm:w-20 sm:h-20 object-contain border-2 border-gray-200 rounded" />
+                                                    <button type="button"
                                                         onClick={() => { setQrFile(null); setQrPreview(null); if (qrInputRef.current) qrInputRef.current.value = ""; }}
-                                                        className="text-xs text-red-500 hover:underline"
-                                                    >
+                                                        className="text-xs text-red-500 hover:underline">
                                                         Remove
                                                     </button>
                                                 </div>
@@ -603,10 +649,10 @@ const Obligations = () => {
 
                                 {/* Due Date */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                                    <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
                                     <input
                                         type="date"
-                                        className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
+                                        className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100"
                                         value={form.dueDate ?? ""}
                                         onChange={e => setForm({ ...form, dueDate: e.target.value || null })}
                                     />
@@ -614,7 +660,7 @@ const Obligations = () => {
 
                                 {/* School Year */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year *</label>
+                                    <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">School Year *</label>
                                     <SchoolYearCombobox
                                         value={form.schoolYear}
                                         onChange={v => setForm({ ...form, schoolYear: v })}
@@ -623,9 +669,9 @@ const Obligations = () => {
 
                                 {/* Semester */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester *</label>
+                                    <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Semester *</label>
                                     <select
-                                        className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
+                                        className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
                                         value={form.semester}
                                         onChange={e => setForm({ ...form, semester: Number(e.target.value) })}
                                     >
@@ -637,9 +683,9 @@ const Obligations = () => {
 
                                 {/* Scope */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scope *</label>
+                                    <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Scope *</label>
                                     <select
-                                        className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
+                                        className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
                                         value={form.scope}
                                         onChange={e => setForm({ ...form, scope: Number(e.target.value), programId: null, yearLevel: null, section: null })}
                                     >
@@ -648,28 +694,28 @@ const Obligations = () => {
                                 </div>
 
                                 {/* Required */}
-                                <div className="flex items-center gap-3 mt-6">
+                                <div className="col-span-2 flex items-center gap-2.5">
                                     <input
                                         type="checkbox"
                                         id="isRequired"
                                         checked={form.isRequired}
                                         onChange={e => setForm({ ...form, isRequired: e.target.checked })}
-                                        className="w-4 h-4 accent-orange-500"
+                                        className="w-4 h-4 accent-orange-500 shrink-0"
                                     />
-                                    <label htmlFor="isRequired" className={`text-sm font-semibold ${form.isRequired ? "text-orange-600" : "text-gray-500"}`}>
+                                    <label htmlFor="isRequired" className={`text-xs sm:text-sm font-semibold ${form.isRequired ? "text-orange-600" : "text-gray-500"}`}>
                                         Required obligation
                                     </label>
                                     {form.isRequired && (
-                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-600 border border-orange-300">Required</span>
+                                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 border border-orange-300">Required</span>
                                     )}
                                 </div>
 
                                 {/* Program */}
                                 {(form.scope === 1 || form.scope === 2 || form.scope === 3) && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
+                                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Program</label>
                                         <select
-                                            className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
+                                            className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
                                             value={form.programId ?? ""}
                                             onChange={e => setForm({ ...form, programId: e.target.value ? Number(e.target.value) : null })}
                                         >
@@ -682,9 +728,9 @@ const Obligations = () => {
                                 {/* Year Level */}
                                 {(form.scope === 2 || form.scope === 3) && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
+                                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Year Level</label>
                                         <select
-                                            className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
+                                            className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
                                             value={form.yearLevel ?? ""}
                                             onChange={e => setForm({ ...form, yearLevel: e.target.value ? Number(e.target.value) : null })}
                                         >
@@ -700,9 +746,9 @@ const Obligations = () => {
                                 {/* Section */}
                                 {(form.scope === 2 || form.scope === 3) && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</label>
+                                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Section</label>
                                         <input
-                                            className="border-2 border-gray-300 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
+                                            className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
                                             placeholder="e.g. A"
                                             value={form.section ?? ""}
                                             onChange={e => setForm({ ...form, section: e.target.value || null })}
@@ -711,11 +757,11 @@ const Obligations = () => {
                                 )}
                             </div>
 
-                            <div className="flex justify-between mt-6 pt-4 border-t-2 border-gray-100 dark:border-gray-700">
+                            <div className="flex justify-between mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className="bg-primary text-white px-6 py-2 rounded-lg disabled:opacity-60 font-medium"
+                                    className="bg-primary text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg disabled:opacity-60 font-semibold text-xs sm:text-sm"
                                 >
                                     {saving ? "Saving..." : "Save"}
                                 </button>
@@ -723,9 +769,9 @@ const Obligations = () => {
                                     <button
                                         onClick={() => handleDelete(editing.obligationId)}
                                         title="Delete obligation"
-                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition font-medium text-sm border border-red-200"
+                                        className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition font-medium text-xs sm:text-sm border border-red-200"
                                     >
-                                        <FiTrash2 className="w-4 h-4" /> Delete
+                                        <FiTrash2 className="w-3.5 h-3.5" /> Delete
                                     </button>
                                 )}
                             </div>

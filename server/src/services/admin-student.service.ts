@@ -221,8 +221,6 @@ export const verifyProofObligation = async (
     studentObligationId: number,
     status: number
 ): Promise<void> => {
-    const adminId = await getAdminId(userId);
-
     const [rows]: any = await pool.execute(
         `SELECT so.student_id, so.amount_due, o.obligation_name,
                 s.user_id AS studentUserId

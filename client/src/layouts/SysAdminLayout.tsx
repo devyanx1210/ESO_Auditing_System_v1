@@ -1,7 +1,7 @@
 import {
     MdDashboard, MdPeople, MdSettings, MdArticle, MdUploadFile,
 } from "react-icons/md";
-import { FaSignOutAlt, FaTimes } from "react-icons/fa";
+import { FaSignOutAlt, FaTimes, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import logo from "../assets/ESO_Logo.png";
@@ -15,9 +15,15 @@ const navItems = [
     { path: "/sysadmin/audit",    label: "Audit Logs",     icon: <MdArticle /> },
 ];
 
-// Always force light mode for admin panel
+// Always force light mode for sysadmin panel
+// Intercepts any theme change events so child components using useTheme() cannot re-apply dark
 function useForceLightMode() {
-    useEffect(() => { document.documentElement.classList.remove("dark"); }, []);
+    useEffect(() => {
+        document.documentElement.classList.remove("dark");
+        const forceLight = () => { document.documentElement.classList.remove("dark"); };
+        window.addEventListener("themechange", forceLight);
+        return () => { window.removeEventListener("themechange", forceLight); };
+    }, []);
 }
 
 function DefaultAvatarSvg() {
@@ -31,10 +37,11 @@ function DefaultAvatarSvg() {
 }
 
 export default function SysAdminLayout() {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const navigate    = useNavigate();
     const location    = useLocation();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [collapsed,       setCollapsed]       = useState(false);
     useForceLightMode();
 
     async function handleLogout() {
@@ -43,34 +50,48 @@ export default function SysAdminLayout() {
     }
 
     const navBase    = "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors duration-150 text-sm font-medium";
-    const navActive  = "bg-orange-500/15 text-orange-600 font-semibold";
-    const navInactive = "text-gray-600 hover:bg-gray-200";
+    const navActive  = "bg-white/15 text-white font-semibold";
+    const navInactive = "text-orange-200/70 hover:bg-white/10 hover:text-white";
 
     return (
         <div className="flex flex-col md:flex-row h-screen bg-white">
 
             {/* Desktop Sidebar */}
-            <div className="hidden md:flex w-56 p-4 flex-col shrink-0 bg-gray-100">
-                <div className="flex items-center justify-center mb-4 mt-1">
-                    <img src={logo} className="object-contain"
-                        style={{ width: "clamp(36px,20vw,56px)", height: "clamp(36px,20vw,56px)" }} />
+            <div className={`hidden md:flex flex-col shrink-0 bg-orange-800 transition-all duration-300 ease-in-out ${collapsed ? "w-16 p-2" : "w-56 p-4"}`}>
+                <div className={`flex flex-col items-center justify-center mb-5 mt-2 ${collapsed ? "gap-1" : "gap-3"}`}>
+                    <img src={logo} className="object-contain transition-all duration-300 drop-shadow-lg"
+                        style={{ width: collapsed ? "32px" : "64px", height: collapsed ? "32px" : "64px" }} />
+                    {!collapsed && (
+                        <div className="text-center">
+                            <p className="text-white font-extrabold text-sm tracking-wide leading-tight">ESO Auditing System</p>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-white/15 text-orange-200 text-[10px] font-semibold tracking-widest uppercase">
+                                {user?.role === "system_admin" ? "System Admin" : (user?.role ?? "")}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
-<nav className="flex flex-col gap-1">
+                <nav className="flex flex-col gap-1 flex-1">
                     {navItems.map(item => (
-                        <NavLink key={item.path} to={item.path}
-                            className={({ isActive }) => `${navBase} ${isActive ? navActive : navInactive}`}>
+                        <NavLink key={item.path} to={item.path} title={collapsed ? item.label : ""}
+                            className={({ isActive }) => `${navBase} ${isActive ? navActive : navInactive} ${collapsed ? "justify-center px-2" : ""}`}>
                             <span className="shrink-0">{item.icon}</span>
-                            <span>{item.label}</span>
+                            {!collapsed && <span>{item.label}</span>}
                         </NavLink>
                     ))}
 
-                    <button onClick={() => setShowLogoutModal(true)}
-                        className={`${navBase} ${navInactive} mt-2`}>
+                    <button onClick={() => setShowLogoutModal(true)} title={collapsed ? "Sign Out" : ""}
+                        className={`${navBase} ${navInactive} mt-2 ${collapsed ? "justify-center px-2" : ""}`}>
                         <FaSignOutAlt className="shrink-0" />
-                        <span>Sign Out</span>
+                        {!collapsed && <span>Sign Out</span>}
                     </button>
                 </nav>
+
+                {/* Collapse toggle */}
+                <button onClick={() => setCollapsed(c => !c)}
+                    className={`mt-3 flex items-center gap-2 py-2 rounded-lg text-orange-100/60 hover:bg-white/10 hover:text-white transition-colors text-xs font-medium ${collapsed ? "justify-center px-2" : "px-3"}`}>
+                    {collapsed ? <FaChevronRight className="shrink-0" /> : <><FaChevronLeft className="shrink-0" /><span>Collapse</span></>}
+                </button>
             </div>
 
             {/* Main Content */}
@@ -79,20 +100,18 @@ export default function SysAdminLayout() {
             </div>
 
             {/* Mobile Bottom Nav */}
-            <div className="fixed bottom-0 left-0 right-0 md:hidden border-t shadow-md flex justify-around items-center h-16 z-50 bg-white border-gray-200">
+            <div className="fixed bottom-0 left-0 right-0 md:hidden border-t shadow-md flex justify-around items-center h-14 z-50 bg-white border-gray-200">
                 {navItems.map(item => (
                     <NavLink key={item.path} to={item.path}
                         className={({ isActive }) =>
-                            `flex flex-col items-center justify-center text-xs gap-0.5
-                            ${isActive ? "text-orange-500 font-bold" : "text-gray-500"}`}>
-                        <span className="text-lg">{item.icon}</span>
-                        <span className="text-[10px] mt-0.5">{item.label.split(" ")[0]}</span>
+                            `flex items-center justify-center w-10 h-10 rounded-xl transition-colors
+                            ${isActive ? "bg-orange-500/15 text-orange-500" : "text-gray-400 hover:text-orange-500"}`}>
+                        <span className="text-xl">{item.icon}</span>
                     </NavLink>
                 ))}
                 <button onClick={() => setShowLogoutModal(true)}
-                    className="flex flex-col items-center justify-center text-xs gap-0.5 text-gray-500">
-                    <FaSignOutAlt className="text-lg" />
-                    <span className="text-[10px] mt-0.5">Sign Out</span>
+                    className="flex items-center justify-center w-10 h-10 rounded-xl text-gray-400 hover:text-orange-500 transition-colors">
+                    <FaSignOutAlt className="text-xl" />
                 </button>
             </div>
 

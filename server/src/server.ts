@@ -21,8 +21,21 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(helmet());
+const ALLOWED_ORIGINS = [
+    "http://localhost:5174",
+    "http://localhost:5173",
+    ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+    ...(process.env.TUNNEL_URL  ? [process.env.TUNNEL_URL]  : []),
+];
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5174",
+    origin: (origin, cb) => {
+        // allow server-to-server (no origin) or any trycloudflare.com tunnel
+        if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".trycloudflare.com")) {
+            cb(null, true);
+        } else {
+            cb(new Error(`CORS: origin ${origin} not allowed`));
+        }
+    },
     credentials: true,
 }));
 

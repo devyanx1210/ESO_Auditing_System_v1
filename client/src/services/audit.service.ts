@@ -1,11 +1,12 @@
 import { apiFetch } from "./api";
 
 export interface AuditSummary {
-    totalIncome:   number;
-    totalExpenses: number;
-    netBalance:    number;
-    expenseCount:  number;
-    incomeCount:   number;
+    totalIncome:    number;
+    totalPotential: number;
+    totalExpenses:  number;
+    netBalance:     number;
+    expenseCount:   number;
+    incomeCount:    number;
 }
 
 export interface IncomeItem {

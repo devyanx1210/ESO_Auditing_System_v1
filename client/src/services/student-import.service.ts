@@ -1,4 +1,4 @@
-const API = "http://localhost:5000/api/v1";
+const API = "/api/v1";
 
 export interface ImportCheckResult {
     exists:      boolean;

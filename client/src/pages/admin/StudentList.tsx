@@ -11,7 +11,7 @@ function UserAvatar({ src }: { src?: string | null }) {
     return (
         <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
             {src
-                ? <img src={src.startsWith("http") ? src : src.startsWith("/") ? `http://localhost:5000${src}` : `http://localhost:5000/uploads/${src}`} alt="" className="w-full h-full object-cover" />
+                ? <img src={src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`} alt="" className="w-full h-full object-cover" />
                 : <DefaultAvatarSvg />}
         </div>
     );
@@ -131,12 +131,7 @@ const StudentList = () => {
             {/* ── Page Header ── */}
             <div className="mb-6 flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="font-bold text-gray-800 dark:text-gray-100 text-lg sm:text-xl">Students</h1>
-                    <p className="text-sm text-gray-400 mt-1">
-                        {isRestricted && students[0]
-                            ? `${students[0].programName} · ${students.length} student${students.length !== 1 ? "s" : ""}`
-                            : `${students.length} student${students.length !== 1 ? "s" : ""} across all programs`}
-                    </p>
+                    <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-gray-100">Students</h1>
                 </div>
                 <button onClick={load} disabled={loading} title="Refresh"
                     className="p-2 bg-white dark:bg-[#1a1a1a] rounded-xl text-gray-600 dark:text-gray-400 hover:text-orange-600 transition shadow-sm disabled:opacity-50">
@@ -231,19 +226,15 @@ const StudentList = () => {
                     )}
                 </div>
 
-                <span className="hidden sm:flex items-center text-xs font-medium text-gray-400 bg-white dark:bg-[#2a2a2a] px-2.5 py-2 rounded-xl whitespace-nowrap shadow-sm">
-                    {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-                </span>
             </div>
 
             {/* ── Student Table ── */}
             {filtered.length === 0 ? (
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-10 text-center text-gray-400 text-sm shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-10 text-center text-gray-400 text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
                     No students found.
                 </div>
             ) : (
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
-                    <div className="overflow-x-auto">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
                         <table className="eso-table w-full border-collapse" style={{ minWidth: "1100px" }}>
                             <thead className="bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400">
                                 <tr>
@@ -328,7 +319,6 @@ const StudentList = () => {
                                 })}
                             </tbody>
                         </table>
-                    </div>
                 </div>
             )}
         </div>

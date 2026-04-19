@@ -59,7 +59,7 @@ const LandingPage = () => {
     }, []);
 
     return (
-        <div className="landing-page relative min-h-screen w-screen bg-black overflow-x-hidden">
+        <div className="landing-page relative min-h-screen w-screen bg-black">
 
             <div
                 className="landing-bg fixed inset-0 bg-cover bg-center z-0"
@@ -70,12 +70,12 @@ const LandingPage = () => {
             <div className="fixed inset-0 z-0 pointer-events-none"
                 style={{ background: "radial-gradient(ellipse 60% 50% at 18% 8%, rgba(234,88,12,0.18) 0%, transparent 60%)" }} />
 
-            <header className="landing-header relative z-10 flex h-[72px] w-full items-center justify-between px-6 text-white"
+            <header className="landing-header fixed top-0 left-0 right-0 z-20 flex h-[72px] w-full items-center justify-between px-4 sm:px-6 text-white"
                 style={{ background: "linear-gradient(to right, #fbbf24, #f97316, #ea580c)" }}>
-                <div className="flex items-center gap-3">
-                    <img src={logo} alt="ESO Logo" className="h-10 w-10 object-contain drop-shadow" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <img src={logo} alt="ESO Logo" className="h-8 w-8 sm:h-10 sm:w-10 object-contain drop-shadow" />
                     <div className="leading-tight">
-                        <div className="font-bold text-[clamp(13px,1.4vw,18px)] tracking-wide">
+                        <div className="font-bold text-[clamp(11px,1.4vw,18px)] tracking-wide">
                             Marinduque State University
                         </div>
                         <div className="text-white/80 text-[10px] tracking-widest uppercase font-medium hidden sm:block">
@@ -87,43 +87,47 @@ const LandingPage = () => {
                     href="https://www.marsu.edu.ph"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:underline text-[clamp(12px,1.2vw,15px)] text-white/90 hover:text-white
-                        border border-white/30 hover:border-white px-4 py-1.5 rounded-full transition-all"
+                    className="hover:underline text-[11px] sm:text-[clamp(12px,1.2vw,15px)] text-white/90 hover:text-white
+                        border border-white/30 hover:border-white px-3 sm:px-4 py-1.5 rounded-full transition-all whitespace-nowrap"
                 >
                     More Info
                 </a>
             </header>
-            {/* Accent line under header */}
-            <div className="relative z-10 h-[3px]"
+            {/* Accent line under fixed header */}
+            <div className="fixed top-[72px] left-0 right-0 z-20 h-[3px]"
                 style={{ background: "linear-gradient(to right, #fbbf24, #ea580c, #9a3412)" }} />
 
-            <main className="landing-main relative z-10 flex min-h-[calc(100vh-75px)] overflow-y-auto
-                flex-col items-center justify-center gap-4 py-8 px-4
-                md:flex-row md:items-center md:justify-start md:gap-0 md:py-0">
+            <main className="landing-main relative z-10 min-h-screen overflow-y-auto pt-[75px]">
 
-                {/* Logo */}
-                <div className="flex items-center justify-center md:w-[50%]">
-                    <img
-                        src={logo}
-                        alt="Logo"
-                        className="object-contain md:translate-x-6"
-                        style={{
-                            width: "clamp(150px,22vw,280px)",
-                            height: "clamp(150px,22vw,280px)",
-                        }}
-                    />
-                </div>
-
-                {/* Form area */}
-                <div className="w-full max-w-sm flex flex-col items-center text-center text-white
-                    md:w-[80%] md:max-w-none md:items-start md:text-left">
-
-                    {showSignup ? (
+                {showSignup ? (
+                    /* ── Signup: full-width centered, no side logo ── */
+                    <div className="flex items-start justify-center py-6 px-4 min-h-[calc(100vh-75px)]">
                         <Signup onCancel={() => setShowSignup(false)} />
-                    ) : (
-                        <>
+                    </div>
+                ) : (
+                    /* ── Login: side-by-side logo + form ── */
+                    <div className="flex flex-col items-center justify-center gap-4 py-8 px-4
+                        md:flex-row md:items-center md:justify-start md:gap-0 md:py-0 min-h-[calc(100vh-75px)]">
+
+                        {/* Logo */}
+                        <div className="flex items-center justify-center md:w-[50%]">
+                            <img
+                                src={logo}
+                                alt="Logo"
+                                className="object-contain md:translate-x-6"
+                                style={{
+                                    width: "clamp(180px,32vw,380px)",
+                                    height: "clamp(180px,32vw,380px)",
+                                }}
+                            />
+                        </div>
+
+                        {/* Login form */}
+                        <div className="w-full max-w-sm flex flex-col items-center text-center text-white
+                            md:w-[50%] md:max-w-none md:items-start md:text-left">
+
                             <h1 className="mb-5 font-extrabold leading-tight md:leading-snug tracking-tight
-                                text-3xl sm:text-4xl md:text-[clamp(32px,4vw,60px)]">
+                                text-2xl sm:text-3xl md:text-[clamp(32px,4vw,60px)]">
                                 Engineering Student
                                 <br className="hidden sm:block" />{" "}
                                 Organization{" "}
@@ -187,9 +191,9 @@ const LandingPage = () => {
                                     Sign up here
                                 </span>
                             </p>
-                        </>
-                    )}
-                </div>
+                        </div>
+                    </div>
+                )}
             </main>
 
             {loading && (

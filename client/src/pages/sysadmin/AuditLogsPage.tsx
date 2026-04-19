@@ -104,7 +104,7 @@ export default function AuditLogsPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1 mb-5 sm:mb-6"
                 style={{ animation: "fadeInUp 0.35s ease both" }}>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Audit Logs</h1>
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">Audit Logs</h1>
                 <p className="text-gray-400 text-xs sm:text-sm">{total} total entries</p>
             </div>
 
@@ -135,7 +135,7 @@ export default function AuditLogsPage() {
             )}
 
             {/* Table */}
-            <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
+            <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
                 style={{ animation: "fadeInUp 0.42s ease both 0.08s" }}>
                 <div className="overflow-x-auto">
                     <table className="eso-table w-full min-w-[720px] text-xs">

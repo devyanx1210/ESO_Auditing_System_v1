@@ -38,11 +38,11 @@ export default function MaintenancePage() {
         <div className="p-3 sm:p-5 lg:p-8 min-h-screen bg-gray-50">
 
             <div className="mb-5 sm:mb-6">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Maintenance Mode</h1>
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">Maintenance Mode</h1>
             </div>
 
             {loading ? (
-                <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-6">
+                <div className="bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] p-6">
                     <p className="text-gray-400 text-sm">Loading...</p>
                 </div>
             ) : (

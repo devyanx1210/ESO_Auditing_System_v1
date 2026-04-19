@@ -41,30 +41,26 @@ function UserAvatar() {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-// value = role_name, roleId = roles.role_id in DB
-const ROLES = [
-    { value: "eso_officer",     roleId: 2, label: "ESO Officer" },
-    { value: "class_officer",   roleId: 3, label: "Class Officer" },
-    { value: "program_head",    roleId: 4, label: "Program Head" },
-    { value: "signatory",       roleId: 5, label: "Signatory" },
-    { value: "dean",            roleId: 6, label: "Dean" },
-    { value: "program_officer", roleId: 8, label: "Program Officer" },
-];
-
-const EDIT_ROLES = [
-    ...ROLES,
-    { value: "student", roleId: 7, label: "Student" },
-];
-
-const DEPARTMENTS = [
-    { id: 1, name: "Computer Engineering" },
-    { id: 2, name: "Civil Engineering" },
-    { id: 3, name: "Electronics Engineering" },
-    { id: 4, name: "Electrical Engineering" },
-    { id: 5, name: "Mechanical Engineering" },
-];
-
-const COLLEGES = [{ id: 6, name: "Engineering" }];
+// Position suggestions per role — used for autocomplete
+const POSITION_SUGGESTIONS: Record<string, string> = {
+    system_admin:      "System Administrator",
+    eso_officer:       "ESO Officer",
+    class_officer:     "Class Officer",
+    program_officer:   "Program Officer",
+    signatory:         "Signatory",
+    class_secretary:   "Class Secretary",
+    class_treasurer:   "Class Treasurer",
+    class_president:   "Class President",
+    program_treasurer: "Program Treasurer",
+    program_president: "Program President",
+    eso_treasurer:     "ESO Treasurer",
+    eso_vpsa:          "ESO Vice President for Student Affairs",
+    eso_president:     "ESO President",
+    osas_coordinator:  "OSAS Coordinator",
+    program_head:      "Program Head",
+    dean:              "Dean of Engineering",
+    auditor:           "Auditor",
+};
 
 const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
 
@@ -86,8 +82,8 @@ function SuspendModal({ targets, onConfirm, onClose }: { targets: Account[]; onC
     const [err, setErr] = useState("");
     const submit = () => { if (!password) { setErr("Enter your password to confirm."); return; } onConfirm(); };
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" style={{ animation: "fadeInScrim 0.2s ease both" }}>
-            <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-sm p-6 relative" style={{ animation: "modalPop 0.25s cubic-bezier(.34,1.4,.64,1) both" }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" style={{ animation: "fadeInScrim 0.2s ease both" }} onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-sm p-6 relative" style={{ animation: "modalPop 0.25s cubic-bezier(.34,1.4,.64,1) both" }} onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
                 <div className="flex items-center gap-2 mb-3">
                     <MdBlock className="text-red-500" size={20} />
@@ -121,6 +117,7 @@ export default function AccountsPage() {
     const { accessToken } = useAuth();
     const [accounts,       setAccounts]       = useState<Account[]>([]);
     const [programs,       setPrograms]       = useState<{ program_id: number; name: string; code: string }[]>([]);
+    const [roles,          setRoles]          = useState<{ role_id: number; role_name: string; role_label: string }[]>([]);
     const [loading,        setLoading]        = useState(true);
     const [tab,            setTab]            = useState<"active" | "archived">("active");
     const [search,         setSearch]         = useState("");
@@ -159,12 +156,14 @@ export default function AccountsPage() {
         if (!accessToken) return;
         setLoading(true); setSelected(new Set());
         try {
-            const [accs, progs] = await Promise.all([
+            const [accs, progs, rls] = await Promise.all([
                 sysadminService.getAccounts(accessToken),
                 sysadminService.getPrograms(accessToken),
+                sysadminService.getRoles(accessToken),
             ]);
             setAccounts(accs);
             setPrograms(progs);
+            setRoles(rls);
         }
         finally { setLoading(false); }
     };
@@ -220,7 +219,6 @@ export default function AccountsPage() {
 
     const isDean         = form.role === "dean";
     const isClassOfficer = form.role === "class_officer";
-    const programOptions = isDean ? COLLEGES : DEPARTMENTS;
     const inputCls = "border-2 border-gray-300 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 bg-white";
 
     const handleCreate = async (e: React.FormEvent) => {
@@ -358,7 +356,7 @@ export default function AccountsPage() {
             `}</style>
 
             <div className="mb-6" style={{ animation: "fadeInUp 0.35s ease both" }}>
-                <h1 className="font-bold text-gray-800 text-2xl sm:text-3xl">Accounts</h1>
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">Accounts</h1>
             </div>
 
             {successMsg && (
@@ -440,8 +438,7 @@ export default function AccountsPage() {
                                     <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
                                         className="w-full border-2 border-gray-200 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white">
                                         <option value="all">All Roles</option>
-                                        {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                                        <option value="system_admin">System Admin</option>
+                                        {roles.map(r => <option key={r.role_name} value={r.role_name}>{r.role_label}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -501,19 +498,19 @@ export default function AccountsPage() {
 
             {/* ── Active Table ── */}
             {tab === "active" && (loading ? (
-                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] flex items-center gap-2 text-gray-400 text-sm py-10 justify-center"
+                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] flex items-center gap-2 text-gray-400 text-sm py-10 justify-center"
                     style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-orange-400 border-t-transparent" />
                     Loading accounts...
                 </div>
             ) : activeAccounts.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] text-center py-12 text-gray-400"
+                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] text-center py-12 text-gray-400"
                     style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                     <FiUsers className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="font-medium text-gray-500">No active accounts</p>
                 </div>
             ) : (
-                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
+                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
                     style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                     <div className="overflow-x-auto">
                         <table className="eso-table w-full min-w-[860px] text-xs">
@@ -592,13 +589,13 @@ export default function AccountsPage() {
             {/* ── Archived Table ── */}
             {tab === "archived" && (
                 archivedAccounts.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] text-center py-10 text-gray-400"
+                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] text-center py-10 text-gray-400"
                         style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                         <FiArchive className="w-10 h-10 mx-auto mb-2 opacity-30" />
                         <p className="text-sm">No archived accounts yet.</p>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden"
+                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
                         style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                         <div className="overflow-x-auto">
                             <table className="eso-table w-full min-w-[780px] text-xs">
@@ -692,13 +689,18 @@ export default function AccountsPage() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
                                     <select className={inputCls} value={editForm.roleId}
-                                        onChange={e => setEditForm(f => ({ ...f, roleId: e.target.value, programId: "" }))}
+                                        onChange={e => {
+                                            const rid = e.target.value;
+                                            const roleName = roles.find(r => r.role_id === Number(rid))?.role_name ?? "";
+                                            setEditForm(f => ({ ...f, roleId: rid, programId: "",
+                                                position: POSITION_SUGGESTIONS[roleName] ?? f.position }));
+                                        }}
                                         disabled={editTarget.role_name === "system_admin"}>
                                         {editTarget.role_name === "system_admin" && (
                                             <option value={editForm.roleId}>System Admin</option>
                                         )}
-                                        {EDIT_ROLES.map(r => (
-                                            <option key={r.value} value={r.roleId}>{r.label}</option>
+                                        {roles.filter(r => r.role_name !== "student" && r.role_name !== "system_admin").map(r => (
+                                            <option key={r.role_id} value={r.role_id}>{r.role_label}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -707,16 +709,18 @@ export default function AccountsPage() {
                                     <select className={inputCls} value={editForm.programId}
                                         onChange={e => setEditForm(f => ({ ...f, programId: e.target.value }))}>
                                         <option value="">— none —</option>
-                                        {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                        {COLLEGES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        {programs.map(p => <option key={p.program_id} value={p.program_id}>{p.name}</option>)}
                                     </select>
                                 </div>
-                                {editForm.roleId !== "7" && (
+                                {editTarget.role_name !== "system_admin" && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                                    <input className={inputCls} value={editForm.position}
+                                    <input list="edit-position-suggestions" className={inputCls} value={editForm.position}
                                         onChange={e => setEditForm(f => ({ ...f, position: e.target.value }))}
                                         placeholder="e.g. ESO Director" />
+                                    <datalist id="edit-position-suggestions">
+                                        {Object.values(POSITION_SUGGESTIONS).map(p => <option key={p} value={p} />)}
+                                    </datalist>
                                 </div>
                                 )}
                                 <div className="sm:col-span-2 lg:col-span-3">
@@ -752,9 +756,11 @@ export default function AccountsPage() {
             {/* ── Create Account Modal ─────────────────────────────────────────── */}
             {showCreate && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-                    style={{ animation: "fadeInScrim 0.2s ease both" }}>
+                    style={{ animation: "fadeInScrim 0.2s ease both" }}
+                    onClick={() => { setShowCreate(false); setFormError(""); setForm(BLANK); }}>
                     <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
-                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}>
+                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}
+                        onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-5 pb-3">
                             <h2 className="font-semibold text-gray-800 text-lg">Create Account</h2>
                             <button onClick={() => { setShowCreate(false); setFormError(""); setForm(BLANK); }}
@@ -792,19 +798,23 @@ export default function AccountsPage() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
                                     <select className={inputCls} value={form.role}
-                                        onChange={e => setForm({ ...form, role: e.target.value, programId: "", yearLevel: "", section: "" })}>
-                                        {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                        onChange={e => {
+                                            const roleName = e.target.value;
+                                            setForm({ ...form, role: roleName, programId: "", yearLevel: "", section: "",
+                                                position: POSITION_SUGGESTIONS[roleName] ?? "" });
+                                        }}>
+                                        {roles.filter(r => r.role_name !== "student").map(r => (
+                                            <option key={r.role_name} value={r.role_name}>{r.role_label}</option>
+                                        ))}
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        {isDean ? "College" : "Program"}
-                                    </label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
                                     <select className={inputCls} value={form.programId}
                                         onChange={e => setForm({ ...form, programId: e.target.value })}>
                                         <option value="">None</option>
-                                        {programOptions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        {programs.map(p => <option key={p.program_id} value={p.program_id}>{p.name}</option>)}
                                     </select>
                                 </div>
 
@@ -831,9 +841,12 @@ export default function AccountsPage() {
                                 {!isClassOfficer && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
-                                        <input className={inputCls} value={form.position}
+                                        <input list="position-suggestions" className={inputCls} value={form.position}
                                             onChange={e => setForm({ ...form, position: e.target.value })}
                                             placeholder="e.g. ESO President" />
+                                        <datalist id="position-suggestions">
+                                            {Object.values(POSITION_SUGGESTIONS).map(p => <option key={p} value={p} />)}
+                                        </datalist>
                                     </div>
                                 )}
                             </div>
@@ -855,9 +868,12 @@ export default function AccountsPage() {
             {/* ── Archive Confirmation ─────────────────────────────────────────── */}
             {archiveTarget && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-                    style={{ animation: "fadeInScrim 0.2s ease both" }}>
-                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-6"
-                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}>
+                    style={{ animation: "fadeInScrim 0.2s ease both" }}
+                    onClick={() => setArchiveTarget(null)}>
+                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-6 relative"
+                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}
+                        onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setArchiveTarget(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition"><MdClose size={20} /></button>
                         <h3 className="font-bold text-gray-800 text-lg mb-2">Archive Account</h3>
                         <p className="text-sm text-gray-600 mb-1">This will deactivate and archive the account for:</p>
                         <p className="font-semibold text-gray-800 mb-0.5">{archiveTarget.first_name} {archiveTarget.last_name}</p>
@@ -877,9 +893,12 @@ export default function AccountsPage() {
             {/* ── Permanent Delete ─────────────────────────────────────────────── */}
             {deleteTarget && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-                    style={{ animation: "fadeInScrim 0.2s ease both" }}>
-                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-6"
-                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}>
+                    style={{ animation: "fadeInScrim 0.2s ease both" }}
+                    onClick={() => { setDeleteTarget(null); setDeletePassword(""); setDeleteErr(""); }}>
+                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-6 relative"
+                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}
+                        onClick={e => e.stopPropagation()}>
+                        <button onClick={() => { setDeleteTarget(null); setDeletePassword(""); setDeleteErr(""); }} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition"><MdClose size={20} /></button>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
                                 <FiTrash2 className="w-5 h-5 text-red-600" />

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import {
     getPendingPayments,
+    getPendingProofs,
     getPaymentHistory,
     verifyPayment,
     recordCashPayment,
@@ -10,6 +11,15 @@ import {
     bulkUnverifyPayments,
     bulkDeletePayments,
 } from "../services/admin-payment.service.js";
+
+export const listPendingProofs = async (req: Request, res: Response) => {
+    try {
+        const items = await getPendingProofs(req.user!.userId, req.user!.role);
+        return sendSuccess(res, items);
+    } catch (err: any) {
+        return sendError(res, err.message, 400);
+    }
+};
 
 export const listPendingPayments = async (req: Request, res: Response) => {
     try {

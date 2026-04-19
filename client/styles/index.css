@@ -103,6 +103,12 @@ input[type="checkbox"]:indeterminate {
 .anim-modal-backdrop { animation: modalBackdropIn 0.2s ease-out both; }
 .anim-modal-panel  { animation: modalPanelIn    0.32s cubic-bezier(0.34,1.56,0.64,1) both; }
 
+/* ── Table wrapper ── */
+.eso-table-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
 /* ── Table borders ── */
 .eso-table {
     border-collapse: collapse;
@@ -119,6 +125,14 @@ input[type="checkbox"]:indeterminate {
 .eso-table thead tr:last-child th {
     border-bottom: 2px solid #d1d5db;
 }
+/* Checkbox column — always centered */
+.eso-table th.col-check,
+.eso-table td.col-check {
+    width: 36px;
+    text-align: center;
+    padding-left: 0;
+    padding-right: 0;
+}
 .dark .eso-table th,
 .dark .eso-table td {
     border-right-color: #2a2a2a;
@@ -126,6 +140,37 @@ input[type="checkbox"]:indeterminate {
 }
 .dark .eso-table thead tr:last-child th {
     border-bottom-color: #3a3a3a;
+}
+
+/* ── Global scrollbar — thin orange ── */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #f97316 transparent;
+}
+*::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+    background-color: #f97316;
+    border-radius: 99px;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: #ea580c;
+}
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Utility to hide scrollbar entirely */
+.scrollbar-none {
+    scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
 }
 
 /* Hide browser password reveal button */

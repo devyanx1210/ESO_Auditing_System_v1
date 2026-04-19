@@ -145,7 +145,7 @@ function StatCard({ title, value, subtitle, icon, active, darkMode, animDelay = 
                 cursor-pointer transition-all duration-200
                 ${active
                     ? "bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.50)] text-white"
-                    : `shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]
+                    : `shadow-[0_6px_24px_rgba(0,0,0,0.13)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.20)]
                        ${darkMode ? "bg-[#1a1a1a] text-white" : "bg-white text-gray-800"}`
                 }
             `}
@@ -470,7 +470,7 @@ export default function AdminDashboard() {
             {/* ── Main panel — graph + obligations side by side ── */}
             <div
                 style={{ animationDelay: "360ms" }}
-                className={`anim-section rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden
+                className={`anim-section rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden
                     ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
             >
                 {/* Two-column body: stacks on mobile, side-by-side on lg+ */}

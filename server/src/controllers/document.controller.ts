@@ -8,8 +8,17 @@ import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import * as svc from "../services/document.service.js";
 
+function attachPdfUrl(tpl: any): any {
+    if (tpl?.pdfPath) {
+        tpl.pdfUrl = `/uploads/pdf-templates/${path.basename(tpl.pdfPath)}`;
+    } else {
+        tpl.pdfUrl = null;
+    }
+    return tpl;
+}
+
 export const handleGetTemplates = async (_req: Request, res: Response) => {
-    try { sendSuccess(res, await svc.getTemplates()); }
+    try { sendSuccess(res, (await svc.getTemplates()).map(attachPdfUrl)); }
     catch (e: any) { sendError(res, e.message); }
 };
 
@@ -19,7 +28,7 @@ export const handleGetTemplate = async (req: Request, res: Response) => {
         if (!id) return sendError(res, "Invalid ID", 400);
         const tpl = await svc.getTemplate(id);
         if (!tpl) return sendError(res, "Template not found", 404);
-        sendSuccess(res, tpl);
+        sendSuccess(res, attachPdfUrl(tpl));
     } catch (e: any) { sendError(res, e.message); }
 };
 
@@ -64,6 +73,15 @@ export const handleSetDefault = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
+export const handleUnsetDefault = async (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        if (!id) return sendError(res, "Invalid ID", 400);
+        await svc.unsetDefaultTemplate(id);
+        sendSuccess(res, null, "Default unset");
+    } catch (e: any) { sendError(res, e.message); }
+};
+
 export const handleGetApprovedStudents = async (req: Request, res: Response) => {
     try {
         const { schoolYear, semester } = req.query;
@@ -97,9 +115,9 @@ export const handleGetPdfFile = async (req: Request, res: Response) => {
         if (!tpl?.pdfPath) return sendError(res, "No PDF attached to this template", 404);
         const filePath = resolvePdfPath(tpl.pdfPath);
         if (!filePath) return sendError(res, "PDF file not found on server", 404);
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", "inline");
-        fs.createReadStream(filePath).pipe(res);
+        res.sendFile(filePath, { headers: { "Content-Disposition": "inline" } }, (err) => {
+            if (err && !res.headersSent) sendError(res, "Failed to stream PDF file");
+        });
     } catch (e: any) { sendError(res, e.message); }
 };
 
@@ -117,10 +135,10 @@ export const handleUploadPdf = async (req: Request, res: Response) => {
         const existing = await svc.getTemplate(id);
         if (existing?.pdfPath) svc.deletePdfFile(existing.pdfPath);
 
-        // Store absolute path so it works regardless of working directory at read time
         const pdfPath = path.resolve(file.path);
         await svc.updateTemplatePdf(id, pdfPath, existing?.fieldPositions ?? null);
-        sendSuccess(res, { pdfPath: pdfPath.replace(/\\/g, "/") }, "PDF uploaded");
+        const pdfUrl = `/uploads/pdf-templates/${path.basename(pdfPath)}`;
+        sendSuccess(res, { pdfPath: pdfPath.replace(/\\/g, "/"), pdfUrl }, "PDF uploaded");
     } catch (e: any) { sendError(res, e.message); }
 };
 
@@ -157,6 +175,37 @@ export const handleRemovePdf = async (req: Request, res: Response) => {
         await svc.updateTemplatePdf(id, null, null);
         sendSuccess(res, null, "PDF removed");
     } catch (e: any) { sendError(res, e.message); }
+};
+
+// ─── Preview PDF with dummy data ─────────────────────────────────────────────
+
+const PREVIEW_DUMMY = {
+    firstName:   "Juan",
+    lastName:    "Dela Cruz",
+    studentNo:   "2021-00001",
+    programName: "Computer Engineering",
+    programCode: "CpE",
+    yearLevel:   3,
+    section:     "A",
+    schoolYear:  "2024-2025",
+    semester:    "2",
+    signedAt:    new Date().toISOString(),
+};
+
+export const handlePreviewPdf = async (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        if (!id) return sendError(res, "Invalid ID", 400);
+
+        const pdfBytes = await svc.stampPdfTemplate(id, [PREVIEW_DUMMY]);
+
+        res.setHeader("Content-Type",        "application/pdf");
+        res.setHeader("Content-Disposition", `inline; filename="preview.pdf"`);
+        res.setHeader("Content-Length",      pdfBytes.length);
+        res.end(Buffer.from(pdfBytes));
+    } catch (e: any) {
+        sendError(res, e.message);
+    }
 };
 
 // ─── Stamp + stream merged PDF ────────────────────────────────────────────────

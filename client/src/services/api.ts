@@ -1,9 +1,18 @@
-const BASE_URL = "http://localhost:5000/api/v1";
+const BASE_URL = "/api/v1";
 
 export interface ApiResponse<T> {
     success: boolean;
     message: string;
     data: T;
+}
+
+/** Thrown when the server returns 401. Triggers auto-logout. */
+export class AuthError extends Error {
+    readonly status = 401;
+    constructor(message: string) {
+        super(message);
+        this.name = "AuthError";
+    }
 }
 
 export async function apiFetch<T>(
@@ -36,6 +45,11 @@ export async function apiFetch<T>(
     }
 
     if (!res.ok) {
+        if (res.status === 401) {
+            // Signal all listeners (AuthContext) to log the user out
+            window.dispatchEvent(new Event("eso:auth:expired"));
+            throw new AuthError(json.message || "Session expired. Please log in again.");
+        }
         throw new Error(json.message || "Request failed");
     }
 

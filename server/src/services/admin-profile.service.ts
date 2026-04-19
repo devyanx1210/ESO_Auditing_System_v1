@@ -23,8 +23,8 @@ export const getAdminProfile = async (userId: number): Promise<AdminProfile> => 
                 a.admin_id, a.position, a.year_level, a.section, a.avatar_path,
                 p.name AS programName, p.code AS programCode
          FROM users u
-         JOIN roles r   ON r.role_id   = u.role_id
-         JOIN admins a  ON a.user_id   = u.user_id
+         JOIN roles r        ON r.role_id   = u.role_id
+         LEFT JOIN admins a  ON a.user_id   = u.user_id
          LEFT JOIN programs p ON p.program_id = u.program_id
          WHERE u.user_id = ?`,
         [userId]

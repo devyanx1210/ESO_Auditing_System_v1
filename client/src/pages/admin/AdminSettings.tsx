@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { FiTrash2, FiPlus, FiCheck, FiUsers, FiArchive, FiUser, FiFilter, FiChevronDown, FiChevronUp, FiSearch, FiSun, FiMoon, FiLock, FiEdit2, FiUpload, FiRefreshCw, FiSave } from "react-icons/fi";
+import { FiTrash2, FiPlus, FiCheck, FiUsers, FiArchive, FiUser, FiFilter, FiChevronDown, FiChevronUp, FiSearch, FiLock, FiEdit2, FiUpload, FiRefreshCw, FiSave } from "react-icons/fi";
+import { AlertModal } from "../../components/ui/AlertModal";
 import { userService } from "../../services/user.service";
 import type { AdminUserItem, CreateAdminInput } from "../../services/user.service";
 import { authService } from "../../services/auth.service";
@@ -21,7 +22,7 @@ function DefaultAvatarSvg() {
 function UserAvatar({ size = "md", src }: { size?: "sm" | "md"; src?: string | null }) {
     const sz = size === "md" ? "w-9 h-9" : "w-8 h-8";
     const url = src
-        ? (src.startsWith("http") ? src : src.startsWith("/") ? `http://localhost:5000${src}` : `http://localhost:5000/uploads/${src}`)
+        ? (src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`)
         : null;
     return (
         <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
@@ -113,6 +114,7 @@ const AdminSettings = () => {
     const [togglingId,         setTogglingId]         = useState<number | null>(null);
     const [showForm,           setShowForm]           = useState(false);
     const [accountTab,         setAccountTab]         = useState<"active" | "archived">("active");
+    const [alertMsg,           setAlertMsg]           = useState<string | null>(null);
     const [adminSearch,        setAdminSearch]        = useState("");
     const [roleFilter,         setRoleFilter]         = useState("all");
     const [adminSortKey,       setAdminSortKey]       = useState<AdminSortKey>("name");
@@ -243,7 +245,7 @@ const AdminSettings = () => {
             const result = await userService.toggleAdmin(accessToken, admin.userId);
             setAdmins(prev => prev.map(a => a.userId === admin.userId ? { ...a, status: result.status } : a));
         } catch (err: any) {
-            alert(err.message ?? "Failed to toggle status.");
+            setAlertMsg(err.message ?? "Failed to toggle status.");
         } finally {
             setTogglingId(null);
         }
@@ -316,6 +318,28 @@ const AdminSettings = () => {
     return (
         <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-[#111111] min-h-screen">
             <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+            {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg(null)} />}
+            <datalist id="officer-positions">
+                <option value="ESO President" />
+                <option value="ESO Vice President" />
+                <option value="ESO Secretary" />
+                <option value="ESO Treasurer" />
+                <option value="ESO Auditor" />
+                <option value="ESO Public Relations Officer" />
+                <option value="ESO Business Manager" />
+                <option value="ESO Peace Officer" />
+                <option value="ESO Sergeant-at-Arms" />
+                <option value="ESO Historian" />
+                <option value="Class President" />
+                <option value="Class Vice President" />
+                <option value="Class Secretary" />
+                <option value="Class Treasurer" />
+                <option value="Class Auditor" />
+                <option value="Program Head" />
+                <option value="Dean" />
+                <option value="Faculty Adviser" />
+                <option value="ESO Officer" />
+            </datalist>
 
             {/* ── Toast ── */}
             {toastVisible && (
@@ -328,15 +352,15 @@ const AdminSettings = () => {
             )}
 
             <div className="mb-6">
-                <h1 className="font-bold text-gray-800 dark:text-gray-100 text-2xl sm:text-3xl">Settings</h1>
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-gray-100">Settings</h1>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Manage your profile and account preferences</p>
             </div>
 
             <div className="flex flex-col gap-6 w-full">
 
                 {/* ── PROFILE CARD ──────────────────────────────────────────── */}
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-6 w-full">
-                    <div className="flex items-center gap-2 mb-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-4 sm:p-6 w-full">
+                    <div className="flex items-center gap-2 mb-4 sm:mb-5 pb-3 sm:pb-4 border-b border-gray-100 dark:border-gray-700">
                         <FiUser className="w-4 h-4 text-orange-500" />
                         <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-base">My Profile</h2>
                     </div>
@@ -351,7 +375,7 @@ const AdminSettings = () => {
                     ) : profile && (
                         <form onSubmit={handleSaveProfile}>
                             {/* Avatar row */}
-                            <div className="flex items-center gap-5 mb-6">
+                            <div className="flex items-center gap-4 sm:gap-5 mb-5 sm:mb-6">
                                 <div className="relative shrink-0" ref={avatarMenuRef}>
                                     <div className="w-20 h-20 rounded-full overflow-hidden">
                                         {avatarPreview
@@ -400,7 +424,7 @@ const AdminSettings = () => {
                                     />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-gray-900 dark:text-white text-xl">{firstName} {lastName}</p>
+                                    <p className="font-bold text-gray-900 dark:text-white text-base sm:text-xl">{firstName} {lastName}</p>
                                     <p className="text-sm text-orange-500 font-medium mt-0.5">{profile.roleLabel}</p>
                                     {profile.programName && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{profile.programName}</p>}
                                 </div>
@@ -409,7 +433,7 @@ const AdminSettings = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
                                 <Field label="First Name">
                                     <input
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={firstName}
                                         onChange={e => setFirstName(e.target.value)}
                                         placeholder="First name"
@@ -417,7 +441,7 @@ const AdminSettings = () => {
                                 </Field>
                                 <Field label="Last Name">
                                     <input
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={lastName}
                                         onChange={e => setLastName(e.target.value)}
                                         placeholder="Last name"
@@ -425,31 +449,33 @@ const AdminSettings = () => {
                                 </Field>
                                 <Field label="Position">
                                     <input
-                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                        list="officer-positions"
+                                        className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                         value={position}
                                         onChange={e => setPosition(e.target.value)}
                                         placeholder="e.g. ESO President"
+                                        autoComplete="off"
                                     />
                                 </Field>
                                 <Field label="Email">
-                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500">
                                         {profile.email}
                                     </div>
                                 </Field>
                                 <Field label="Role">
-                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
                                         {profile.roleLabel}
                                     </div>
                                 </Field>
                                 {profile.programName && (
                                     <Field label="Program">
-                                        <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                        <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
                                             {profile.programName}
                                         </div>
                                     </Field>
                                 )}
                                 <Field label="Email">
-                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2.5 w-full text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-mono text-xs">
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-mono text-xs">
                                         {profile.email}
                                     </div>
                                 </Field>
@@ -459,7 +485,7 @@ const AdminSettings = () => {
 
                             <div className="flex justify-end">
                                 <button type="submit" disabled={saving}
-                                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-sm">
+                                    className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-xs sm:text-sm">
                                     <FiSave className="w-4 h-4" />
                                     {saving ? "Saving..." : "Save Changes"}
                                 </button>
@@ -469,19 +495,19 @@ const AdminSettings = () => {
                 </div>
 
                 {/* ── CHANGE PASSWORD CARD ──────────────────────────────────── */}
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-6 w-full">
-                    <div className="flex items-center gap-2 mb-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-4 sm:p-6 w-full">
+                    <div className="flex items-center gap-2 mb-4 sm:mb-5 pb-3 sm:pb-4 border-b border-gray-100 dark:border-gray-700">
                         <FiLock className="w-4 h-4 text-orange-500" />
                         <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-base">Change Password</h2>
                     </div>
                     <p className="text-xs text-gray-400 mb-5">Leave these blank if you do not want to change your password.</p>
 
                     <form onSubmit={handleChangePassword}>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
                             <Field label="Current Password">
                                 <input
                                     type="password"
-                                    className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                    className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                     value={pw.current}
                                     onChange={e => setPw(p => ({ ...p, current: e.target.value }))}
                                     placeholder="Current password"
@@ -490,7 +516,7 @@ const AdminSettings = () => {
                             <Field label="New Password">
                                 <input
                                     type="password"
-                                    className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                    className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                     value={pw.next}
                                     onChange={e => setPw(p => ({ ...p, next: e.target.value }))}
                                     placeholder="Min. 8 characters"
@@ -499,7 +525,7 @@ const AdminSettings = () => {
                             <Field label="Confirm New Password">
                                 <input
                                     type="password"
-                                    className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                    className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
                                     value={pw.confirm}
                                     onChange={e => setPw(p => ({ ...p, confirm: e.target.value }))}
                                     placeholder="Confirm new password"
@@ -512,7 +538,7 @@ const AdminSettings = () => {
 
                         <div className="flex justify-end">
                             <button type="submit" disabled={pwSaving}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-sm">
+                                className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-xs sm:text-sm">
                                 <FiLock className="w-4 h-4" />
                                 {pwSaving ? "Updating..." : "Update Password"}
                             </button>
@@ -522,7 +548,7 @@ const AdminSettings = () => {
 
                 {/* ── ADMIN ACCOUNTS (system_admin only) ───────────────────── */}
                 {isSysAdmin && (
-                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-6 w-full">
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-4 sm:p-6 w-full">
                         {successMsg && (
                             <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm mb-4 bg-green-50 dark:bg-green-900/20 rounded-lg px-4 py-2.5">
                                 <FiCheck className="w-4 h-4 flex-shrink-0" />
@@ -534,10 +560,10 @@ const AdminSettings = () => {
                             <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl">
                                 <button
                                     onClick={() => setAccountTab("active")}
-                                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                                    className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                                         accountTab === "active" ? "bg-white dark:bg-[#111111] text-orange-600 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                                     }`}>
-                                    <FiUsers className="w-4 h-4" />
+                                    <FiUsers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Accounts
                                     {activeAdmins.length > 0 && (
                                         <span className="bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{activeAdmins.length}</span>
@@ -545,10 +571,10 @@ const AdminSettings = () => {
                                 </button>
                                 <button
                                     onClick={() => setAccountTab("archived")}
-                                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                                    className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                                         accountTab === "archived" ? "bg-white dark:bg-[#111111] text-orange-600 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                                     }`}>
-                                    <FiArchive className="w-4 h-4" />
+                                    <FiArchive className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Archived
                                     {archivedAdmins.length > 0 && (
                                         <span className="bg-gray-400 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{archivedAdmins.length}</span>
@@ -558,9 +584,10 @@ const AdminSettings = () => {
                             {accountTab === "active" && (
                                 <button
                                     onClick={() => { setShowForm(true); setFormError(""); setSuccessMsg(""); setForm(BLANK); }}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-orange-600 transition shadow-sm">
-                                    <FiPlus className="w-4 h-4" />
-                                    Create Admin Account
+                                    className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-primary text-white text-xs sm:text-sm font-medium hover:bg-orange-600 transition shadow-sm">
+                                    <FiPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    <span className="hidden sm:inline">Create Admin Account</span>
+                                    <span className="sm:hidden">New Admin</span>
                                 </button>
                             )}
                         </div>
@@ -744,31 +771,27 @@ const AdminSettings = () => {
                 )}
 
                 {/* ── APPEARANCE ───────────────────────────────────────────── */}
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-5 w-full">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-4 sm:p-5 w-full">
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Appearance</h2>
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Switch between light and dark mode</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <FiSun className={`w-4 h-4 transition-colors ${darkMode ? "text-gray-500" : "text-orange-500"}`} />
-                            <button
-                                role="switch"
-                                aria-checked={darkMode}
-                                onClick={() => setDarkMode(!darkMode)}
-                                className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none
-                                    ${darkMode ? "bg-orange-500" : "bg-gray-300 dark:bg-gray-600"}`}
-                            >
-                                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300
-                                    ${darkMode ? "translate-x-6" : "translate-x-0"}`} />
-                            </button>
-                            <FiMoon className={`w-4 h-4 transition-colors ${darkMode ? "text-orange-400" : "text-gray-400"}`} />
-                        </div>
+                        <button
+                            role="switch"
+                            aria-checked={darkMode}
+                            onClick={() => setDarkMode(!darkMode)}
+                            className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none
+                                ${darkMode ? "bg-orange-500" : "bg-gray-300 dark:bg-gray-600"}`}
+                        >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300
+                                ${darkMode ? "translate-x-6" : "translate-x-0"}`} />
+                        </button>
                     </div>
                 </div>
 
                 {/* ── NOTIFICATIONS ─────────────────────────────────────────── */}
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-5 w-full">
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] p-4 sm:p-5 w-full">
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Notifications</h2>
@@ -792,9 +815,9 @@ const AdminSettings = () => {
             {/* ── CREATE ADMIN MODAL ──────────────────────────────────────────── */}
             {showForm && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" style={{ animation: 'fadeInUp 0.2s ease both' }}>
-                        <div className="flex items-center justify-between mb-5 border-b-2 border-gray-200 dark:border-gray-700 pb-3">
-                            <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-lg">Create Admin Account</h2>
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6" style={{ animation: 'fadeInUp 0.2s ease both' }}>
+                        <div className="flex items-center justify-between mb-4 sm:mb-5 border-b-2 border-gray-200 dark:border-gray-700 pb-3">
+                            <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-base sm:text-lg">Create Admin Account</h2>
                             <button onClick={() => { setShowForm(false); setFormError(""); setForm(BLANK); }}
                                 className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
                         </div>
@@ -804,27 +827,27 @@ const AdminSettings = () => {
                         <form onSubmit={handleCreate} className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name *</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name *</label>
                                     <input className={inputCls}
                                         value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder="Juan" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name *</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name *</label>
                                     <input className={inputCls}
                                         value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder="Dela Cruz" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email *</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email *</label>
                                     <input type="email" className={inputCls}
                                         value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="officer@eso.edu.ph" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password *</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password *</label>
                                     <input type="password" className={inputCls}
                                         value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min. 8 characters" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role *</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role *</label>
                                     <select className={selectCls}
                                         value={form.role}
                                         onChange={e => setForm({ ...form, role: e.target.value as CreateAdminInput["role"], programId: null, yearLevel: null, section: null })}>
@@ -832,7 +855,7 @@ const AdminSettings = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
                                     <select className={selectCls}
                                         value={form.programId ?? ""}
                                         onChange={e => setForm({ ...form, programId: e.target.value ? Number(e.target.value) : null })}>
@@ -843,7 +866,7 @@ const AdminSettings = () => {
                                 {form.role === "class_officer" && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
+                                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
                                             <select className={selectCls}
                                                 value={form.yearLevel ?? ""}
                                                 onChange={e => setForm({ ...form, yearLevel: e.target.value ? Number(e.target.value) : null })}>
@@ -855,7 +878,7 @@ const AdminSettings = () => {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</label>
+                                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</label>
                                             <input className={inputCls}
                                                 value={form.section ?? ""}
                                                 onChange={e => setForm({ ...form, section: e.target.value || null })}
@@ -864,18 +887,18 @@ const AdminSettings = () => {
                                     </>
                                 )}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Position *</label>
-                                    <input className={inputCls}
-                                        value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} placeholder="e.g. ESO President" />
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Position *</label>
+                                    <input list="officer-positions" className={inputCls}
+                                        value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} placeholder="e.g. ESO President" autoComplete="off" />
                                 </div>
                             </div>
                             <div className="flex justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
                                 <button type="button" onClick={() => { setForm(BLANK); setFormError(""); }}
-                                    className="px-6 py-2.5 rounded-xl bg-gray-200 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-[#333] transition text-sm">
+                                    className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gray-200 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-[#333] transition text-xs sm:text-sm">
                                     Reset
                                 </button>
                                 <button type="submit" disabled={formSaving}
-                                    className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-sm">
+                                    className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60 text-xs sm:text-sm">
                                     {formSaving ? "Creating..." : "Create Account"}
                                 </button>
                             </div>
@@ -887,8 +910,8 @@ const AdminSettings = () => {
             {/* ── ARCHIVE CONFIRMATION ─────────────────────────────────────────── */}
             {deleteTarget && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-6">
-                        <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg mb-2">Archive Admin Account</h3>
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-4 sm:p-6">
+                        <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base sm:text-lg mb-2">Archive Admin Account</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">This will deactivate and archive the account for:</p>
                         <p className="font-semibold text-gray-800 dark:text-gray-100 mb-1">{deleteTarget.firstName} {deleteTarget.lastName}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{deleteTarget.email}</p>
@@ -912,13 +935,13 @@ const AdminSettings = () => {
             {/* ── PERMANENT DELETE CONFIRMATION ──────────────────────────────── */}
             {permDeleteTarget && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-6">
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-4 sm:p-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-                                <FiTrash2 className="w-5 h-5 text-red-600" />
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                                <FiTrash2 className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg">Permanently Delete Account</h3>
+                                <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base sm:text-lg">Permanently Delete Account</h3>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">This action cannot be undone.</p>
                             </div>
                         </div>
