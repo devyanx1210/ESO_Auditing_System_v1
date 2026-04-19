@@ -1,0 +1,30 @@
+# Claude Code memory and session files
+.claude/
+
+# Duplicate / leftover folders
+client1/
+
+# Leftover scripts and test files
+write_sl3.js
+test_out.txt
+
+# SQL dump files (keep only the one you intentionally commit)
+*.sql
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (each subfolder has its own)
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+
+# Logs
+*.log
