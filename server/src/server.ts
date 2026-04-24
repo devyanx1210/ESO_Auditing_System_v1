@@ -79,10 +79,13 @@ app.use(errorHandler);
 
 const startServer = async () => {
     await connectDB();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
         console.log(`Environment: ${process.env.NODE_ENV}`);
     });
+    // Must be > Cloudflare tunnel's 60s keep-alive to prevent 400 warnings
+    server.keepAliveTimeout = 65_000;
+    server.headersTimeout   = 66_000;
 };
 
 startServer();

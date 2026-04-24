@@ -37,6 +37,7 @@ export const sysadminService = {
     updateAccount: (token: string, userId: number, data: {
         firstName: string; lastName: string; email: string;
         roleId: number; programId?: number | null; position: string; password?: string;
+        yearLevel?: number | null; section?: string | null;
     }) =>
         apiFetch<any>(`/sysadmin/accounts/${userId}`, {
             method: "PATCH",

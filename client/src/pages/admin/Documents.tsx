@@ -487,7 +487,7 @@ function PdfCanvasViewer({
         const canvas = canvasRef.current;
         const rect   = canvas.getBoundingClientRect();
         const dispScale = rect.width / canvas.width;
-        // chip centre in client coordinates
+        // chip bottom-left in client coordinates (matches translate(0,-100%) anchor)
         const chipClientX = rect.left + pos.x * RENDER_SCALE * dispScale;
         const chipClientY = rect.top  + pos.y * RENDER_SCALE * dispScale;
         ptrOffset.current = { dx: e.clientX - chipClientX, dy: e.clientY - chipClientY };
@@ -550,7 +550,7 @@ function PdfCanvasViewer({
                         return (
                             <div key={v.key}
                                 className="absolute group"
-                                style={{ left: cssX, top: cssY, transform: "translate(-50%,-50%)", zIndex: isMoving ? 20 : 10 }}>
+                                style={{ left: cssX, top: cssY, transform: "translate(0,-100%)", zIndex: isMoving ? 20 : 10 }}>
 
                                 {/* Label chip — pointer-down starts repositioning */}
                                 <div
@@ -1272,13 +1272,11 @@ export default function Documents() {
                     </button>
                 )}
 
-                {/* Save — HTML templates only */}
-                {!selected?.pdfPath && (
-                    <button onClick={handleSave} disabled={saving || !isDirty}
-                        className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition shadow">
-                        <FiSave className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {saving ? "Saving…" : "Save"}
-                    </button>
-                )}
+                {/* Save — always visible so name can be saved on PDF templates too */}
+                <button onClick={handleSave} disabled={saving || !isDirty}
+                    className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition shadow">
+                    <FiSave className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {saving ? "Saving…" : "Save"}
+                </button>
             </div>
 
             {/* PDF panel or HTML editor — fills remaining viewport height */}

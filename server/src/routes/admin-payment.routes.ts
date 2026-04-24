@@ -16,7 +16,7 @@ import {
 
 const router = Router();
 
-const adminRoles: UserRole[] = ["system_admin", "eso_officer", "class_officer", "program_officer", "program_head"];
+const adminRoles: UserRole[] = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "class_officer", "class_secretary", "class_treasurer", "class_president", "program_officer", "program_treasurer", "program_president", "program_head", "osas_coordinator", "dean"];
 
 router.get(  "/pending",        authenticate, authorize(...adminRoles), listPendingPayments);
 router.get(  "/pending-proofs", authenticate, authorize(...adminRoles), listPendingProofs);

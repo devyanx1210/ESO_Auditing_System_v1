@@ -7,7 +7,7 @@ import type { UserRole } from "../types/auth.types.js";
 
 const router = Router();
 
-const adminRoles: UserRole[] = ["system_admin", "eso_officer", "class_officer", "program_officer", "program_head", "signatory", "dean"];
+const adminRoles: UserRole[] = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "class_officer", "class_secretary", "class_treasurer", "class_president", "program_officer", "program_treasurer", "program_president", "program_head", "signatory", "osas_coordinator", "dean"];
 
 router.get("/me",         authenticate, authorize(...adminRoles), handleGetAdminProfile);
 router.patch("/me",       authenticate, authorize(...adminRoles), uploadAvatar, handleUpdateAdminProfile);

@@ -1,9 +1,12 @@
 import { Request, Response } from "express";
 import {
     getObligations,
+    getArchivedObligations,
     createObligation,
     updateObligation,
     deleteObligation,
+    permanentlyDeleteObligation,
+    restoreObligation,
     syncObligationStudents,
 } from "../services/obligation.service.js";
 import { uploadQR } from "../middleware/upload.middleware.js";
@@ -20,7 +23,8 @@ async function getAdminId(userId: number): Promise<number | null> {
 
 export const listObligations = async (req: Request, res: Response) => {
     try {
-        const obligations = await getObligations(req.user!.role, req.user!.programId);
+        const { role, programId, yearLevel, section } = req.user!;
+        const obligations = await getObligations(role, programId, yearLevel, section);
         return sendSuccess(res, obligations, "Obligations fetched");
     } catch (error: any) {
         return sendError(res, error.message, 500);
@@ -100,6 +104,38 @@ export const removeObligation = async (req: Request, res: Response) => {
         if (!id) return sendError(res, "Invalid obligation ID", 400);
         await deleteObligation(id);
         return sendSuccess(res, null, "Obligation deleted");
+    } catch (error: any) {
+        return sendError(res, error.message, 500);
+    }
+};
+
+export const listArchivedObligations = async (req: Request, res: Response) => {
+    try {
+        const { role, programId, yearLevel, section } = req.user!;
+        const obligations = await getArchivedObligations(role, programId, yearLevel, section);
+        return sendSuccess(res, obligations, "Archived obligations fetched");
+    } catch (error: any) {
+        return sendError(res, error.message, 500);
+    }
+};
+
+export const restoreObligationHandler = async (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        if (!id) return sendError(res, "Invalid obligation ID", 400);
+        await restoreObligation(id);
+        return sendSuccess(res, null, "Obligation restored");
+    } catch (error: any) {
+        return sendError(res, error.message, 500);
+    }
+};
+
+export const permanentlyDeleteObligationHandler = async (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        if (!id) return sendError(res, "Invalid obligation ID", 400);
+        await permanentlyDeleteObligation(id);
+        return sendSuccess(res, null, "Obligation permanently deleted");
     } catch (error: any) {
         return sendError(res, error.message, 500);
     }

@@ -69,7 +69,7 @@ export const loginUser = async (
         }
         throw new Error("Invalid email or password");
     }
-    const isOfficer = ["class_officer", "program_officer"].includes(user.role_name);
+    const isOfficer = ["class_officer", "class_secretary", "class_treasurer", "class_president", "program_officer", "program_treasurer", "program_president"].includes(user.role_name);
     const payload: JwtAccessPayload = {
         userId: user.user_id,
         email: user.email,
@@ -130,7 +130,7 @@ export const refreshAccessToken = async (
         if (user.refresh_token_expires_at && new Date() > new Date(user.refresh_token_expires_at)) {
             throw new Error("Refresh token expired. Please login again.");
         }
-        const isOfficer = ["class_officer", "program_officer"].includes(user.role_name);
+        const isOfficer = ["class_officer", "class_secretary", "class_treasurer", "class_president", "program_officer", "program_treasurer", "program_president"].includes(user.role_name);
         const payload: JwtAccessPayload = {
             userId: user.user_id,
             email: user.email,

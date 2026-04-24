@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { AuthenticatedUser, LoginInput, RegisterInput } from "../types/auth.types";
 import { authService } from "../services/auth.service";
+import SplashScreen from "../components/SplashScreen";
 
 interface AuthContextType {
     user: AuthenticatedUser | null;
@@ -22,11 +23,14 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const USER_KEY = "eso_user";
 const REFRESH_KEY = "eso_refresh_token";
+const IS_MOBILE = /Android|iPhone|iPod/i.test(navigator.userAgent);
+
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<AuthenticatedUser | null>(null);
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [splashDone, setSplashDone] = useState(false);
 
     // Auto-logout when any API call receives a 401 (expired/invalid token)
     useEffect(() => {
@@ -101,6 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AuthContext.Provider value={{ user, accessToken, isLoading, login, register, logout, changePassword }}>
+            {IS_MOBILE && !splashDone && (
+                <SplashScreen isReady={!isLoading} onDone={() => setSplashDone(true)} />
+            )}
             {children}
         </AuthContext.Provider>
     );

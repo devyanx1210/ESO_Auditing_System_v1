@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { isClassRole, isProgramRole } from "../config/role-groups.js";
 
 export interface ObligationStudentStatus {
     studentId: number;
@@ -56,8 +57,8 @@ export const getDashboardStats = async (
     yearLevel?: number | null,
     section?: string | null
 ): Promise<DashboardStats> => {
-    const isClassOfficer   = role === "class_officer";
-    const isProgramOfficer = role === "program_officer";
+    const isClassOfficer   = isClassRole(role ?? "");
+    const isProgramOfficer = isProgramRole(role ?? "");
 
     // ─── Build program stats query ───────────────────────────────────────────────
     // Class officer: filter by their programId + yearLevel + section
@@ -202,8 +203,9 @@ export const getDashboardStats = async (
         obligationConditions.push("s.program_id = ?", "s.year_level = ?", "s.section = ?");
         obligationParams.push(programId ?? null, yearLevel ?? null, section ?? null);
     } else if (isProgramOfficer && programId) {
-        obligationConditions.push("s.program_id = ?");
-        obligationParams.push(programId);
+        // Program officers: only see scope=1 obligations they created for their program
+        obligationConditions.push("s.program_id = ?", "o.scope = 1", "o.program_id = ?");
+        obligationParams.push(programId, programId);
     }
 
     if (obligationConditions.length) {

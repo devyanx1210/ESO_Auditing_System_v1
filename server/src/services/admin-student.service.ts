@@ -1,7 +1,8 @@
 import pool from "../config/db.js";
+import { isClassRole } from "../config/role-groups.js";
 
 // Roles that see ALL students across every program (no program filter)
-const ALL_PROGRAMS_ROLES = ["system_admin", "eso_officer", "signatory", "dean"];
+const ALL_PROGRAMS_ROLES = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "signatory", "osas_coordinator", "dean"];
 
 async function getAdminDeptId(userId: number): Promise<number | null> {
     const [rows]: any = await pool.execute(
@@ -96,7 +97,7 @@ export const listStudents = async (
         params.push(deptId);
     }
     // class_officer: further restrict to their specific year + section (deptId already filters program)
-    if (role === "class_officer") {
+    if (isClassRole(role ?? "")) {
         if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
         if (section)           { sql += " AND s.section = ?";    params.push(section); }
     }

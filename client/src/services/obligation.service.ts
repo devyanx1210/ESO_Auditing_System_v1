@@ -81,6 +81,15 @@ export const obligationService = {
 
     sync: (token: string, id: number) =>
         apiFetch<{ inserted: number }>(`/obligations/${id}/sync`, { method: "POST" }, token),
+
+    getArchived: (token: string) =>
+        apiFetch<ObligationData[]>("/obligations/archived", {}, token),
+
+    restore: (token: string, id: number) =>
+        apiFetch<null>(`/obligations/${id}/restore`, { method: "PATCH" }, token),
+
+    permanentDelete: (token: string, id: number) =>
+        apiFetch<null>(`/obligations/${id}/permanent`, { method: "DELETE" }, token),
 };
 
 export function qrUrl(path: string): string {

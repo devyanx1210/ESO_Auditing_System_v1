@@ -20,6 +20,8 @@ interface Account {
     program_id:   number | null;
     program_name: string | null;
     position:     string | null;
+    year_level:   number | null;
+    section:      string | null;
     avatar_path:  string | null;
     status:       string;
 }
@@ -62,7 +64,15 @@ const POSITION_SUGGESTIONS: Record<string, string> = {
     auditor:           "Auditor",
 };
 
-const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
+const CLASS_ROLES = ["class_officer", "class_secretary", "class_treasurer", "class_president"];
+
+const YEAR_LEVELS = [
+    { value: "1", label: "1st Year" },
+    { value: "2", label: "2nd Year" },
+    { value: "3", label: "3rd Year" },
+    { value: "4", label: "4th Year" },
+    { value: "5", label: "5th Year" },
+];
 
 type SortKey = "name" | "program" | "role";
 
@@ -142,7 +152,7 @@ export default function AccountsPage() {
 
     // Edit
     const [editTarget,    setEditTarget]    = useState<Account | null>(null);
-    const [editForm,      setEditForm]      = useState({ firstName: "", lastName: "", email: "", roleId: "", programId: "", position: "", password: "" });
+    const [editForm,      setEditForm]      = useState({ firstName: "", lastName: "", email: "", roleId: "", programId: "", position: "", password: "", yearLevel: "", section: "" });
     const [editSaving,    setEditSaving]    = useState(false);
     const [editError,     setEditError]     = useState("");
     const [showEditPass,  setShowEditPass]  = useState(false);
@@ -218,7 +228,7 @@ export default function AccountsPage() {
     // ─── Actions ──────────────────────────────────────────────────────────────
 
     const isDean         = form.role === "dean";
-    const isClassOfficer = form.role === "class_officer";
+    const isClassOfficer = CLASS_ROLES.includes(form.role);
     const inputCls = "border-2 border-gray-300 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 bg-white";
 
     const handleCreate = async (e: React.FormEvent) => {
@@ -232,7 +242,8 @@ export default function AccountsPage() {
         if (isClassOfficer) {
             if (!form.yearLevel) { setFormError("Year level is required for Class Officer."); return; }
             if (!form.section.trim()) { setFormError("Section is required for Class Officer."); return; }
-            position = `${form.yearLevel} - Section ${form.section.trim()}`;
+            const yrLabel = YEAR_LEVELS.find(y => y.value === form.yearLevel)?.label ?? form.yearLevel;
+            position = `${yrLabel} - Section ${form.section.trim()}`;
         } else {
             if (!position) { setFormError("Position is required."); return; }
         }
@@ -287,13 +298,15 @@ export default function AccountsPage() {
         setEditTarget(a);
         setEditError("");
         setEditForm({
-            firstName: a.first_name,
-            lastName:  a.last_name,
-            email:     a.email,
-            roleId:    String(a.role_id),
-            programId: a.program_id ? String(a.program_id) : "",
-            position:  a.position ?? "",
-            password:  "",
+            firstName:  a.first_name,
+            lastName:   a.last_name,
+            email:      a.email,
+            roleId:     String(a.role_id),
+            programId:  a.program_id ? String(a.program_id) : "",
+            position:   a.position ?? "",
+            password:   "",
+            yearLevel:  a.year_level ? String(a.year_level) : "",
+            section:    a.section ?? "",
         });
     };
 
@@ -307,6 +320,7 @@ export default function AccountsPage() {
         if (editForm.password && editForm.password.length < 8) { setEditError("Password must be at least 8 characters."); return; }
         setEditSaving(true);
         try {
+            const editRoleName = roles.find(r => r.role_id === Number(editForm.roleId))?.role_name ?? "";
             await sysadminService.updateAccount(accessToken, editTarget.user_id, {
                 firstName: editForm.firstName.trim(),
                 lastName:  editForm.lastName.trim(),
@@ -315,6 +329,8 @@ export default function AccountsPage() {
                 programId: editForm.programId ? Number(editForm.programId) : null,
                 position:  editForm.position.trim(),
                 password:  editForm.password || undefined,
+                yearLevel: CLASS_ROLES.includes(editRoleName) && editForm.yearLevel ? Number(editForm.yearLevel) : null,
+                section:   CLASS_ROLES.includes(editRoleName) ? editForm.section.trim() || null : null,
             });
             setEditTarget(null); setShowEditPass(false);
             showToast(`${editForm.firstName} ${editForm.lastName} updated.`);
@@ -723,6 +739,24 @@ export default function AccountsPage() {
                                     </datalist>
                                 </div>
                                 )}
+                                {CLASS_ROLES.includes(roles.find(r => r.role_id === Number(editForm.roleId))?.role_name ?? "") && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Year Level *</label>
+                                    <select className={inputCls} value={editForm.yearLevel}
+                                        onChange={e => setEditForm(f => ({ ...f, yearLevel: e.target.value }))}>
+                                        <option value="" disabled hidden>Select year level</option>
+                                        {YEAR_LEVELS.map(y => <option key={y.value} value={y.value}>{y.label}</option>)}
+                                    </select>
+                                </div>
+                                )}
+                                {CLASS_ROLES.includes(roles.find(r => r.role_id === Number(editForm.roleId))?.role_name ?? "") && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Section *</label>
+                                    <input className={inputCls} value={editForm.section}
+                                        onChange={e => setEditForm(f => ({ ...f, section: e.target.value }))}
+                                        placeholder="e.g. A, B, Section 1" />
+                                </div>
+                                )}
                                 <div className="sm:col-span-2 lg:col-span-3">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         New Password <span className="text-gray-400 font-normal">(leave blank to keep current)</span>
@@ -824,7 +858,7 @@ export default function AccountsPage() {
                                         <select className={inputCls} value={form.yearLevel}
                                             onChange={e => setForm({ ...form, yearLevel: e.target.value })}>
                                             <option value="" disabled hidden>Select year level</option>
-                                            {YEAR_LEVELS.map(y => <option key={y} value={y}>{y}</option>)}
+                                            {YEAR_LEVELS.map(y => <option key={y.value} value={y.value}>{y.label}</option>)}
                                         </select>
                                     </div>
                                 )}
@@ -838,7 +872,7 @@ export default function AccountsPage() {
                                     </div>
                                 )}
 
-                                {!isClassOfficer && (
+                                {form.role !== "system_admin" && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
                                         <input list="position-suggestions" className={inputCls} value={form.position}

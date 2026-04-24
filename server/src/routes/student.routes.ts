@@ -16,7 +16,7 @@ const router = Router();
 router.get(
     "/",
     authenticate,
-    authorize("system_admin", "eso_officer", "class_officer", "program_head", "signatory", "dean"),
+    authorize("system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "class_officer", "class_secretary", "class_treasurer", "class_president", "program_officer", "program_treasurer", "program_president", "program_head", "signatory", "osas_coordinator", "dean"),
     listStudents
 );
 

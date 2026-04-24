@@ -1,0 +1,40 @@
+=== Seed run: 2026-04-21T02:47:04.336Z ===
+Connecting to DB...
+Connected.
+Found CpE: program_id = 1
+Found student role: role_id = 7
+Password hashed with 10 rounds.
+
+Seeding Year 1 (5 students)...
+  SKIP (exists): student.cpe1.001@eso.test
+  OK: 26T2002 - Maria Reyes (student.cpe1.002@eso.test)
+  OK: 26T2003 - Jose Cruz (student.cpe1.003@eso.test)
+  OK: 26T2004 - Ana Garcia (student.cpe1.004@eso.test)
+  OK: 26T2005 - Carlos Torres (student.cpe1.005@eso.test)
+
+Seeding Year 2 (10 students)...
+  SKIP (exists): student.cpe2.006@eso.test
+  OK: 26T2007 - Miguel Flores (student.cpe2.007@eso.test)
+  OK: 26T2008 - Rosa Rivera (student.cpe2.008@eso.test)
+  OK: 26T2009 - Pedro Gomez (student.cpe2.009@eso.test)
+  OK: 26T2010 - Clara Martinez (student.cpe2.010@eso.test)
+  OK: 26T2011 - Ramon Ramos (student.cpe2.011@eso.test)
+  OK: 26T2012 - Luz Diaz (student.cpe2.012@eso.test)
+  OK: 26T2013 - Eduardo Mendoza (student.cpe2.013@eso.test)
+  OK: 26T2014 - Teresa Aquino (student.cpe2.014@eso.test)
+  OK: 26T2015 - Ricardo Bautista (student.cpe2.015@eso.test)
+
+Seeding Year 3 (5 students)...
+  SKIP (exists): student.cpe3.016@eso.test
+  OK: 26T2017 - Marco Villanueva (student.cpe3.017@eso.test)
+  OK: 26T2018 - Sofia Santiago (student.cpe3.018@eso.test)
+  OK: 26T2019 - Diego Aguilar (student.cpe3.019@eso.test)
+  OK: 26T2020 - Isabel Navarro (student.cpe3.020@eso.test)
+
+Seeding Year 4 (3 students)...
+  SKIP (exists): student.cpe4.021@eso.test
+  OK: 26T2022 - Carla Morales (student.cpe4.022@eso.test)
+  OK: 26T2023 - Bernard Hernandez (student.cpe4.023@eso.test)
+
+Done! 19 student(s) inserted.
+Login password for all: Student@123

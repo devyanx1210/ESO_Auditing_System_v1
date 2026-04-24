@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { isClassRole } from "../config/role-groups.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ async function getAdminRecord(userId: number): Promise<{ adminId: number; progra
 }
 
 // Roles that can see all departments
-const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "dean", "program_head"];
+const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "signatory", "osas_coordinator", "dean", "program_head"];
 
 // ─── Pending GCash payments for admin review ──────────────────────────────────
 
@@ -75,7 +76,7 @@ export const getPendingPayments = async (
         sql += " AND s.program_id = ?";
         params.push(programId);
     }
-    if (role === "class_officer") {
+    if (isClassRole(role ?? "")) {
         if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
         if (section)           { sql += " AND s.section = ?";    params.push(section); }
     }
@@ -345,7 +346,7 @@ export const getPaymentHistory = async (
         sql += " AND s.program_id = ?";
         params.push(programId);
     }
-    if (role === "class_officer") {
+    if (isClassRole(role ?? "")) {
         if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
         if (section)           { sql += " AND s.section = ?";    params.push(section); }
     }

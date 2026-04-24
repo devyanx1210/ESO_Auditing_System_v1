@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { FiTrash2, FiRefreshCw, FiEdit2, FiFilter, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiTrash2, FiRefreshCw, FiEdit2, FiFilter, FiChevronDown, FiChevronUp, FiArchive, FiRotateCcw } from "react-icons/fi";
 import { useAuth } from "../../hooks/useAuth";
 import { obligationService, qrUrl } from "../../services/obligation.service";
 import type { ObligationData, CreateObligationInput } from "../../services/obligation.service";
@@ -133,13 +133,110 @@ function SchoolYearCombobox({ value, onChange }: SchoolYearComboboxProps) {
     );
 }
 
+// ─── Shared table component ───────────────────────────────────────────────────
+
+interface ObligationTableProps {
+    rows: ObligationData[];
+    selected: Set<number>;
+    onToggleOne: (id: number) => void;
+    onToggleAll: () => void;
+    actionSlot: (o: ObligationData) => React.ReactNode;
+    syncing?: number | null;
+}
+
+function ObligationTable({ rows, selected, onToggleOne, onToggleAll, actionSlot }: ObligationTableProps) {
+    return (
+        <div className="rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.08)] overflow-x-auto">
+            <table className="eso-table w-full text-[11px] border-collapse bg-white dark:bg-[#1a1a1a]" style={{ minWidth: 1000 }}>
+                <thead className="bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400">
+                    <tr>
+                        <th className="col-check py-2 w-8 shrink-0">
+                            <input type="checkbox"
+                                checked={rows.length > 0 && selected.size === rows.length}
+                                onChange={onToggleAll}
+                                className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
+                        </th>
+                        <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap" style={{ minWidth: 160 }}>Name</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Payment</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Scope</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Program</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Yr/Sec</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">School Year</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Sem</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Due Date</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">GCash QR</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Created By</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((o, i) => (
+                        <tr key={o.obligationId}
+                            style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.05}s` }}
+                            className={`transition-colors hover:bg-orange-50 dark:hover:bg-orange-500/10 ${selected.has(o.obligationId) ? "bg-orange-50 dark:bg-orange-500/10" : i % 2 === 0 ? "bg-white dark:bg-[#1a1a1a]" : "bg-gray-50/70 dark:bg-[#222]"}`}>
+                            <td className="col-check py-2" onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" checked={selected.has(o.obligationId)}
+                                    onChange={() => onToggleOne(o.obligationId)}
+                                    className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
+                            </td>
+                            <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100 max-w-[200px] truncate" title={o.obligationName}>{o.obligationName}</td>
+                            <td className="px-2 py-2 text-center">
+                                {o.amount > 0
+                                    ? <span className="font-semibold text-gray-800 dark:text-gray-100">₱{Number(o.amount).toFixed(2)}</span>
+                                    : <span className="text-gray-400 dark:text-gray-500">—</span>}
+                            </td>
+                            <td className="px-2 py-2 text-center capitalize dark:text-gray-300">{SCOPE_LABELS[o.scope] ?? String(o.scope)}</td>
+                            <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.programName ?? "—"}</td>
+                            <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">
+                                {o.yearLevel != null ? `${o.yearLevel}${o.section ?? ""}` : "—"}
+                            </td>
+                            <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.schoolYear}</td>
+                            <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{SEMESTER_LABELS[o.semester] ?? String(o.semester)}</td>
+                            <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.dueDate ? new Date(o.dueDate).toLocaleDateString() : "—"}</td>
+                            <td className="px-2 py-2 text-center">
+                                {o.gcashQrPath
+                                    ? <a href={qrUrl(o.gcashQrPath)} target="_blank" rel="noreferrer" className="text-primary underline">View</a>
+                                    : <span className="text-gray-400">—</span>}
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                                <div className="font-medium text-gray-700 dark:text-gray-200 leading-tight">
+                                    {o.createdByName ?? "—"}
+                                </div>
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                    {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ""}
+                                </div>
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                                <div className="flex justify-center items-center gap-0.5">
+                                    {actionSlot(o)}
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 const Obligations = () => {
     const { accessToken } = useAuth();
     const online = useOnlineStatus();
+    const [tab, setTab] = useState<"active" | "archived">("active");
+
+    // Active
     const [obligations, setObligations] = useState<ObligationData[]>(() => readObCache() ?? []);
-    const [loading, setLoading] = useState(() => readObCache() === null); // skip spinner if cached
+    const [loading, setLoading] = useState(() => readObCache() === null);
     const [stale,   setStale]   = useState(() => readObCache() !== null);
     const [error, setError] = useState("");
+
+    // Archive
+    const [archived, setArchived] = useState<ObligationData[]>([]);
+    const [archiveLoading, setArchiveLoading] = useState(false);
+    const [archiveError, setArchiveError] = useState("");
+
     const [search, setSearch] = useState("");
     const [sortOption, setSortOption] = useState("newest");
     const [filterPayment, setFilterPayment] = useState<"all" | "required" | "free">("all");
@@ -155,7 +252,9 @@ const Obligations = () => {
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState("");
     const [syncing, setSyncing] = useState<number | null>(null);
+    const [restoring, setRestoring] = useState<number | null>(null);
     const [selectedObIds, setSelectedObIds] = useState<Set<number>>(new Set());
+    const [selectedArchiveIds, setSelectedArchiveIds] = useState<Set<number>>(new Set());
     const [alertMsg, setAlertMsg] = useState<string | null>(null);
     const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
     const qrInputRef = useRef<HTMLInputElement>(null);
@@ -171,19 +270,19 @@ const Obligations = () => {
 
     const activeFilterCount = (filterPayment !== "all" ? 1 : 0) + (filterProgram !== null ? 1 : 0);
 
-    function toggleObSelect(id: number) {
-        setSelectedObIds(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
+    function toggleSelect(id: number) {
+        setSelectedObIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
     }
-    function toggleObSelectAll() {
-        if (selectedObIds.size === filtered.length) {
-            setSelectedObIds(new Set());
-        } else {
-            setSelectedObIds(new Set(filtered.map(o => o.obligationId)));
-        }
+    function toggleSelectAll() {
+        if (selectedObIds.size === filtered.length) setSelectedObIds(new Set());
+        else setSelectedObIds(new Set(filtered.map(o => o.obligationId)));
+    }
+    function toggleArchiveSelect(id: number) {
+        setSelectedArchiveIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    }
+    function toggleArchiveSelectAll() {
+        if (selectedArchiveIds.size === filteredArchive.length) setSelectedArchiveIds(new Set());
+        else setSelectedArchiveIds(new Set(filteredArchive.map(o => o.obligationId)));
     }
 
     const fetchObligations = () => {
@@ -198,7 +297,7 @@ const Obligations = () => {
         obligationService.getAll(accessToken)
             .then(data => { setObligations(data); writeObCache(data); setStale(false); })
             .catch(e => {
-                if (e instanceof AuthError) return; // AuthContext handles redirect
+                if (e instanceof AuthError) return;
                 const cached = readObCache();
                 if (cached) { setObligations(cached); setStale(true); }
                 else setError(e.message);
@@ -206,19 +305,22 @@ const Obligations = () => {
             .finally(() => setLoading(false));
     };
 
+    const fetchArchived = () => {
+        if (!accessToken) return;
+        setArchiveLoading(true);
+        obligationService.getArchived(accessToken)
+            .then(data => setArchived(data))
+            .catch(e => { if (!(e instanceof AuthError)) setArchiveError(e.message); })
+            .finally(() => setArchiveLoading(false));
+    };
+
     useEffect(() => { fetchObligations(); }, [accessToken]);
-    // Auto-refresh when coming back online
     useEffect(() => { if (online) fetchObligations(); }, [online]);
+    useEffect(() => { if (tab === "archived") fetchArchived(); }, [tab, accessToken]);
 
     function openAdd() {
-        setEditing(null);
-        setForm(BLANK_FORM);
-        setRequiresPayment(false);
-
-        setQrFile(null);
-        setQrPreview(null);
-        setFormError("");
-        setShowModal(true);
+        setEditing(null); setForm(BLANK_FORM); setRequiresPayment(false);
+        setQrFile(null); setQrPreview(null); setFormError(""); setShowModal(true);
     }
 
     function openEdit(o: ObligationData) {
@@ -238,35 +340,25 @@ const Obligations = () => {
             gcashQrPath: o.gcashQrPath,
         });
         setRequiresPayment(o.requiresPayment);
-
-        setQrFile(null);
-        setQrPreview(o.gcashQrPath ? qrUrl(o.gcashQrPath) : null);
-        setFormError("");
-        setShowModal(true);
+        setQrFile(null); setQrPreview(o.gcashQrPath ? qrUrl(o.gcashQrPath) : null);
+        setFormError(""); setShowModal(true);
     }
 
-    function cancelEdit() {
-        setShowModal(false);
-        setEditing(null);
-    }
+    function cancelEdit() { setShowModal(false); setEditing(null); }
 
     function handleQrChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0] ?? null;
         setQrFile(file);
-        if (file) {
-            setQrPreview(URL.createObjectURL(file));
-        }
+        if (file) setQrPreview(URL.createObjectURL(file));
     }
 
     async function handleSave() {
         if (!accessToken) return;
         if (!form.obligationName.trim()) { setFormError("Obligation name is required."); return; }
         if (requiresPayment && (!form.amount || form.amount <= 0)) {
-            setFormError("Amount is required for paid obligations.");
-            return;
+            setFormError("Amount is required for paid obligations."); return;
         }
-        setSaving(true);
-        setFormError("");
+        setSaving(true); setFormError("");
         const submitForm = { ...form, amount: requiresPayment ? form.amount : 0 };
         try {
             if (editing) {
@@ -280,24 +372,97 @@ const Obligations = () => {
             setShowModal(false);
         } catch (e: any) {
             setFormError(e.message ?? "Failed to save.");
-        } finally {
-            setSaving(false);
-        }
+        } finally { setSaving(false); }
     }
 
-    function handleDelete(id: number) {
+    // Archive (soft delete) from active list
+    function handleArchive(id: number) {
         if (!accessToken) return;
         setConfirmState({
-            message: "Delete this obligation? Students will be notified.",
+            message: "Archive this obligation? You can restore it later from the Archive tab.",
             onConfirm: async () => {
                 setConfirmState(null);
                 try {
                     await obligationService.remove(accessToken, id);
                     setObligations(prev => { const next = prev.filter(o => o.obligationId !== id); writeObCache(next); return next; });
                     setShowModal(false);
-                } catch (e: any) {
-                    setAlertMsg(e.message ?? "Failed to delete.");
+                } catch (e: any) { setAlertMsg(e.message ?? "Failed to archive."); }
+            },
+        });
+    }
+
+    function handleBulkArchive() {
+        if (!accessToken || !selectedObIds.size) return;
+        setConfirmState({
+            message: `Archive ${selectedObIds.size} obligation(s)? You can restore them from the Archive tab.`,
+            onConfirm: async () => {
+                setConfirmState(null);
+                const ids = [...selectedObIds];
+                for (const id of ids) {
+                    try { await obligationService.remove(accessToken, id); } catch { /* skip */ }
                 }
+                setObligations(prev => { const next = prev.filter(o => !ids.includes(o.obligationId)); writeObCache(next); return next; });
+                setSelectedObIds(new Set());
+            },
+        });
+    }
+
+    // Restore from archive
+    async function handleRestore(id: number) {
+        if (!accessToken) return;
+        setRestoring(id);
+        try {
+            await obligationService.restore(accessToken, id);
+            setArchived(prev => prev.filter(o => o.obligationId !== id));
+            fetchObligations();
+        } catch (e: any) { setAlertMsg(e.message ?? "Failed to restore."); }
+        finally { setRestoring(null); }
+    }
+
+    function handleBulkRestore() {
+        if (!accessToken || !selectedArchiveIds.size) return;
+        setConfirmState({
+            message: `Restore ${selectedArchiveIds.size} obligation(s)?`,
+            onConfirm: async () => {
+                setConfirmState(null);
+                const ids = [...selectedArchiveIds];
+                for (const id of ids) {
+                    try { await obligationService.restore(accessToken, id); } catch { /* skip */ }
+                }
+                setArchived(prev => prev.filter(o => !ids.includes(o.obligationId)));
+                setSelectedArchiveIds(new Set());
+                fetchObligations();
+            },
+        });
+    }
+
+    // Permanent delete (only from archive)
+    function handlePermanentDelete(id: number) {
+        if (!accessToken) return;
+        setConfirmState({
+            message: "Permanently delete this obligation? This cannot be undone and students will be notified.",
+            onConfirm: async () => {
+                setConfirmState(null);
+                try {
+                    await obligationService.permanentDelete(accessToken, id);
+                    setArchived(prev => prev.filter(o => o.obligationId !== id));
+                } catch (e: any) { setAlertMsg(e.message ?? "Failed to delete."); }
+            },
+        });
+    }
+
+    function handleBulkPermanentDelete() {
+        if (!accessToken || !selectedArchiveIds.size) return;
+        setConfirmState({
+            message: `Permanently delete ${selectedArchiveIds.size} obligation(s)? This cannot be undone.`,
+            onConfirm: async () => {
+                setConfirmState(null);
+                const ids = [...selectedArchiveIds];
+                for (const id of ids) {
+                    try { await obligationService.permanentDelete(accessToken, id); } catch { /* skip */ }
+                }
+                setArchived(prev => prev.filter(o => !ids.includes(o.obligationId)));
+                setSelectedArchiveIds(new Set());
             },
         });
     }
@@ -311,11 +476,8 @@ const Obligations = () => {
                 ? `Synced! ${res.inserted} student(s) newly assigned.`
                 : "All matching students already have this obligation."
             );
-        } catch (e: any) {
-            setAlertMsg(e.message ?? "Sync failed.");
-        } finally {
-            setSyncing(null);
-        }
+        } catch (e: any) { setAlertMsg(e.message ?? "Sync failed."); }
+        finally { setSyncing(null); }
     }
 
     const searchLower = search.toLowerCase();
@@ -331,21 +493,11 @@ const Obligations = () => {
     else if (sortOption === "amount-high") filtered = [...filtered].sort((a, b) => b.amount - a.amount);
     else if (sortOption === "amount-low") filtered = [...filtered].sort((a, b) => a.amount - b.amount);
 
-    function handleBulkDelete() {
-        if (!accessToken || !selectedObIds.size) return;
-        setConfirmState({
-            message: `Delete ${selectedObIds.size} obligation(s)? This cannot be undone.`,
-            onConfirm: async () => {
-                setConfirmState(null);
-                const ids = [...selectedObIds];
-                for (const id of ids) {
-                    try { await obligationService.remove(accessToken, id); } catch { /* skip */ }
-                }
-                setObligations(prev => { const next = prev.filter(o => !ids.includes(o.obligationId)); writeObCache(next); return next; });
-                setSelectedObIds(new Set());
-            },
-        });
-    }
+    let filteredArchive = archived.filter(o => {
+        if (searchLower && !o.obligationName.toLowerCase().includes(searchLower) && !(o.createdByName ?? "").toLowerCase().includes(searchLower)) return false;
+        if (filterProgram !== null && o.programId !== filterProgram) return false;
+        return true;
+    });
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen dark:bg-[#111111]">
@@ -357,31 +509,75 @@ const Obligations = () => {
         <div className="p-4 sm:p-6 md:p-10 bg-gray-50 dark:bg-[#111111] min-h-screen">
             <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
             {alertMsg && <AlertModal message={alertMsg} onClose={() => setAlertMsg(null)} />}
-            {confirmState && <ConfirmModal message={confirmState.message} confirmLabel="Delete" danger onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(null)} />}
+            {confirmState && <ConfirmModal message={confirmState.message} confirmLabel="Confirm" danger onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(null)} />}
             <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">Obligations</h1>
+
+            {/* TABS */}
+            <div className="flex gap-1 mb-5 border-b border-gray-200 dark:border-gray-700">
+                <button
+                    onClick={() => { setTab("active"); setSelectedObIds(new Set()); }}
+                    className={`px-5 py-2 text-sm font-semibold rounded-t-lg transition-colors ${tab === "active" ? "bg-white dark:bg-[#1a1a1a] text-orange-500 border-b-2 border-orange-500" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                    Active
+                    <span className="ml-1.5 text-xs bg-orange-100 text-orange-600 rounded-full px-1.5 py-0.5">{obligations.length}</span>
+                </button>
+                <button
+                    onClick={() => { setTab("archived"); setSelectedArchiveIds(new Set()); }}
+                    className={`px-5 py-2 text-sm font-semibold rounded-t-lg transition-colors ${tab === "archived" ? "bg-white dark:bg-[#1a1a1a] text-amber-500 border-b-2 border-amber-500" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                    Archive
+                    {archived.length > 0 && <span className="ml-1.5 text-xs bg-amber-100 text-amber-600 rounded-full px-1.5 py-0.5">{archived.length}</span>}
+                </button>
+            </div>
 
             {/* TOP BAR */}
             <div className="flex flex-row flex-wrap gap-3 mb-6 items-center">
                 <input
                     className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500 shadow-sm flex-1 min-w-[180px] max-w-xs"
-                    placeholder="Search obligations..."
+                    placeholder={tab === "active" ? "Search obligations..." : "Search archive..."}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
                 <div className="flex gap-2 flex-wrap items-center">
-                    {selectedObIds.size > 0 && (
-                        <button onClick={handleBulkDelete}
-                            className="relative px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
-                            Delete
-                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-red-600 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-red-200">
-                                {selectedObIds.size}
-                            </span>
-                        </button>
+
+                    {/* Active tab bulk/add actions */}
+                    {tab === "active" && (
+                        <>
+                            {selectedObIds.size > 0 && (
+                                <button onClick={handleBulkArchive}
+                                    className="relative px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition">
+                                    Archive
+                                    <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-amber-600 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-amber-200">
+                                        {selectedObIds.size}
+                                    </span>
+                                </button>
+                            )}
+                            <button onClick={openAdd} className="bg-primary text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition flex items-center gap-1.5">
+                                <span className="text-base leading-none">+</span>
+                                <span className="hidden sm:inline">Add Obligation</span>
+                            </button>
+                        </>
                     )}
-                    <button onClick={openAdd} className="bg-primary text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition flex items-center gap-1.5">
-                        <span className="text-base leading-none">+</span>
-                        <span className="hidden sm:inline">Add Obligation</span>
-                    </button>
+
+                    {/* Archive tab bulk actions */}
+                    {tab === "archived" && selectedArchiveIds.size > 0 && (
+                        <>
+                            <button onClick={handleBulkRestore}
+                                className="relative px-4 py-2 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition">
+                                Restore
+                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-green-600 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-green-200">
+                                    {selectedArchiveIds.size}
+                                </span>
+                            </button>
+                            <button onClick={handleBulkPermanentDelete}
+                                className="relative px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
+                                Delete
+                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-red-600 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-red-200">
+                                    {selectedArchiveIds.size}
+                                </span>
+                            </button>
+                        </>
+                    )}
+
+                    {/* Filter (shared) */}
                     <div ref={filterRef} className="relative">
                         <button
                             onClick={() => setShowFilter(f => !f)}
@@ -402,31 +598,29 @@ const Obligations = () => {
                         {showFilter && (
                             <div className="absolute right-0 sm:right-0 top-full mt-2 z-30 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl ring-1 ring-black/5 p-4 w-72 max-w-[calc(100vw-2rem)] flex flex-col gap-3" style={{ animation: 'fadeInUp 0.15s ease both' }}>
                                 <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Sort &amp; Filter</p>
-
-                                {/* Sort By */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Sort by</label>
-                                    <select value={sortOption} onChange={e => setSortOption(e.target.value)}
-                                        className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
-                                        <option value="newest">Newest</option>
-                                        <option value="az">Name A–Z</option>
-                                        <option value="amount-high">Amount (High → Low)</option>
-                                        <option value="amount-low">Amount (Low → High)</option>
-                                    </select>
-                                </div>
-
-                                {/* Payment */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Payment</label>
-                                    <select value={filterPayment} onChange={e => setFilterPayment(e.target.value as any)}
-                                        className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
-                                        <option value="all">All</option>
-                                        <option value="required">Required</option>
-                                        <option value="free">Free</option>
-                                    </select>
-                                </div>
-
-                                {/* Program */}
+                                {tab === "active" && (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Sort by</label>
+                                            <select value={sortOption} onChange={e => setSortOption(e.target.value)}
+                                                className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
+                                                <option value="newest">Newest</option>
+                                                <option value="az">Name A–Z</option>
+                                                <option value="amount-high">Amount (High → Low)</option>
+                                                <option value="amount-low">Amount (Low → High)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Payment</label>
+                                            <select value={filterPayment} onChange={e => setFilterPayment(e.target.value as any)}
+                                                className="w-full border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100">
+                                                <option value="all">All</option>
+                                                <option value="required">Required</option>
+                                                <option value="free">Free</option>
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Program</label>
                                     <select value={filterProgram ?? ""} onChange={e => setFilterProgram(e.target.value ? Number(e.target.value) : null)}
@@ -437,8 +631,6 @@ const Obligations = () => {
                                         ))}
                                     </select>
                                 </div>
-
-                                {/* Clear filters */}
                                 {(activeFilterCount > 0 || sortOption !== "newest") && (
                                     <button
                                         onClick={() => { setFilterPayment("all"); setFilterProgram(null); setSortOption("newest"); }}
@@ -453,102 +645,78 @@ const Obligations = () => {
             </div>
 
             {error && <p className="text-red-500 mb-4">{error}</p>}
+            {stale && <p className="text-amber-500 text-xs mb-2">Showing cached data. Reconnect to refresh.</p>}
 
-            {/* LIST */}
-            {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center mt-20 text-gray-400 opacity-60">
-                    <p className="text-lg font-semibold">No obligations yet. Add one to get started.</p>
-                </div>
-            ) : (
-                <div className="rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.08)] overflow-x-auto">
-                    <table className="eso-table w-full text-[11px] border-collapse bg-white dark:bg-[#1a1a1a]" style={{ minWidth: 1000 }}>
-                        <thead className="bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400">
-                            <tr>
-                                <th className="col-check py-2 w-8 shrink-0">
-                                    <input type="checkbox"
-                                        checked={filtered.length > 0 && selectedObIds.size === filtered.length}
-                                        onChange={toggleObSelectAll}
-                                        className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
-                                </th>
-                                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap" style={{ minWidth: 160 }}>Name</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Payment</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Scope</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Program</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Yr/Sec</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">School Year</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Sem</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Due Date</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">GCash QR</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Created By</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Status</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map((o, i) => (
-                                <tr key={o.obligationId}
-                                    style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.05}s` }}
-                                    className={`transition-colors hover:bg-orange-50 dark:hover:bg-orange-500/10 ${selectedObIds.has(o.obligationId) ? "bg-orange-50 dark:bg-orange-500/10" : i % 2 === 0 ? "bg-white dark:bg-[#1a1a1a]" : "bg-gray-50/70 dark:bg-[#222]"}`}>
-                                    <td className="col-check py-2" onClick={e => e.stopPropagation()}>
-                                        <input type="checkbox" checked={selectedObIds.has(o.obligationId)}
-                                            onChange={() => toggleObSelect(o.obligationId)}
-                                            className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
-                                    </td>
-                                    <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100 max-w-[200px] truncate" title={o.obligationName}>{o.obligationName}</td>
-                                    <td className="px-2 py-2 text-center">
-                                        {o.amount > 0
-                                            ? <span className="font-semibold text-gray-800 dark:text-gray-100">₱{Number(o.amount).toFixed(2)}</span>
-                                            : <span className="text-gray-400 dark:text-gray-500">—</span>}
-                                    </td>
-                                    <td className="px-2 py-2 text-center capitalize dark:text-gray-300">{SCOPE_LABELS[o.scope] ?? String(o.scope)}</td>
-                                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.programName ?? "—"}</td>
-                                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">
-                                        {o.yearLevel != null ? `${o.yearLevel}${o.section ?? ""}` : "—"}
-                                    </td>
-                                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.schoolYear}</td>
-                                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{SEMESTER_LABELS[o.semester] ?? String(o.semester)}</td>
-                                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400">{o.dueDate ? new Date(o.dueDate).toLocaleDateString() : "—"}</td>
-                                    <td className="px-2 py-2 text-center">
-                                        {o.gcashQrPath
-                                            ? <a href={qrUrl(o.gcashQrPath)} target="_blank" rel="noreferrer" className="text-primary underline">View</a>
-                                            : <span className="text-gray-400">—</span>}
-                                    </td>
-                                    <td className="px-2 py-2 text-center">
-                                        <div className="font-medium text-gray-700 dark:text-gray-200 leading-tight">
-                                            {o.createdByName ?? "—"}
-                                        </div>
-                                        <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                                            {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ""}
-                                        </div>
-                                    </td>
-                                    <td className="px-2 py-2 text-center">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${o.isActive ? "bg-green-500 text-white" : "bg-gray-400 text-white"}`}>
-                                            {o.isActive ? "Active" : "Inactive"}
-                                        </span>
-                                    </td>
-                                    <td className="px-2 py-2 text-center">
-                                        <div className="flex justify-center items-center gap-0.5">
-                                            <button onClick={() => openEdit(o)} title="Edit" className="p-1 rounded-lg text-orange-500 hover:bg-orange-50 transition">
-                                                <FiEdit2 className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleSync(o.obligationId)}
-                                                disabled={syncing === o.obligationId}
-                                                title="Sync students to this obligation"
-                                                className="p-1 rounded-lg text-blue-500 hover:bg-blue-50 transition disabled:opacity-40"
-                                            >
-                                                <FiRefreshCw className={`w-3 h-3 ${syncing === o.obligationId ? "animate-spin" : ""}`} />
-                                            </button>
-                                            <button onClick={() => handleDelete(o.obligationId)} title="Delete" className="p-1 rounded-lg text-red-500 hover:bg-red-50 transition">
-                                                <FiTrash2 className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+            {/* ACTIVE TAB */}
+            {tab === "active" && (
+                filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center mt-20 text-gray-400 opacity-60">
+                        <p className="text-lg font-semibold">No obligations yet. Add one to get started.</p>
+                    </div>
+                ) : (
+                    <ObligationTable
+                        rows={filtered}
+                        selected={selectedObIds}
+                        onToggleOne={toggleSelect}
+                        onToggleAll={toggleSelectAll}
+                        actionSlot={(o) => (
+                            <>
+                                <button onClick={() => openEdit(o)} title="Edit" className="p-1 rounded-lg text-orange-500 hover:bg-orange-50 transition">
+                                    <FiEdit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                    onClick={() => handleSync(o.obligationId)}
+                                    disabled={syncing === o.obligationId}
+                                    title="Sync students"
+                                    className="p-1 rounded-lg text-blue-500 hover:bg-blue-50 transition disabled:opacity-40"
+                                >
+                                    <FiRefreshCw className={`w-3 h-3 ${syncing === o.obligationId ? "animate-spin" : ""}`} />
+                                </button>
+                                <button onClick={() => handleArchive(o.obligationId)} title="Archive" className="p-1 rounded-lg text-amber-500 hover:bg-amber-50 transition">
+                                    <FiArchive className="w-3 h-3" />
+                                </button>
+                            </>
+                        )}
+                    />
+                )
+            )}
+
+            {/* ARCHIVE TAB */}
+            {tab === "archived" && (
+                archiveLoading ? (
+                    <div className="flex items-center justify-center mt-20">
+                        <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-amber-500" />
+                    </div>
+                ) : archiveError ? (
+                    <p className="text-red-500">{archiveError}</p>
+                ) : filteredArchive.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center mt-20 text-gray-400 opacity-60">
+                        <FiArchive className="w-10 h-10 mb-3" />
+                        <p className="text-lg font-semibold">No archived obligations.</p>
+                    </div>
+                ) : (
+                    <ObligationTable
+                        rows={filteredArchive}
+                        selected={selectedArchiveIds}
+                        onToggleOne={toggleArchiveSelect}
+                        onToggleAll={toggleArchiveSelectAll}
+                        actionSlot={(o) => (
+                            <>
+                                <button
+                                    onClick={() => handleRestore(o.obligationId)}
+                                    disabled={restoring === o.obligationId}
+                                    title="Restore"
+                                    className="p-1 rounded-lg text-green-500 hover:bg-green-50 transition disabled:opacity-40"
+                                >
+                                    <FiRotateCcw className={`w-3 h-3 ${restoring === o.obligationId ? "animate-spin" : ""}`} />
+                                </button>
+                                <button onClick={() => handlePermanentDelete(o.obligationId)} title="Permanently delete" className="p-1 rounded-lg text-red-500 hover:bg-red-50 transition">
+                                    <FiTrash2 className="w-3 h-3" />
+                                </button>
+                            </>
+                        )}
+                    />
+                )
             )}
 
             {/* ADD / EDIT MODAL */}
@@ -558,7 +726,6 @@ const Obligations = () => {
                     <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-2xl max-h-[88vh] sm:max-h-[90vh] overflow-y-auto" style={{ animation: 'fadeInUp 0.2s ease both' }}
                         onClick={e => e.stopPropagation()}>
 
-                        {/* Header */}
                         <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-gray-100 dark:border-gray-700">
                             <h2 className="font-bold text-base sm:text-xl text-gray-800 dark:text-gray-100">{editing ? "Edit Obligation" : "Add Obligation"}</h2>
                             <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold leading-none">&times;</button>
@@ -569,7 +736,6 @@ const Obligations = () => {
 
                             <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5 sm:gap-4">
 
-                                {/* Name */}
                                 <div className="col-span-2">
                                     <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Obligation Name *</label>
                                     <input
@@ -580,7 +746,6 @@ const Obligations = () => {
                                     />
                                 </div>
 
-                                {/* Description */}
                                 <div className="col-span-2">
                                     <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Description</label>
                                     <textarea
@@ -592,14 +757,10 @@ const Obligations = () => {
                                     />
                                 </div>
 
-                                {/* Payment Required Toggle */}
                                 <div className="col-span-2">
                                     <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                         <div
-                                            onClick={() => {
-                                                setRequiresPayment(p => !p);
-                                                if (requiresPayment) setForm(f => ({ ...f, amount: 0 }));
-                                            }}
+                                            onClick={() => { setRequiresPayment(p => !p); if (requiresPayment) setForm(f => ({ ...f, amount: 0 })); }}
                                             className={`relative w-9 h-5 sm:w-11 sm:h-6 rounded-full transition-colors ${requiresPayment ? "bg-primary" : "bg-gray-300"}`}
                                         >
                                             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${requiresPayment ? "translate-x-4 sm:translate-x-5" : "translate-x-0"}`} />
@@ -608,21 +769,17 @@ const Obligations = () => {
                                     </label>
                                 </div>
 
-                                {/* Amount + QR (shown only when payment required) */}
                                 {requiresPayment && (
                                     <>
                                         <div>
                                             <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Amount (₱) *</label>
                                             <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0.01"
+                                                type="number" step="0.01" min="0.01"
                                                 className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
                                                 value={form.amount || ""}
                                                 onChange={e => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })}
                                             />
                                         </div>
-
                                         <div>
                                             <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">GCash QR Code</label>
                                             <button
@@ -638,16 +795,13 @@ const Obligations = () => {
                                                     <img src={qrPreview} alt="QR Preview" className="w-14 h-14 sm:w-20 sm:h-20 object-contain border-2 border-gray-200 rounded" />
                                                     <button type="button"
                                                         onClick={() => { setQrFile(null); setQrPreview(null); if (qrInputRef.current) qrInputRef.current.value = ""; }}
-                                                        className="text-xs text-red-500 hover:underline">
-                                                        Remove
-                                                    </button>
+                                                        className="text-xs text-red-500 hover:underline">Remove</button>
                                                 </div>
                                             )}
                                         </div>
                                     </>
                                 )}
 
-                                {/* Due Date */}
                                 <div>
                                     <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
                                     <input
@@ -658,16 +812,11 @@ const Obligations = () => {
                                     />
                                 </div>
 
-                                {/* School Year */}
                                 <div>
                                     <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">School Year *</label>
-                                    <SchoolYearCombobox
-                                        value={form.schoolYear}
-                                        onChange={v => setForm({ ...form, schoolYear: v })}
-                                    />
+                                    <SchoolYearCombobox value={form.schoolYear} onChange={v => setForm({ ...form, schoolYear: v })} />
                                 </div>
 
-                                {/* Semester */}
                                 <div>
                                     <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Semester *</label>
                                     <select
@@ -681,7 +830,6 @@ const Obligations = () => {
                                     </select>
                                 </div>
 
-                                {/* Scope */}
                                 <div>
                                     <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Scope *</label>
                                     <select
@@ -693,11 +841,9 @@ const Obligations = () => {
                                     </select>
                                 </div>
 
-                                {/* Required */}
                                 <div className="col-span-2 flex items-center gap-2.5">
                                     <input
-                                        type="checkbox"
-                                        id="isRequired"
+                                        type="checkbox" id="isRequired"
                                         checked={form.isRequired}
                                         onChange={e => setForm({ ...form, isRequired: e.target.checked })}
                                         className="w-4 h-4 accent-orange-500 shrink-0"
@@ -710,7 +856,6 @@ const Obligations = () => {
                                     )}
                                 </div>
 
-                                {/* Program */}
                                 {(form.scope === 1 || form.scope === 2 || form.scope === 3) && (
                                     <div>
                                         <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Program</label>
@@ -725,7 +870,6 @@ const Obligations = () => {
                                     </div>
                                 )}
 
-                                {/* Year Level */}
                                 {(form.scope === 2 || form.scope === 3) && (
                                     <div>
                                         <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Year Level</label>
@@ -743,7 +887,6 @@ const Obligations = () => {
                                     </div>
                                 )}
 
-                                {/* Section */}
                                 {(form.scope === 2 || form.scope === 3) && (
                                     <div>
                                         <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Section</label>
@@ -767,11 +910,10 @@ const Obligations = () => {
                                 </button>
                                 {editing && (
                                     <button
-                                        onClick={() => handleDelete(editing.obligationId)}
-                                        title="Delete obligation"
-                                        className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition font-medium text-xs sm:text-sm border border-red-200"
+                                        onClick={() => handleArchive(editing.obligationId)}
+                                        className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-amber-100 text-amber-600 hover:bg-amber-200 transition font-medium text-xs sm:text-sm border border-amber-200"
                                     >
-                                        <FiTrash2 className="w-3.5 h-3.5" /> Delete
+                                        <FiArchive className="w-3.5 h-3.5" /> Archive
                                     </button>
                                 )}
                             </div>

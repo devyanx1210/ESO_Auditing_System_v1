@@ -449,7 +449,7 @@ export default function StudentDashboard() {
                 {/* Status message */}
                 {clearance?.clearanceId ? (
                     clearance.status === 2
-                        ? <p className="text-xs text-green-600 font-semibold text-center mb-3">🎉 Clearance fully approved!</p>
+                        ? <p className="text-xs text-green-600 font-semibold text-center mb-3">Clearance fully approved!</p>
                         : <p className="text-xs text-orange-500 text-center mb-3">Clearance in progress. Step {clearance.currentStep} of {CLEARANCE_STEPS.length}</p>
                 ) : allObligationsDone ? (
                     <p className="text-xs text-orange-500 font-medium text-center mb-3">

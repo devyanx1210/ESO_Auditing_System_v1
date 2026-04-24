@@ -55,6 +55,7 @@ export const getAllAccounts = async () => {
                 u.program_id,
                 d.name AS program_name,
                 COALESCE(a.position, '') AS position,
+                a.year_level, a.section,
                 a.avatar_path,
                 u.status, u.created_at
          FROM users u
@@ -98,6 +99,8 @@ export const updateAdminAccount = async (
         programId:  number | null;
         position:   string;
         password?:  string;
+        yearLevel?: number | null;
+        section?:   string | null;
     }
 ) => {
     const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
@@ -121,10 +124,10 @@ export const updateAdminAccount = async (
         );
     }
 
-    // Update admins row (position)
+    // Update admins row (position, year_level, section)
     await pool.execute(
-        `UPDATE admins SET position = ?, updated_at = NOW() WHERE user_id = ?`,
-        [data.position.trim() || null, userId]
+        `UPDATE admins SET position = ?, year_level = ?, section = ?, updated_at = NOW() WHERE user_id = ?`,
+        [data.position.trim() || null, data.yearLevel ?? null, data.section ?? null, userId]
     );
 
     // If the account is a student, sync name to students table too
@@ -142,6 +145,8 @@ export const createAdminAccount = async (data: {
     role: string;
     programId?: number | null;
     position?: string;
+    yearLevel?: number | null;
+    section?: string | null;
 }) => {
     const hash = await bcrypt.hash(data.password, 10);
     const [result] = await pool.execute<ResultSetHeader>(
@@ -152,8 +157,8 @@ export const createAdminAccount = async (data: {
     const userId = result.insertId;
     if (data.role !== "system_admin") {
         await pool.execute(
-            `INSERT INTO admins (user_id, position, program_id, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())`,
-            [userId, data.position?.trim() ?? "", data.programId ?? null]
+            `INSERT INTO admins (user_id, position, program_id, year_level, section, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+            [userId, data.position?.trim() ?? "", data.programId ?? null, data.yearLevel ?? null, data.section ?? null]
         );
     }
     return userId;

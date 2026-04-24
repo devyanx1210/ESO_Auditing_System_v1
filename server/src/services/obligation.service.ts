@@ -62,38 +62,107 @@ function mapRow(r: any): ObligationData {
     };
 }
 
-const RESTRICTED_ROLES = ["program_head", "class_officer"];
+import { isClassRole, isProgramRole, isEsoRole } from "../config/role-groups.js";
 
-export const getObligations = async (role?: string, programId?: number | null): Promise<ObligationData[]> => {
-    const isRestricted = role && RESTRICTED_ROLES.includes(role) && programId;
-    const params: any[] = isRestricted ? [programId] : [];
+const OBLIGATION_SELECT = `
+    SELECT
+        o.obligation_id   AS obligationId,
+        o.obligation_name AS obligationName,
+        o.description,
+        o.amount,
+        o.gcash_qr_path          AS gcashQrPath,
+        o.is_required            AS isRequired,
+        o.scope,
+        o.program_id      AS programId,
+        d.name            AS programName,
+        o.year_level      AS yearLevel,
+        o.section,
+        o.school_year     AS schoolYear,
+        o.semester,
+        o.due_date        AS dueDate,
+        o.is_active       AS isActive,
+        o.created_at      AS createdAt,
+        CONCAT(u.first_name, ' ', u.last_name) AS createdByName
+    FROM obligations o
+    LEFT JOIN programs d ON o.program_id = d.program_id
+    LEFT JOIN admins a ON o.created_by = a.admin_id
+    LEFT JOIN users u ON a.user_id = u.user_id
+`;
 
-    const [rows]: any = await pool.execute(`
-        SELECT
-            o.obligation_id   AS obligationId,
-            o.obligation_name AS obligationName,
-            o.description,
-            o.amount,
-            o.gcash_qr_path          AS gcashQrPath,
-            o.is_required            AS isRequired,
-            o.scope,
-            o.program_id      AS programId,
-            d.name            AS programName,
-            o.year_level      AS yearLevel,
-            o.section,
-            o.school_year     AS schoolYear,
-            o.semester,
-            o.due_date        AS dueDate,
-            o.is_active       AS isActive,
-            o.created_at      AS createdAt,
-            CONCAT(u.first_name, ' ', u.last_name) AS createdByName
-        FROM obligations o
-        LEFT JOIN programs d ON o.program_id = d.program_id
-        LEFT JOIN admins a ON o.created_by = a.admin_id
-        LEFT JOIN users u ON a.user_id = u.user_id
-        ${isRestricted ? "WHERE (o.program_id IS NULL OR o.program_id = ?)" : ""}
-        ORDER BY o.created_at DESC
-    `, params);
+function buildScopeFilter(
+    role: string | undefined,
+    programId: number | null | undefined,
+    yearLevel: number | null | undefined,
+    section: string | null | undefined,
+    activeFlag: 0 | 1
+): { where: string; params: any[] } {
+    const params: any[] = [];
+    const base = `o.is_active = ${activeFlag}`;
+
+    if (isClassRole(role ?? "")) {
+        // Class roles: see scope=0 (all), scope=1 for their program,
+        // scope=2 for their year (+ program), scope=3 for their section (+ year + program)
+        const parts: string[] = ["o.scope = 0"];
+        if (programId) {
+            parts.push("(o.scope = 1 AND o.program_id = ?)");
+            params.push(programId);
+        }
+        if (yearLevel != null) {
+            parts.push("(o.scope = 2 AND o.year_level = ? AND (o.program_id IS NULL OR o.program_id = ?))");
+            params.push(yearLevel, programId ?? null);
+        }
+        if (section && yearLevel != null) {
+            parts.push("(o.scope = 3 AND o.section = ? AND o.year_level = ? AND (o.program_id IS NULL OR o.program_id = ?))");
+            params.push(section, yearLevel, programId ?? null);
+        }
+        return { where: `${base} AND (${parts.join(" OR ")})`, params };
+    }
+
+    if (isProgramRole(role ?? "")) {
+        // Program officers: only see scope=1 obligations made for their program (not ESO-wide scope=0)
+        if (programId) {
+            params.push(programId);
+            return { where: `${base} AND o.scope = 1 AND o.program_id = ?`, params };
+        }
+    }
+
+    if (role === "program_head") {
+        // Program head: sees everything in their program including scope=0
+        if (programId) {
+            params.push(programId);
+            return { where: `${base} AND (o.program_id IS NULL OR o.program_id = ?)`, params };
+        }
+    }
+
+    // ESO, sysadmin, dean, signatory — see everything
+    return { where: base, params };
+}
+
+export const getObligations = async (
+    role?: string,
+    programId?: number | null,
+    yearLevel?: number | null,
+    section?: string | null
+): Promise<ObligationData[]> => {
+    const { where, params } = buildScopeFilter(role, programId, yearLevel, section, 1);
+    const [rows]: any = await pool.execute(
+        `${OBLIGATION_SELECT} WHERE ${where} ORDER BY o.created_at DESC`,
+        params
+    );
+    return rows.map(mapRow);
+};
+
+export const getArchivedObligations = async (
+    role?: string,
+    programId?: number | null,
+    yearLevel?: number | null,
+    section?: string | null
+): Promise<ObligationData[]> => {
+    const { where, params } = buildScopeFilter(role, programId, yearLevel, section, 0);
+    const [rows]: any = await pool.execute(
+        `${OBLIGATION_SELECT} WHERE ${where} ORDER BY o.updated_at DESC`,
+        params
+    );
     return rows.map(mapRow);
 };
 
@@ -231,6 +300,20 @@ export const updateObligation = async (
     );
 };
 
+export const toggleObligationActive = async (obligationId: number): Promise<boolean> => {
+    const [rows]: any = await pool.execute(
+        `SELECT is_active FROM obligations WHERE obligation_id = ?`,
+        [obligationId]
+    );
+    if (!rows.length) throw new Error("Obligation not found");
+    const newActive = rows[0].is_active ? 0 : 1;
+    await pool.execute(
+        `UPDATE obligations SET is_active = ?, updated_at = NOW() WHERE obligation_id = ?`,
+        [newActive, obligationId]
+    );
+    return Boolean(newActive);
+};
+
 /**
  * Retroactively assign an obligation to all currently enrolled matching students
  * who don't already have a student_obligation row for it.
@@ -314,7 +397,16 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
     }
 };
 
+// Soft delete — moves to archive
 export const deleteObligation = async (obligationId: number): Promise<void> => {
+    await pool.execute(
+        `UPDATE obligations SET is_active = 0, updated_at = NOW() WHERE obligation_id = ?`,
+        [obligationId]
+    );
+};
+
+// Hard delete — permanently removes from DB (only from archive)
+export const permanentlyDeleteObligation = async (obligationId: number): Promise<void> => {
     const [students]: any = await pool.execute(
         `SELECT u.user_id, o.obligation_name
          FROM student_obligations so
@@ -324,7 +416,6 @@ export const deleteObligation = async (obligationId: number): Promise<void> => {
          WHERE so.obligation_id = ? AND so.status = 0`,
         [obligationId]
     );
-
     if (students.length) {
         const name = students[0].obligation_name;
         for (const s of students) {
@@ -332,11 +423,18 @@ export const deleteObligation = async (obligationId: number): Promise<void> => {
                 `INSERT INTO notifications
                     (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
                  VALUES (?, 'Obligation Removed', ?, 3, ?, 'obligation', 0, NOW())`,
-                [s.user_id, `The obligation "${name}" has been removed.`, obligationId]
+                [s.user_id, `The obligation "${name}" has been permanently removed.`, obligationId]
             );
         }
     }
-
     await pool.execute("DELETE FROM student_obligations WHERE obligation_id = ?", [obligationId]);
     await pool.execute("DELETE FROM obligations WHERE obligation_id = ?", [obligationId]);
+};
+
+// Restore from archive
+export const restoreObligation = async (obligationId: number): Promise<void> => {
+    await pool.execute(
+        `UPDATE obligations SET is_active = 1, updated_at = NOW() WHERE obligation_id = ?`,
+        [obligationId]
+    );
 };

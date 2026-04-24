@@ -47,10 +47,10 @@ export const handleGetAccounts = async (_req: Request, res: Response) => {
 
 export const handleCreateAccount = async (req: Request, res: Response) => {
     try {
-        const { firstName, lastName, email, password, role, programId, position } = req.body;
+        const { firstName, lastName, email, password, role, programId, position, yearLevel, section } = req.body;
         if (!firstName || !lastName || !email || !password || !role)
             return sendError(res, "firstName, lastName, email, password, role are required", 400);
-        const id = await svc.createAdminAccount({ firstName, lastName, email, password, role, programId, position });
+        const id = await svc.createAdminAccount({ firstName, lastName, email, password, role, programId, position, yearLevel: yearLevel ? Number(yearLevel) : null, section: section ?? null });
         logAction({ performedBy: req.user!.userId, action: "create_account", targetType: "user", targetId: id, details: { email, role } });
         sendSuccess(res, { userId: id, message: "Account created" }, "Account created", 201);
     } catch (e: any) { sendError(res, e.message); }
@@ -70,7 +70,7 @@ export const handleUpdateAccountStatus = async (req: Request, res: Response) => 
 export const handleUpdateAccount = async (req: Request, res: Response) => {
     try {
         const userId = Number(req.params.userId);
-        const { firstName, lastName, email, roleId, programId, position, password } = req.body;
+        const { firstName, lastName, email, roleId, programId, position, password, yearLevel, section } = req.body;
         if (!firstName || !lastName || !email || !roleId)
             return sendError(res, "firstName, lastName, email and roleId are required", 400);
         await svc.updateAdminAccount(userId, {
@@ -79,6 +79,8 @@ export const handleUpdateAccount = async (req: Request, res: Response) => {
             programId: programId ? Number(programId) : null,
             position:  position ?? "",
             password,
+            yearLevel: yearLevel ? Number(yearLevel) : null,
+            section:   section ?? null,
         });
         logAction({ performedBy: req.user!.userId, action: "update_account", targetType: "user", targetId: userId, details: { email } });
         sendSuccess(res, null, "Account updated");

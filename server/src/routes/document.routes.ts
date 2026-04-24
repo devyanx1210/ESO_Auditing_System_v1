@@ -8,8 +8,10 @@ import type { UserRole }        from "../types/auth.types.js";
 const router = Router();
 
 const adminRoles: UserRole[] = [
-    "system_admin", "eso_officer", "program_head",
-    "program_officer", "signatory", "dean", "class_officer",
+    "system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president",
+    "class_officer", "class_secretary", "class_treasurer", "class_president",
+    "program_officer", "program_treasurer", "program_president",
+    "program_head", "signatory", "osas_coordinator", "dean",
 ];
 
 router.use(authenticate, authorize(...adminRoles));

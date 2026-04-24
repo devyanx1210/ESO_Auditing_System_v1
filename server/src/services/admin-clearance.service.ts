@@ -1,16 +1,17 @@
 import pool from "../config/db.js";
+import { isClassRole, isProgramRole } from "../config/role-groups.js";
 
-// Get admin's clearance step (null if role doesn't have one)
 async function getAdminClearanceStep(userId: number): Promise<{
     adminId: number;
     roleId: number;
+    roleName: string;
     clearanceStep: number | null;
     programId: number | null;
     yearLevel: number | null;
     section: string | null;
 }> {
     const [rows]: any = await pool.execute(
-        `SELECT a.admin_id, u.program_id, a.year_level, a.section, r.role_id, r.clearance_step
+        `SELECT a.admin_id, u.program_id, a.year_level, a.section, r.role_id, r.role_name, r.clearance_step
          FROM users u
          JOIN roles r        ON r.role_id = u.role_id
          LEFT JOIN admins a  ON a.user_id = u.user_id
@@ -21,6 +22,7 @@ async function getAdminClearanceStep(userId: number): Promise<{
     return {
         adminId:       rows[0].admin_id,
         roleId:        rows[0].role_id,
+        roleName:      rows[0].role_name,
         clearanceStep: rows[0].clearance_step ?? null,
         programId:     rows[0].program_id ?? null,
         yearLevel:     rows[0].year_level  ?? null,
@@ -28,7 +30,7 @@ async function getAdminClearanceStep(userId: number): Promise<{
     };
 }
 
-const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "signatory", "program_head", "dean"];
+const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "signatory", "osas_coordinator", "program_head", "dean"];
 
 export interface PendingClearanceItem {
     studentId: number;
@@ -168,16 +170,31 @@ export const signClearance = async (
     studentId: number,
     remarks: string | null
 ): Promise<void> => {
-    const { adminId, roleId, clearanceStep } = await getAdminClearanceStep(userId);
+    const { adminId, roleId, roleName, clearanceStep, programId: adminProgramId, yearLevel: adminYearLevel, section: adminSection } = await getAdminClearanceStep(userId);
     if (!clearanceStep) throw new Error("Your role does not participate in clearance");
 
-    // Get student school_year / semester
+    // Get student school_year, semester, and scope fields
     const [stRows]: any = await pool.execute(
-        "SELECT school_year, semester, user_id FROM students WHERE student_id = ?",
+        "SELECT school_year, semester, user_id, program_id, year_level, section FROM students WHERE student_id = ?",
         [studentId]
     );
     if (!stRows.length) throw new Error("Student not found");
-    const { school_year, semester, user_id: studentUserId } = stRows[0];
+    const { school_year, semester, user_id: studentUserId, program_id: studentProgramId, year_level: studentYearLevel, section: studentSection } = stRows[0];
+
+    // Validate scope: class roles can only sign for their own year/section
+    if (isClassRole(roleName)) {
+        if (adminProgramId && adminProgramId !== studentProgramId)
+            throw new Error("You can only sign clearances for students in your program");
+        if (adminYearLevel != null && adminYearLevel !== studentYearLevel)
+            throw new Error("You can only sign clearances for students in your year level");
+        if (adminSection && adminSection !== studentSection)
+            throw new Error("You can only sign clearances for students in your section");
+    }
+    // Program roles can only sign for their own program
+    if (isProgramRole(roleName) || roleName === "program_head") {
+        if (adminProgramId && adminProgramId !== studentProgramId)
+            throw new Error("You can only sign clearances for students in your program");
+    }
 
     const conn = await pool.getConnection();
     try {
@@ -222,15 +239,28 @@ export const signClearance = async (
             [clearanceId, adminId, roleId, clearanceStep, remarks ?? null]
         );
 
-        // Check how many active admins exist at this step vs how many have signed
-        const [totalRows]: any = await conn.execute(
-            `SELECT COUNT(*) AS total
-             FROM admins a
-             JOIN users u ON u.user_id = a.user_id
-             JOIN roles r ON r.role_id = u.role_id
-             WHERE r.clearance_step = ? AND u.status = 'active' AND u.deleted_at IS NULL AND a.deleted_at IS NULL`,
-            [clearanceStep]
-        );
+        // Count required approvers at this step, scoped by student's program/year/section
+        // Class roles: only count officers assigned to THIS student's section
+        // Program roles: only count officers assigned to THIS student's program
+        // ESO/signatory/others: count all at this step
+        let totalSql = `
+            SELECT COUNT(*) AS total
+            FROM admins a
+            JOIN users u ON u.user_id = a.user_id
+            JOIN roles r ON r.role_id = u.role_id
+            WHERE r.clearance_step = ? AND u.status = 'active' AND u.deleted_at IS NULL AND a.deleted_at IS NULL
+        `;
+        const totalParams: any[] = [clearanceStep];
+
+        if (isClassRole(roleName)) {
+            totalSql += " AND u.program_id = ? AND a.year_level = ? AND a.section = ?";
+            totalParams.push(studentProgramId, studentYearLevel, studentSection);
+        } else if (isProgramRole(roleName) || roleName === "program_head") {
+            totalSql += " AND u.program_id = ?";
+            totalParams.push(studentProgramId);
+        }
+
+        const [totalRows]: any = await conn.execute(totalSql, totalParams);
         const totalAtStep = Number(totalRows[0].total);
 
         const [signedRows]: any = await conn.execute(
@@ -290,7 +320,7 @@ export const signClearance = async (
 
         // Notify student of full step completion
         const message = finalStatus === 2
-            ? "Your clearance has been fully cleared!"
+            ? "Your clearance has been fully approved!"
             : `Your clearance has been approved at step ${clearanceStep}. Proceeding to next step.`;
         await conn.execute(
             `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)

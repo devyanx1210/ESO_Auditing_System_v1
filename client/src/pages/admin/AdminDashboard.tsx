@@ -195,14 +195,22 @@ export default function AdminDashboard() {
         if (!accessToken) return;
         dashboardService
             .getStats(accessToken)
-            .then(data => setStats(data))
+            .then(data => {
+                setStats(data);
+                if ((isClassOfficer || isProgramOfficer) && user?.programId && data.programs.length > 0) {
+                    setSelectedProgram(user.programId);
+                }
+            })
             .catch(e => setError(e.message))
             .finally(() => setLoading(false));
     }, [accessToken]);
 
-    const isClassOfficer   = user?.role === "class_officer";
+    const CLASS_ROLES_LIST   = ["class_officer", "class_secretary", "class_treasurer", "class_president"];
+    const PROGRAM_ROLES_LIST = ["program_officer", "program_treasurer", "program_president"];
+    const isClassOfficer   = user?.role ? CLASS_ROLES_LIST.includes(user.role) : false;
+    const isProgramOfficer = user?.role ? PROGRAM_ROLES_LIST.includes(user.role) : false;
     const isProgramHead    = user?.role === "program_head";
-    const canFilterProgram = !isClassOfficer && !isProgramHead;
+    const canFilterProgram = !isClassOfficer && !isProgramOfficer && !isProgramHead;
 
     const filteredProgram = selectedProgram !== "" && stats
         ? stats.programs.find(p => p.programId === selectedProgram) ?? null
@@ -250,7 +258,7 @@ export default function AdminDashboard() {
                 order: 2,
             },
             {
-                label: "Verified Clearances",
+                label: "Approved Clearances",
                 data: chartValues,
                 backgroundColor: (context: any) => {
                     const { chart } = context;
@@ -311,7 +319,7 @@ export default function AdminDashboard() {
                 callbacks: {
                     label: (item: any) => {
                         const total = chartTotalValues[item.dataIndex] ?? 0;
-                        if (item.dataset.label === "Verified Clearances") {
+                        if (item.dataset.label === "Approved Clearances") {
                             const pct = total > 0 ? Math.round((item.raw / total) * 100) : 0;
                             return `  Verified: ${item.raw} (${pct}%)`;
                         }
@@ -364,9 +372,9 @@ export default function AdminDashboard() {
 
     const allObs = stats?.obligations ?? [];
     const visibleObs = (() => {
-        let obs = isClassOfficer ? allObs.filter(ob => ob.scope !== 0) : allObs;
-        if (selectedProgram !== "") {
-            // Show "all" scope (0) obligations + per-program obligations for this specific program
+        // Class and program officers don't see ESO-wide (scope=0) obligations
+        let obs = (isClassOfficer || isProgramOfficer) ? allObs.filter(ob => ob.scope !== 0) : allObs;
+        if (selectedProgram !== "" && !isProgramOfficer) {
             obs = obs.filter(ob => ob.scope === 0 || ob.programId === selectedProgram);
         }
         return obs;
@@ -412,7 +420,7 @@ export default function AdminDashboard() {
                 />
                 <StatCard
                     cardKey="verified"
-                    title="Verified Clearances"
+                    title="Approved Clearances"
                     value={
                         <span>
                             <span className={activeCard === "verified" ? "text-white" : ""}>{displayVerified}</span>
@@ -421,7 +429,7 @@ export default function AdminDashboard() {
                             </span>
                         </span>
                     }
-                    subtitle="Fully verified student clearances"
+                    subtitle="Fully approved student clearances"
                     icon={<FaCheckCircle />}
                     active={activeCard === "verified"}
                     darkMode={darkMode}
@@ -482,7 +490,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2 mb-3">
                             <FaChartBar className="text-orange-500 text-sm shrink-0" />
                             <h2 className={`font-bold text-xs sm:text-sm ${darkMode ? "text-white" : "text-gray-800"}`}>
-                                Verified Clearances Graph
+                                Approved Clearances Graph
                             </h2>
                         </div>
                         <p className={`text-[9px] sm:text-[10px] lg:text-xs mb-3 sm:mb-4 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
@@ -518,9 +526,7 @@ export default function AdminDashboard() {
                             </h2>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full
                                 ${darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-500"}`}>
-                                {isClassOfficer
-                                    ? (stats?.obligations.filter(o => o.scope !== 0).length ?? 0)
-                                    : (stats?.obligations.length ?? 0)}
+                                {visibleObs.length}
                             </span>
                         </div>
 
