@@ -1,4 +1,3 @@
-import React from "react";
 import { FiWifiOff, FiRefreshCw } from "react-icons/fi";
 
 interface OfflineBannerProps {

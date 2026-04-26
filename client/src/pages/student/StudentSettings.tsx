@@ -3,7 +3,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { studentService, avatarUrl } from "../../services/student.service";
 import type { StudentProfile } from "../../services/student.service";
-import { FiEdit2, FiUpload, FiRefreshCw, FiUser, FiLock, FiSave, FiRotateCcw, FiMoon, FiBell } from "react-icons/fi";
+import { FiEdit2, FiUpload, FiRefreshCw, FiUser, FiLock, FiSave, FiRotateCcw, FiMoon } from "react-icons/fi";
 
 const StudentSettings = () => {
     const { accessToken, changePassword } = useAuth();
@@ -12,8 +12,6 @@ const StudentSettings = () => {
     const card = dk ? "bg-[#1a1a1a] border border-[#2a2a2a]" : "bg-white";
     const txt  = dk ? "text-white"   : "text-gray-800";
     const sub  = dk ? "text-gray-400" : "text-gray-500";
-    const inp  = dk ? "bg-[#252525] border-[#3a3a3a] text-gray-100 focus:border-orange-500" : "border-gray-300 focus:border-orange-400 text-gray-800";
-
     // Profile state
     const [profile,       setProfile]       = useState<StudentProfile | null>(null);
     const [loading,       setLoading]       = useState(true);
@@ -45,7 +43,6 @@ const StudentSettings = () => {
     const [pwSuccess, setPwSuccess] = useState("");
 
     const [saving,      setSaving]      = useState(false);
-    const [saveMsg,     setSaveMsg]     = useState("");
     const [saveErr,     setSaveErr]     = useState("");
     const [toastVisible, setToastVisible] = useState(false);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,13 +99,12 @@ const StudentSettings = () => {
         setPwError("");
         setPwSuccess("");
         setSaveErr("");
-        setSaveMsg("");
     }
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
         if (!accessToken) return;
-        setSaveErr(""); setSaveMsg(""); setPwError(""); setPwSuccess("");
+        setSaveErr(""); setPwError(""); setPwSuccess("");
 
         if (!firstName.trim() || !lastName.trim() || !yearLevel || !section.trim() || !schoolYear.trim() || !semester) {
             setSaveErr("First name, last name, year level, section, school year, and semester are required.");
@@ -147,7 +143,6 @@ const StudentSettings = () => {
                 setPwSuccess("Password changed.");
                 setPw(BLANK_PW);
             }
-            setSaveMsg("Changes saved successfully.");
             setToastVisible(true);
             if (toastTimer.current) clearTimeout(toastTimer.current);
             toastTimer.current = setTimeout(() => setToastVisible(false), 3000);
@@ -163,8 +158,6 @@ const StudentSettings = () => {
             <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-orange-500" />
         </div>
     );
-
-    const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
 
     return (
         <div className={`p-4 sm:p-6 md:p-8 min-h-screen ${dk ? "bg-[#111111]" : "bg-gray-50"}`}>
@@ -197,11 +190,12 @@ const StudentSettings = () => {
                             <div className="flex items-center gap-5 mb-6">
                                 {/* Avatar circle with pen button */}
                                 <div className="relative shrink-0" ref={avatarMenuRef}>
-                                    <div className="w-20 h-20 rounded-full overflow-hidden">
-                                        {avatarPreview
-                                            ? <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
-                                            : <DefaultAvatarSvg />
-                                        }
+                                    <div className="w-20 h-20 rounded-full overflow-hidden relative">
+                                        <DefaultAvatarSvg />
+                                        {avatarPreview && (
+                                            <img src={avatarPreview} alt="Profile" className="absolute inset-0 w-full h-full object-cover"
+                                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                                        )}
                                     </div>
 
                                     {/* Pen edit button */}

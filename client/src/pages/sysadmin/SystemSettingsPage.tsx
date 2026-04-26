@@ -81,7 +81,6 @@ export default function SystemSettingsPage() {
     const [toast,    setToast]    = useState("");
 
     // Clearance workflow state
-    const [allRoles,       setAllRoles]       = useState<{ role_id: number; role_name: string; role_label: string; clearance_step: number | null }[]>([]);
     const [workflowSteps,  setWorkflowSteps]  = useState<{ roleId: number; roleLabel: string; roleName: string; clearanceStep: number }[]>([]);
     const [unassignedRoles, setUnassignedRoles] = useState<{ role_id: number; role_name: string; role_label: string }[]>([]);
     const [workflowSaving, setWorkflowSaving] = useState(false);
@@ -152,7 +151,6 @@ export default function SystemSettingsPage() {
     useEffect(() => {
         if (!accessToken) return;
         sysadminService.getWorkflow(accessToken).then(roles => {
-            setAllRoles(roles);
             const assigned = roles
                 .filter(r => r.clearance_step !== null)
                 .sort((a, b) => (a.clearance_step ?? 0) - (b.clearance_step ?? 0) || a.role_label.localeCompare(b.role_label))
@@ -252,7 +250,7 @@ export default function SystemSettingsPage() {
         // Otherwise just save
         setSavingS(true);
         try {
-            await sysadminService.updateSemester(accessToken, schoolYear, semester);
+            await sysadminService.updateSemester(accessToken, schoolYear, semester as number);
             setSavedSchoolYear(schoolYear);
             showToast("Academic settings saved.");
         } catch (e: any) { showToast(e.message); }
@@ -264,7 +262,7 @@ export default function SystemSettingsPage() {
         setSavingAdvance(true);
         try {
             // Save semester settings first
-            await sysadminService.updateSemester(accessToken, schoolYear, semester);
+            await sysadminService.updateSemester(accessToken, schoolYear, semester as number);
             setSavedSchoolYear(schoolYear);
 
             if (withAdvancement) {
@@ -326,10 +324,12 @@ export default function SystemSettingsPage() {
 
                         {profile && (
                             <div className="flex items-center gap-4 mb-2">
-                                <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
-                                    {avatarPreview
-                                        ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
-                                        : <DefaultAvatarSvg />}
+                                <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 relative">
+                                    <DefaultAvatarSvg />
+                                    {avatarPreview && (
+                                        <img src={avatarPreview} alt="" className="absolute inset-0 w-full h-full object-cover"
+                                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                                    )}
                                 </div>
                                 <div>
                                     <p className="font-bold text-gray-800">{firstName} {lastName}</p>

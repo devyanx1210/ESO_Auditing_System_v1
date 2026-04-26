@@ -1,7 +1,4 @@
-/**
- * One-time script to create the System Admin account.
- * Run with:  npx tsx src/scripts/create-admin.ts
- */
+// Run with: npx tsx src/scripts/create-admin.ts
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -9,13 +6,12 @@ dotenv.config();
 import bcrypt from "bcrypt";
 import pool from "../config/db.js";
 
-// ── CHANGE THESE BEFORE RUNNING ──────────────────────────────
+// CHANGE THESE BEFORE RUNNING
 const ADMIN_FIRST_NAME = "System";
 const ADMIN_LAST_NAME  = "Admin";
 const ADMIN_EMAIL      = "admin@eso.edu.ph";
 const ADMIN_PASSWORD   = "Admin@1234";       // change this!
 const ADMIN_POSITION   = "System Administrator";
-// ─────────────────────────────────────────────────────────────
 
 async function createAdmin() {
     const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
@@ -85,12 +81,10 @@ async function createAdmin() {
         console.log(`✔ Created admins record`);
     }
 
-    console.log("\n─────────────────────────────────");
-    console.log("  System Admin created/updated");
+    console.log(`\nSystem Admin created/updated`);
     console.log(`  Email   : ${ADMIN_EMAIL}`);
     console.log(`  Password: ${ADMIN_PASSWORD}`);
-    console.log("  ⚠ Change the password after first login!");
-    console.log("─────────────────────────────────\n");
+    console.log(`  Change the password after first login!\n`);
 
     await pool.end();
 }

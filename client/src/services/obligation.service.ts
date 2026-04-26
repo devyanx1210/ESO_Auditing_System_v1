@@ -1,4 +1,5 @@
 import { apiFetch } from "./api";
+import type { ApiResponse } from "./api";
 
 const BASE_URL = "/api/v1";
 
@@ -55,14 +56,27 @@ function buildFormData(data: CreateObligationInput, qrFile?: File | null): FormD
     return fd;
 }
 
+// FormData uploads cannot use apiFetch directly (multipart boundary must be browser-set),
+// but we still need 401 handling to match apiFetch behavior.
 async function apiFetchForm<T>(path: string, method: string, body: FormData, token: string): Promise<T> {
     const res = await fetch(`${BASE_URL}${path}`, {
         method,
         headers: { Authorization: `Bearer ${token}` },
         body,
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || "Request failed");
+    let json: ApiResponse<T>;
+    try {
+        json = await res.json();
+    } catch {
+        throw new Error(`Server error (${res.status})`);
+    }
+    if (!res.ok) {
+        if (res.status === 401) {
+            window.dispatchEvent(new Event("eso:auth:expired"));
+            throw new Error(json.message || "Session expired. Please log in again.");
+        }
+        throw new Error(json.message || "Request failed");
+    }
     return json.data;
 }
 

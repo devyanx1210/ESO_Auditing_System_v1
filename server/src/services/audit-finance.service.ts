@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
 export interface AuditSummary {
     totalIncome:    number;
@@ -43,7 +43,7 @@ export interface ChartDataPoint {
     expenses: number;
 }
 
-// ─── Summary ──────────────────────────────────────────────────────────────────
+// Summary
 
 export const getAuditSummary = async (
     semester: number | null,
@@ -102,7 +102,7 @@ export const getAuditSummary = async (
     };
 };
 
-// ─── Income list ─────────────────────────────────────────────────────────────
+// Income list
 
 export const getIncomeList = async (
     semester: number | null,
@@ -144,7 +144,7 @@ export const getIncomeList = async (
     }));
 };
 
-// ─── Expenses list ────────────────────────────────────────────────────────────
+// Expenses list
 
 export const getExpenseList = async (
     semester: number | null,
@@ -178,7 +178,7 @@ export const getExpenseList = async (
     }));
 };
 
-// ─── Chart data (income vs expenses per semester-year) ────────────────────────
+// Chart data (income vs expenses per semester-year)
 
 export const getChartData = async (schoolYear: string | null): Promise<ChartDataPoint[]> => {
     const incomeParams: any[] = [];
@@ -226,7 +226,7 @@ export const getChartData = async (schoolYear: string | null): Promise<ChartData
     return Array.from(map.values());
 };
 
-// ─── Add expense ──────────────────────────────────────────────────────────────
+// Add expense
 
 export const addExpense = async (
     userId: number,
@@ -245,7 +245,7 @@ export const addExpense = async (
     return result.insertId;
 };
 
-// ─── Edit expense ─────────────────────────────────────────────────────────────
+// Edit expense
 
 export const updateExpense = async (
     expenseId: number,
@@ -262,7 +262,7 @@ export const updateExpense = async (
     );
 };
 
-// ─── Delete (soft) expense ────────────────────────────────────────────────────
+// Delete (soft) expense
 
 export const deleteExpense = async (expenseId: number): Promise<void> => {
     await pool.execute(
@@ -271,7 +271,7 @@ export const deleteExpense = async (expenseId: number): Promise<void> => {
     );
 };
 
-// ─── Fund Ledger (all transactions, chronological, with running balance) ─────────
+// Fund Ledger (all transactions, chronological, with running balance)
 
 export interface LedgerEntry {
     date:        string;
@@ -357,7 +357,7 @@ export const getLedger = async (
     }).reverse(); // newest first for display
 };
 
-// ─── Budgets ──────────────────────────────────────────────────────────────────
+// Budgets
 
 export interface BudgetItem {
     budgetId:        number;
@@ -441,7 +441,7 @@ export const deleteBudget = async (budgetId: number): Promise<void> => {
     );
 };
 
-// ─── Available school years (for filter dropdown) ─────────────────────────────
+// Available school years (for filter dropdown)
 
 export const getSchoolYears = async (): Promise<string[]> => {
     const [incRows]: any = await pool.execute(

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { studentService } from "../../services/student.service";
@@ -36,7 +36,7 @@ function cleanMessage(text: string) {
     return text.replace(/\s*[-–—]{2,}\s*/g, " ").replace(/^\s*[-–—]\s*/g, "").replace(/\s*[-–—]\s*$/g, "").trim();
 }
 
-function notifTypeIcon(type: number) {
+export function notifTypeIcon(type: number) {
     // 1=obligation_assigned, 2=payment_submitted, 3=payment_approved
     // 4=payment_rejected, 5=payment_returned, 6=clearance_signed
     // 7=clearance_cleared, 8=clearance_unapproved, 9=account_status
@@ -283,7 +283,6 @@ export default function StudentDashboard() {
     const isPaymentModal = payModal?.requiresPayment ?? true;
     const card = dk ? "bg-[#1a1a1a] border border-[#2a2a2a]" : "bg-white";
     const txt  = dk ? "text-white"   : "text-gray-800";
-    const sub  = dk ? "text-gray-400" : "text-gray-500";
 
     /* ── render ── */
     return (
@@ -472,7 +471,7 @@ export default function StudentDashboard() {
                         const isUpNext   = !clearance?.clearanceId && allObligationsDone && step.order === 1;
 
                         return (
-                            <React.Fragment key={step.order}>
+                            <Fragment key={step.order}>
                                 <div className="flex flex-col items-center flex-1">
                                     {/* Step circle */}
                                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
@@ -507,7 +506,7 @@ export default function StudentDashboard() {
                                 {idx < CLEARANCE_STEPS.length - 1 && (
                                     <div className={`flex-1 h-0.5 mt-4 mx-1 ${isDone ? "bg-green-400" : "bg-gray-200"}`} />
                                 )}
-                            </React.Fragment>
+                            </Fragment>
                         );
                     })}
                 </div>

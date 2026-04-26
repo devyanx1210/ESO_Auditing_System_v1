@@ -1,4 +1,3 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom';
 
 // TODO Transfer data from the admin layout to sign out for "no" button

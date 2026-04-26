@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     FaUsers,
@@ -7,8 +7,6 @@ import {
     FaMoneyBillWave,
     FaChartBar,
     FaClipboardList,
-    FaFilter,
-    FaChevronDown,
 } from "react-icons/fa";
 import {
     Chart as ChartJS,
@@ -21,12 +19,15 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { useAuth } from "../../hooks/useAuth";
-
 import { dashboardService } from "../../services/dashboard.service";
 import type { DashboardStats } from "../../services/dashboard.service";
 import { useTheme } from "../../hooks/useTheme";
+import StatCard from "../../components/ui/StatCard";
+import ProgramDropdown from "../../components/ui/ProgramDropdown";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+type CardKey = "registered" | "verified" | "collect" | "payments";
 
 function formatPhp(amount: number): string {
     return "₱" + amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -37,157 +38,18 @@ function getOrdinal(n: number): string {
     return labels[n] ?? `${n}th Year`;
 }
 
-// ─── Program Dropdown ─────────────────────────────────────────────────────────
-
-interface ProgramOption { programId: number; name: string; }
-interface ProgramDropdownProps {
-    programs: ProgramOption[];
-    value: number | "";
-    onChange: (val: number | "") => void;
-    darkMode: boolean;
-}
-
-function ProgramDropdown({ programs, value, onChange, darkMode }: ProgramDropdownProps) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-    const selected = programs.find(p => p.programId === value);
-    const label = selected ? selected.name : "All Programs";
-
-    useEffect(() => {
-        function handler(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-        }
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, []);
-
-    const options: Array<{ id: number | ""; name: string }> = [
-        { id: "", name: "All Programs" },
-        ...programs.map(p => ({ id: p.programId, name: p.name })),
-    ];
-
-    return (
-        <div ref={ref} className="relative">
-            <button
-                onClick={() => setOpen(o => !o)}
-                className={`
-                    flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-medium
-                    transition-all duration-200 shadow-sm
-                    ${open
-                        ? "bg-orange-500 text-white shadow-[0_4px_16px_rgba(234,88,12,0.4)]"
-                        : darkMode
-                            ? "bg-[#1a1a1a] border border-gray-700 text-white hover:border-orange-500"
-                            : "bg-white border border-gray-200 text-gray-700 hover:border-orange-400"
-                    }
-                `}
-            >
-                <FaFilter className={`text-[10px] shrink-0 ${open ? "text-white" : "text-orange-500"}`} />
-                <span className="truncate max-w-[120px] sm:max-w-[180px]">{label}</span>
-                <FaChevronDown className={`text-[10px] shrink-0 transition-transform duration-300 ${open ? "rotate-180 text-white" : "text-orange-500"}`} />
-            </button>
-
-            <div className={`
-                absolute right-0 top-full mt-2 z-30
-                w-48 sm:w-auto sm:min-w-[220px] sm:max-w-[300px]
-                rounded-2xl overflow-hidden
-                ${darkMode ? "bg-[#1a1a1a] shadow-[0_16px_48px_rgba(0,0,0,0.6)]" : "bg-white shadow-[0_16px_48px_rgba(0,0,0,0.18)]"}
-                transition-all duration-200 origin-top-right
-                ${open ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"}
-            `}>
-                <div className={`px-3 py-2 text-[9px] font-bold uppercase tracking-widest
-                    ${darkMode ? "text-gray-500 border-b border-gray-700" : "text-gray-400 border-b border-gray-100"}`}>
-                    Filter by Program
-                </div>
-                <div className="py-1 max-h-56 overflow-y-auto">
-                    {options.map(opt => (
-                        <button
-                            key={String(opt.id)}
-                            onClick={() => { onChange(opt.id); setOpen(false); }}
-                            className={`
-                                w-full flex items-center gap-2 px-3 py-2 text-xs text-left
-                                transition-colors duration-150
-                                ${opt.id === value
-                                    ? "bg-orange-500 text-white font-semibold"
-                                    : darkMode ? "text-gray-200 hover:bg-[#222]" : "text-gray-700 hover:bg-orange-50"}
-                            `}
-                        >
-                            <span className="truncate">{opt.name}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-type CardKey = "registered" | "verified" | "collect" | "payments";
-
-interface StatCardProps {
-    cardKey: CardKey;
-    title: string;
-    value: React.ReactNode;
-    subtitle?: string;
-    icon: React.ReactNode;
-    active: boolean;
-    darkMode: boolean;
-    animDelay?: number;
-    onClick: () => void;
-}
-
-function StatCard({ title, value, subtitle, icon, active, darkMode, animDelay = 0, onClick }: StatCardProps) {
-    return (
-        <div
-            onClick={onClick}
-            style={{ animationDelay: `${animDelay}ms` }}
-            className={`anim-card-pop rounded-2xl p-4 sm:p-5 flex flex-col gap-2 sm:gap-3
-                cursor-pointer transition-all duration-200
-                ${active
-                    ? "bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.50)] text-white"
-                    : `shadow-[0_6px_24px_rgba(0,0,0,0.13)] hover:shadow-[0_12px_36px_rgba(0,0,0,0.20)]
-                       ${darkMode ? "bg-[#1a1a1a] text-white" : "bg-white text-gray-800"}`
-                }
-            `}
-        >
-            <div className="flex justify-between items-start gap-2">
-                <p className={`text-[9px] sm:text-[10px] lg:text-xs font-semibold uppercase tracking-wide leading-snug
-                    ${active ? "text-white/75" : darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                    {title}
-                </p>
-                <span className={`text-base sm:text-lg lg:text-xl shrink-0 ${active ? "text-white" : "text-orange-500"}`}>
-                    {icon}
-                </span>
-            </div>
-            <div>
-                <p className={`text-xl sm:text-2xl lg:text-[1.75rem] leading-tight font-black tracking-tight
-                    ${active ? "text-white" : ""}`}>
-                    {value}
-                </p>
-                {subtitle && (
-                    <p className={`text-[9px] sm:text-[10px] lg:text-xs mt-0.5 line-clamp-2
-                        ${active ? "text-white/70" : darkMode ? "text-gray-400" : "text-gray-400"}`}>
-                        {subtitle}
-                    </p>
-                )}
-            </div>
-        </div>
-    );
-}
-
-
-// ─── Main Component ───────────────────────────────────────────────────────────
+// AdminDashboard
 
 export default function AdminDashboard() {
     const { user, accessToken } = useAuth();
     const { darkMode } = useTheme();
     const navigate = useNavigate();
 
-    const [loading, setLoading]                       = useState(true);
-    const [error, setError]                           = useState("");
-    const [stats, setStats]                           = useState<DashboardStats | null>(null);
-    const [selectedProgram, setSelectedProgram]       = useState<number | "">("");
-    const [activeCard, setActiveCard]                 = useState<CardKey>("registered");
+    const [loading, setLoading]                 = useState(true);
+    const [error, setError]                     = useState("");
+    const [stats, setStats]                     = useState<DashboardStats | null>(null);
+    const [selectedProgram, setSelectedProgram] = useState<number | "">("");
+    const [activeCard, setActiveCard]           = useState<CardKey>("registered");
 
     const chartRef = useRef<any>(null);
 
@@ -222,7 +84,7 @@ export default function AdminDashboard() {
     const displayCollect    = filteredProgram ? filteredProgram.totalAmountToCollect  : (stats?.totalAmountToCollect    ?? 0);
     const displayPayments   = filteredProgram ? filteredProgram.totalApprovedPayments : (stats?.totalApprovedPayments   ?? 0);
 
-    // ─── Chart data ───────────────────────────────────────────────────────────
+    // Chart data
     const chartLabels: string[]      = [];
     const chartValues: number[]      = [];
     const chartTotalValues: number[] = [];
@@ -244,6 +106,7 @@ export default function AdminDashboard() {
     const totalVerifiedInChart = chartValues.reduce((a, b) => a + b, 0);
     const totalInChart         = chartTotalValues.reduce((a, b) => a + b, 0);
     const overallRate          = totalInChart > 0 ? Math.round((totalVerifiedInChart / totalInChart) * 100) : 0;
+
     const barData = {
         labels: chartLabels,
         datasets: [
@@ -383,7 +246,7 @@ export default function AdminDashboard() {
     return (
         <div className={`p-3 sm:p-5 lg:p-8 min-h-screen ${darkMode ? "bg-[#111111] text-white" : "bg-gray-50 text-gray-800"}`}>
 
-            {/* ── Header ── */}
+            {/* Header */}
             <div className="flex flex-row items-center justify-between gap-3 mb-5 sm:mb-6">
                 <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold">Dashboard</h1>
                 {canFilterProgram && stats && stats.programs.length > 0 && (
@@ -400,10 +263,9 @@ export default function AdminDashboard() {
                 <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-700 text-sm">{error}</div>
             )}
 
-            {/* ── Stat cards: 2 col phone, 4 col desktop ── */}
+            {/* Stat cards: 2 col on mobile, 4 col on desktop */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
                 <StatCard
-                    cardKey="registered"
                     title="Total Registered Students"
                     value={displayRegistered}
                     subtitle="Total students with registered accounts"
@@ -419,7 +281,6 @@ export default function AdminDashboard() {
                     }}
                 />
                 <StatCard
-                    cardKey="verified"
                     title="Approved Clearances"
                     value={
                         <span>
@@ -442,7 +303,6 @@ export default function AdminDashboard() {
                     }}
                 />
                 <StatCard
-                    cardKey="collect"
                     title="Amount to Collect"
                     value={formatPhp(displayCollect)}
                     subtitle="Total amount to be collected"
@@ -458,7 +318,6 @@ export default function AdminDashboard() {
                     }}
                 />
                 <StatCard
-                    cardKey="payments"
                     title="Total Payments"
                     value={formatPhp(displayPayments)}
                     subtitle={`${formatPhp(Math.max(0, displayCollect - displayPayments))} remaining to collect`}
@@ -475,7 +334,7 @@ export default function AdminDashboard() {
                 />
             </div>
 
-            {/* ── Main panel — graph + obligations side by side ── */}
+            {/* Main panel: graph + obligations side by side */}
             <div
                 style={{ animationDelay: "360ms" }}
                 className={`anim-section rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden
@@ -484,9 +343,8 @@ export default function AdminDashboard() {
                 {/* Two-column body: stacks on mobile, side-by-side on lg+ */}
                 <div className="flex flex-col lg:flex-row">
 
-                    {/* ── Graph column (60%) ── */}
+                    {/* Graph column (60%) */}
                     <div className="w-full lg:w-[60%] min-w-0 p-4 sm:p-5 lg:p-6">
-                        {/* Section header */}
                         <div className="flex items-center gap-2 mb-3">
                             <FaChartBar className="text-orange-500 text-sm shrink-0" />
                             <h2 className={`font-bold text-xs sm:text-sm ${darkMode ? "text-white" : "text-gray-800"}`}>
@@ -513,12 +371,11 @@ export default function AdminDashboard() {
                         )}
                     </div>
 
-                    {/* ── Divider ── */}
+                    {/* Divider */}
                     <div className={`border-t-2 lg:border-t-0 lg:border-l-2 ${darkMode ? "border-gray-600" : "border-gray-200"}`} />
 
-                    {/* ── Obligations column (40%) ── */}
+                    {/* Obligations column (40%) */}
                     <div className="w-full lg:w-[40%] shrink-0 p-4 sm:p-5 lg:p-6 flex flex-col">
-                        {/* Section header */}
                         <div className="flex items-center gap-2 mb-3">
                             <FaClipboardList className="text-orange-500 text-sm shrink-0" />
                             <h2 className={`font-bold text-xs sm:text-sm ${darkMode ? "text-white" : "text-gray-800"}`}>
@@ -547,7 +404,7 @@ export default function AdminDashboard() {
                                             onClick={() => navigate("/dashboard/students/obligations-list", {
                                                 state: {
                                                     obligationFilter: ob.obligationName,
-                                                    programFilter: ob.programCode ?? "all",
+                                                    programFilter: "all",
                                                 }
                                             })}
                                             className={`

@@ -23,7 +23,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const USER_KEY = "eso_user";
 const REFRESH_KEY = "eso_refresh_token";
-const IS_MOBILE = /Android|iPhone|iPod/i.test(navigator.userAgent);
+const IS_MOBILE = /iPhone|iPod|iPad/i.test(navigator.userAgent) ||
+    /Android/i.test(navigator.userAgent);
 
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

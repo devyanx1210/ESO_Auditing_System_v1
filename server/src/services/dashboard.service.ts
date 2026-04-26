@@ -60,7 +60,7 @@ export const getDashboardStats = async (
     const isClassOfficer   = isClassRole(role ?? "");
     const isProgramOfficer = isProgramRole(role ?? "");
 
-    // ─── Build program stats query ───────────────────────────────────────────────
+    // Build program stats query
     // Class officer: filter by their programId + yearLevel + section
     // Program officer: filter by their programId only
     const studentFilter = isClassOfficer
@@ -97,7 +97,7 @@ export const getDashboardStats = async (
 
     const [programRows]: any = await pool.execute(programSql, programParams);
 
-    // ─── Approved payments (separate simple query) ────────────────────────────
+    // Approved payments (separate simple query)
     const paymentConditions: string[] = ["ps.payment_status = 1"];
     const paymentParams: any[] = [];
 
@@ -123,7 +123,7 @@ export const getDashboardStats = async (
         paymentByProgram.set(Number(r.programId), Number(r.approvedTotal));
     }
 
-    // ─── Year-level breakdown per program ────────────────────────────────────────
+    // Year-level breakdown per program
     const ylConditions: string[] = [];
     const ylParams: any[] = [];
     if (isClassOfficer) {
@@ -174,7 +174,7 @@ export const getDashboardStats = async (
         yearLevelBreakdown:    ylByProgram.get(Number(r.programId)) ?? [],
     }));
 
-    // ─── Build obligations query ─────────────────────────────────────────────────
+    // Build obligations query
     let obligationSql = `
         SELECT
             o.obligation_id,
@@ -250,13 +250,13 @@ export const getDashboardStats = async (
 
     const obligations: ObligationStat[] = Array.from(obligationMap.values());
 
-    // ─── Totals ──────────────────────────────────────────────────────────────────
+    // Totals
     const totalRegisteredStudents = programs.reduce((s, p) => s + p.totalStudents, 0);
     const totalVerifiedStudents   = programs.reduce((s, p) => s + p.verifiedStudents, 0);
     const totalAmountToCollect    = programs.reduce((s, p) => s + p.totalAmountToCollect, 0);
     const totalApprovedPayments   = programs.reduce((s, p) => s + p.totalApprovedPayments, 0);
 
-    // ─── filterLabel ─────────────────────────────────────────────────────────────
+    // filterLabel
     let filterLabel: string | null = null;
     if (isClassOfficer && yearLevel != null && section) {
         const ordinal = ["", "1st", "2nd", "3rd", "4th", "5th"][yearLevel] ?? `${yearLevel}th`;

@@ -3,76 +3,38 @@ import { MdPeople, MdBuild, MdCalendarToday } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { sysadminService } from "../../services/sysadmin.service";
+import StatCard from "../../components/ui/StatCard";
 
 interface Settings {
-    maintenance_mode: boolean;
-    maintenance_msg: string;
-    school_year: string;
-    current_semester: string;
+    maintenance_mode:  boolean;
+    maintenance_msg:   string;
+    school_year:       string;
+    current_semester:  string;
 }
 interface Account {
-    user_id: number;
+    user_id:   number;
     role_name: string;
-    status: string;
+    status:    string;
 }
 
-type CardKey = "accounts" | "active" | "students" | "maintenance";
-
-interface StatCardProps {
-    title: string;
-    value: string | number;
-    icon: React.ReactNode;
-    active: boolean;
-    clickable?: boolean;
-    animDelay?: number;
-    onClick: () => void;
-}
-
-function StatCard({ title, value, icon, active, clickable = true, animDelay = 0, onClick }: StatCardProps) {
-    return (
-        <div
-            onClick={clickable ? onClick : undefined}
-            style={{ animationDelay: `${animDelay}ms` }}
-            className={`rounded-2xl p-4 sm:p-5 flex flex-col gap-2 transition-all duration-200
-                ${clickable ? "cursor-pointer" : "cursor-default"}
-                ${active
-                    ? "bg-gradient-to-br from-orange-500 to-orange-700 shadow-[0_12px_32px_rgba(234,88,12,0.45)] text-white"
-                    : `bg-white shadow-[0_6px_24px_rgba(0,0,0,0.13)] text-gray-800 ${clickable ? "hover:shadow-[0_8px_28px_rgba(0,0,0,0.13)]" : ""}`
-                }`}
-        >
-            <div className="flex justify-between items-start gap-2">
-                <p className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wide leading-snug
-                    ${active ? "text-white/75" : "text-gray-500"}`}>
-                    {title}
-                </p>
-                <span className={`text-lg sm:text-xl shrink-0 ${active ? "text-white" : "text-orange-500"}`}>
-                    {icon}
-                </span>
-            </div>
-            <p className={`text-2xl sm:text-3xl font-black tracking-tight ${active ? "text-white" : "text-gray-800"}`}>
-                {value}
-            </p>
-        </div>
-    );
-}
+type CardKey = "accounts" | "active" | "maintenance";
 
 export default function SysAdminDashboard() {
     const { accessToken } = useAuth();
     const navigate = useNavigate();
-    const [settings, setSettings] = useState<Settings | null>(null);
-    const [accounts, setAccounts] = useState<Account[]>([]);
-    const [loading,  setLoading]  = useState(true);
+
+    const [settings,   setSettings]   = useState<Settings | null>(null);
+    const [accounts,   setAccounts]   = useState<Account[]>([]);
+    const [loading,    setLoading]    = useState(true);
     const [activeCard, setActiveCard] = useState<CardKey>("accounts");
 
     useEffect(() => {
         if (!accessToken) return;
         setLoading(true);
-        sysadminService.getSettings(accessToken)
-            .then(s => setSettings(s))
-            .catch(console.error);
+        sysadminService.getSettings(accessToken).then(s => setSettings(s)).catch(() => {});
         sysadminService.getAccounts(accessToken)
             .then(a => setAccounts(Array.isArray(a) ? a : []))
-            .catch(console.error)
+            .catch(() => {})
             .finally(() => setLoading(false));
     }, [accessToken]);
 
@@ -83,67 +45,34 @@ export default function SysAdminDashboard() {
 
     return (
         <div className="p-3 sm:p-5 lg:p-8 min-h-screen bg-gray-50">
-            <style>{`
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translateY(14px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
+            <style>{`@keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }`}</style>
 
-            {/* Header */}
             <div className="mb-5 sm:mb-6" style={{ animation: "fadeInUp 0.35s ease both" }}>
                 <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800">System Admin Dashboard</h1>
             </div>
 
-            {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
-                <StatCard
-                    title="Total Accounts"
-                    value={loading ? "..." : totalAccounts}
-                    icon={<MdPeople />}
-                    active={activeCard === "accounts"}
-                    animDelay={0}
-                    onClick={() => { setActiveCard("accounts"); navigate("/sysadmin/accounts"); }}
-                />
-                <StatCard
-                    title="Active Accounts"
-                    value={loading ? "..." : activeAccounts}
-                    icon={<MdPeople />}
-                    active={activeCard === "active"}
-                    animDelay={90}
-                    onClick={() => { setActiveCard("active"); navigate("/sysadmin/accounts"); }}
-                />
-                <StatCard
-                    title="Students"
-                    value={loading ? "..." : students}
-                    icon={<MdPeople />}
-                    active={false}
-                    clickable={false}
-                    animDelay={180}
-                    onClick={() => {}}
-                />
-                <StatCard
-                    title="Maintenance"
-                    value={loading ? "..." : (maintenanceOn ? "ON" : "OFF")}
-                    icon={<MdBuild />}
-                    active={activeCard === "maintenance"}
-                    animDelay={270}
-                    onClick={() => { setActiveCard("maintenance"); navigate("/sysadmin/settings"); }}
-                />
+                <StatCard title="Total Accounts"  value={loading ? "..." : totalAccounts}
+                    icon={<MdPeople />} active={activeCard === "accounts"} animDelay={0}
+                    onClick={() => { setActiveCard("accounts"); navigate("/sysadmin/accounts"); }} />
+                <StatCard title="Active Accounts" value={loading ? "..." : activeAccounts}
+                    icon={<MdPeople />} active={activeCard === "active"} animDelay={90}
+                    onClick={() => { setActiveCard("active"); navigate("/sysadmin/accounts"); }} />
+                <StatCard title="Students"        value={loading ? "..." : students}
+                    icon={<MdPeople />} active={false} animDelay={180} />
+                <StatCard title="Maintenance"     value={loading ? "..." : (maintenanceOn ? "ON" : "OFF")}
+                    icon={<MdBuild />} active={activeCard === "maintenance"} animDelay={270}
+                    onClick={() => { setActiveCard("maintenance"); navigate("/sysadmin/settings"); }} />
             </div>
 
-            {/* Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animation: "fadeInUp 0.4s ease both 0.18s" }}>
 
-                {/* Current Semester */}
                 <div className="bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <MdCalendarToday className="text-orange-500" size={18} />
                         <h2 className="text-gray-700 font-semibold text-sm">Current Semester</h2>
                     </div>
-                    {loading ? (
-                        <p className="text-gray-400 text-sm">Loading...</p>
-                    ) : (
+                    {loading ? <p className="text-gray-400 text-sm">Loading...</p> : (
                         <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-500">School Year</span>
@@ -157,24 +86,17 @@ export default function SysAdminDashboard() {
                     )}
                 </div>
 
-                {/* Maintenance Status */}
                 <div className="bg-white rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.13)] p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <MdBuild className="text-orange-500" size={18} />
                         <h2 className="text-gray-700 font-semibold text-sm">Maintenance Mode</h2>
                     </div>
-                    {loading ? (
-                        <p className="text-gray-400 text-sm">Loading...</p>
-                    ) : (
+                    {loading ? <p className="text-gray-400 text-sm">Loading...</p> : (
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                                <span className={`text-sm font-semibold ${maintenanceOn ? "text-red-600" : "text-green-600"}`}>
-                                    {maintenanceOn ? "System is under maintenance" : "System is operational"}
-                                </span>
-                            </div>
-                            {maintenanceOn && (
-                                <p className="text-gray-500 text-xs mt-1">{settings?.maintenance_msg}</p>
-                            )}
+                            <span className={`text-sm font-semibold ${maintenanceOn ? "text-red-600" : "text-green-600"}`}>
+                                {maintenanceOn ? "System is under maintenance" : "System is operational"}
+                            </span>
+                            {maintenanceOn && <p className="text-gray-500 text-xs mt-1">{settings?.maintenance_msg}</p>}
                         </div>
                     )}
                 </div>

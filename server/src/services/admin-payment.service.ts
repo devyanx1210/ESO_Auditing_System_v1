@@ -1,7 +1,7 @@
 import pool from "../config/db.js";
 import { isClassRole } from "../config/role-groups.js";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 
 async function getAdminId(userId: number): Promise<number> {
     const [rows]: any = await pool.execute(
@@ -24,7 +24,7 @@ async function getAdminRecord(userId: number): Promise<{ adminId: number; progra
 // Roles that can see all departments
 const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "signatory", "osas_coordinator", "dean", "program_head"];
 
-// ─── Pending GCash payments for admin review ──────────────────────────────────
+// Pending GCash payments for admin review
 
 export interface PendingPaymentItem {
     paymentId: number;
@@ -87,7 +87,7 @@ export const getPendingPayments = async (
     return rows;
 };
 
-// ─── Pending proof-of-compliance submissions for admin review ─────────────────
+// Pending proof-of-compliance submissions for admin review
 
 export interface PendingProofItem {
     studentObligationId: number;
@@ -136,7 +136,7 @@ export const getPendingProofs = async (
     return rows;
 };
 
-// ─── Verify (approve / reject) a GCash submission ────────────────────────────
+// Verify (approve / reject) a GCash submission
 
 export const verifyPayment = async (
     userId: number,
@@ -210,7 +210,7 @@ export const verifyPayment = async (
     }
 };
 
-// ─── Record a cash payment (admin side) ──────────────────────────────────────
+// Record a cash payment (admin side)
 
 export const recordCashPayment = async (
     userId: number,
@@ -285,7 +285,7 @@ export const recordCashPayment = async (
         conn.release();
     }
 };
-// ─── Payment history (approved / rejected) ───────────────────────────────────
+// Payment history (approved / rejected)
 
 export interface PaymentHistoryItem {
     paymentId: number;
@@ -417,7 +417,7 @@ export const verifyAllPayments = async (userId: number, role: string): Promise<n
     }
 };
 
-// ─── Bulk verify selected pending payments ────────────────────────────────────
+// Bulk verify selected pending payments
 
 export const bulkVerifyPayments = async (userId: number, paymentIds: number[]): Promise<number> => {
     if (!paymentIds.length) return 0;
@@ -457,7 +457,7 @@ export const bulkVerifyPayments = async (userId: number, paymentIds: number[]): 
     } catch (err) { await conn.rollback(); throw err; } finally { conn.release(); }
 };
 
-// ─── Bulk unverify history payments (revert to rejected + unpaid) ─────────────
+// Bulk unverify history payments (revert to rejected + unpaid)
 
 export const bulkUnverifyPayments = async (userId: number, paymentIds: number[]): Promise<number> => {
     if (!paymentIds.length) return 0;
@@ -491,7 +491,7 @@ export const bulkUnverifyPayments = async (userId: number, paymentIds: number[])
     } catch (err) { await conn.rollback(); throw err; } finally { conn.release(); }
 };
 
-// ─── Bulk delete payment records ──────────────────────────────────────────────
+// Bulk delete payment records
 
 export const bulkDeletePayments = async (paymentIds: number[]): Promise<number> => {
     if (!paymentIds.length) return 0;

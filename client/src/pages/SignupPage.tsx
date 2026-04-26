@@ -3,7 +3,7 @@ import { IoArrowBackOutline, IoEyeOutline, IoEyeOffOutline } from "react-icons/i
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
-interface SignupProps { onCancel: () => void; }
+interface SignupProps { onCancel?: () => void; }
 
 const PROGRAMS = [
     { id: 1, name: "Computer Engineering" },

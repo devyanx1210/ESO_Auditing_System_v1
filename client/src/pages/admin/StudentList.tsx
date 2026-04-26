@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { FiRefreshCw, FiSearch, FiFilter, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,11 +8,14 @@ import type { AdminStudentItem } from "../../services/admin-student.service";
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function UserAvatar({ src }: { src?: string | null }) {
+    const imgSrc = src ? (src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`) : null;
     return (
-        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-            {src
-                ? <img src={src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`} alt="" className="w-full h-full object-cover" />
-                : <DefaultAvatarSvg />}
+        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 relative">
+            <DefaultAvatarSvg />
+            {imgSrc && (
+                <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            )}
         </div>
     );
 }

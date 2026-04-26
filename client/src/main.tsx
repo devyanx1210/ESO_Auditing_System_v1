@@ -4,18 +4,21 @@ import { RouterProvider } from "react-router-dom";
 
 import router from "./routes/router";
 import { AuthProvider } from "./context/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import "../styles/index.css";
 
-// Apply theme synchronously before first render to prevent flash
+// Apply theme before first render to prevent flash
 if (localStorage.getItem("theme") === "dark") {
     document.documentElement.classList.add("dark");
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
-  </React.StrictMode>
+    <React.StrictMode>
+        <ErrorBoundary>
+            <AuthProvider>
+                <RouterProvider router={router} />
+            </AuthProvider>
+        </ErrorBoundary>
+    </React.StrictMode>
 );

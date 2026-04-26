@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { FiRefreshCw, FiSearch, FiFilter, FiChevronDown, FiChevronUp, FiChevronRight, FiImage, FiX } from "react-icons/fi";
 import { receiptUrl } from "../../services/admin-student.service";
@@ -49,16 +49,6 @@ function CashModal({ studentObligationId, obligationName, amount, token, onClose
         document.body
     );
 }
-
-// ─── Program lookup ───────────────────────────────────────────────────────────
-
-const PROGRAM_NAMES: Record<string, string> = {
-    CpE: "Computer Engineering",
-    CE:  "Civil Engineering",
-    ECE: "Electronics Engineering",
-    EE:  "Electrical Engineering",
-    ME:  "Mechanical Engineering",
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -137,11 +127,14 @@ function DefaultAvatarSvg() {
 
 function UserAvatar({ size = "md", src }: { size?: "sm" | "md"; src?: string | null }) {
     const sz = size === "md" ? "w-9 h-9" : "w-8 h-8";
+    const imgSrc = src ? (src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`) : null;
     return (
-        <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
-            {src
-                ? <img src={src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`} alt="" className="w-full h-full object-cover" />
-                : <DefaultAvatarSvg />}
+        <div className={`${sz} rounded-full overflow-hidden shrink-0 relative`}>
+            <DefaultAvatarSvg />
+            {imgSrc && (
+                <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            )}
         </div>
     );
 }
@@ -211,7 +204,6 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
 
     const panelOuter = darkMode ? "bg-[#111111] border-t border-b border-gray-700/60" : "bg-gray-100 border-t border-b border-gray-200";
     const panelInner = darkMode ? "bg-[#1a1a1a] rounded-xl" : "bg-white rounded-xl shadow-sm";
-    const thCls      = darkMode ? "text-gray-400 border-gray-700" : "text-gray-500 border-gray-200";
 
     if (loading) return (
         <tr><td colSpan={8} className={`${panelOuter} px-6 py-6`}>
@@ -446,16 +438,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
     );
 }
 
-// ─── Mobile Obligation Accordion Content ─────────────────────────────────────
-
-interface MobileObligationAccordionProps {
-    studentId: number;
-    token: string;
-    cache: Record<number, AdminObligationItem[]>;
-    onCache: (id: number, data: AdminObligationItem[]) => void;
-    darkMode: boolean;
-}
-function MobileObligationAccordion({ studentId, token, cache, onCache, darkMode }: MobileObligationAccordionProps) {
+export function _unusedMobileAccordion({ studentId, token, cache, onCache, darkMode }: { studentId: number; token: string; cache: Record<number, AdminObligationItem[]>; onCache: (id: number, data: AdminObligationItem[]) => void; darkMode: boolean; }) {
     const [loading, setLoading] = useState(false);
     const [verifyingId, setVerifyingId] = useState<number | null>(null);
 
@@ -639,7 +622,7 @@ const StudentObligationList = () => {
     const students = studentsData ?? [];
 
     const [search,           setSearch]           = useState((location.state as any)?.search ?? "");
-    const [obligationFilter, setObligationFilter] = useState<string>((location.state as any)?.obligationFilter ?? "");
+    const [obligationFilter] = useState<string>((location.state as any)?.obligationFilter ?? "");
     const [deptFilter,       setDeptFilter]       = useState((location.state as any)?.programFilter ?? "all");
     const [yearFilter,    setYearFilter]    = useState("all");
     const [sectionFilter, setSectionFilter] = useState("all");
@@ -914,7 +897,7 @@ const StudentObligationList = () => {
                                             ? (darkMode ? "bg-[#1a1a1a]" : "bg-white")
                                             : (darkMode ? "bg-[#1a1a1a]/60" : "bg-gray-50/70");
                                     return (
-                                        <React.Fragment key={s.studentId}>
+                                        <Fragment key={s.studentId}>
                                             <tr
                                                 style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.05}s` }}
                                                 className={`transition-colors cursor-pointer ${darkMode ? "hover:bg-[#222]/60" : "hover:bg-gray-100"} ${rowBg} border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
@@ -956,7 +939,7 @@ const StudentObligationList = () => {
                                                     onCache={handleCache}
                                                     darkMode={darkMode} />
                                             )}
-                                        </React.Fragment>
+                                        </Fragment>
                                     );
                                 })}
                             </tbody>

@@ -56,7 +56,7 @@ function normalizeShirtSize(raw: string | null): string | null {
     return ["XS","S","M","L","XL","XXL"].includes(v) ? v : null;
 }
 
-// ── Check if school_year + semester already imported ─────────────────────────
+// Check if school_year + semester already imported
 export const checkImportExists = async (
     schoolYear: string,
     semester:   number
@@ -72,10 +72,10 @@ export const checkImportExists = async (
     return { exists: true, importedAt: rows[0].imported_at, recordCount: rows[0].record_count };
 };
 
-// ── In-memory lock to prevent concurrent imports for the same period ──────────
+// In-memory lock to prevent concurrent imports for the same period
 const importLocks = new Set<string>();
 
-// ── Run the import ────────────────────────────────────────────────────────────
+// Run the import
 export const importStudents = async (
     rows:    ImportRow[],
     ctx:     ImportContext
@@ -106,13 +106,13 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
     const errors: string[] = [];
 
     try {
-        // ── 1. Fetch student role ID ──────────────────────────────────────────
+// 1. Fetch student role ID
         const [roleRows]: any = await conn.execute(
             "SELECT role_id FROM roles WHERE role_name = 'student'"
         );
         const roleId = roleRows[0].role_id;
 
-        // ── 2. Bulk-fetch all programs in one query ───────────────────────────
+// 2. Bulk-fetch all programs in one query
         const [progRows]: any = await conn.execute(
             "SELECT program_id, LOWER(name) AS lname FROM programs"
         );
@@ -120,7 +120,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             progRows.map((p: any) => [p.lname, p.program_id])
         );
 
-        // ── 3. Bulk-check existing student numbers ────────────────────────────
+// 3. Bulk-check existing student numbers
         const allStudentNos = [...new Set(rows.map(r => r.studentNo.trim()).filter(Boolean))];
         let existingStudentNos = new Set<string>();
         if (allStudentNos.length) {
@@ -132,7 +132,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             existingStudentNos = new Set(exSt.map((r: any) => r.student_no));
         }
 
-        // ── 4. Bulk-check existing emails ─────────────────────────────────────
+// 4. Bulk-check existing emails
         const allEmails = [...new Set(rows.map(r => r.email.toLowerCase().trim()).filter(Boolean))];
         let existingEmails = new Set<string>();
         if (allEmails.length) {
@@ -144,7 +144,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             existingEmails = new Set(exEm.map((r: any) => r.email));
         }
 
-        // ── 5. Filter to valid rows only ──────────────────────────────────────
+// 5. Filter to valid rows only
         type ValidRow = ImportRow & {
             programId: number;
             yearLevel: number;
@@ -181,7 +181,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             validRows.push({ ...row, programId, yearLevel, section, firstName, lastName });
         }
 
-        // ── 6. Hash passwords in parallel batches ─────────────────────────────
+// 6. Hash passwords in parallel batches
         const hashes: string[] = new Array(validRows.length);
         for (let i = 0; i < validRows.length; i += HASH_BATCH) {
             const batch = validRows.slice(i, i + HASH_BATCH);
@@ -191,7 +191,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             batchHashes.forEach((h, j) => { hashes[i + j] = h; });
         }
 
-        // ── 7. Insert in a transaction ────────────────────────────────────────
+// 7. Insert in a transaction
         await conn.beginTransaction();
         try {
             for (let i = 0; i < validRows.length; i++) {
@@ -257,7 +257,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
     }
 }
 
-// ── Delete a session record (unlocks that period for re-import) ───────────────
+// Delete a session record (unlocks that period for re-import)
 export const deleteImportSession = async (importId: number): Promise<void> => {
     const [result]: any = await pool.execute(
         "DELETE FROM student_imports WHERE import_id = ?",
@@ -266,7 +266,7 @@ export const deleteImportSession = async (importId: number): Promise<void> => {
     if (result.affectedRows === 0) throw new Error("Import session not found");
 };
 
-// ── History ───────────────────────────────────────────────────────────────────
+// History
 export const getImportSessions = async () => {
     const [rows]: any = await pool.execute(
         `SELECT si.import_id, si.school_year, si.semester,

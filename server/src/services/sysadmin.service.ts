@@ -2,7 +2,7 @@ import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 
-// ─── System Settings ────────────────────────────────────────────────────────
+// System Settings
 
 export const getSystemSettings = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -33,7 +33,7 @@ export const updateSemesterSettings = async (
     );
 };
 
-// ─── Public maintenance check (no auth) ─────────────────────────────────────
+// Public maintenance check (no auth)
 
 export const getMaintenanceStatus = async (): Promise<{ maintenance_mode: boolean; maintenance_msg: string }> => {
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -46,7 +46,7 @@ export const getMaintenanceStatus = async (): Promise<{ maintenance_mode: boolea
     };
 };
 
-// ─── Account Management ──────────────────────────────────────────────────────
+// Account Management
 
 export const getAllAccounts = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -157,8 +157,8 @@ export const createAdminAccount = async (data: {
     const userId = result.insertId;
     if (data.role !== "system_admin") {
         await pool.execute(
-            `INSERT INTO admins (user_id, position, program_id, year_level, section, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
-            [userId, data.position?.trim() ?? "", data.programId ?? null, data.yearLevel ?? null, data.section ?? null]
+            `INSERT INTO admins (user_id, position, year_level, section, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())`,
+            [userId, data.position?.trim() ?? "", data.yearLevel ?? null, data.section ?? null]
         );
     }
     return userId;
@@ -171,7 +171,7 @@ export const deleteAccount = async (userId: number) => {
     );
 };
 
-// ─── Year Advancement ────────────────────────────────────────────────────────
+// Year Advancement
 
 const MAX_YEAR = 5; // Engineering programs in PH are 5 years
 
@@ -246,7 +246,7 @@ export const executeYearAdvancement = async (newSchoolYear: string, updatedBy: n
     }
 };
 
-// ─── Programs ────────────────────────────────────────────────────────────────
+// Programs
 
 export const getAllPrograms = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -255,9 +255,7 @@ export const getAllPrograms = async () => {
     return rows;
 };
 
-// ─── Audit Logs ──────────────────────────────────────────────────────────────
-
-// ─── Roles ───────────────────────────────────────────────────────────────────
+// Roles
 
 export const getAllRoles = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -269,7 +267,7 @@ export const getAllRoles = async () => {
     return rows;
 };
 
-// ─── Clearance Workflow ──────────────────────────────────────────────────────
+// Clearance Workflow
 
 export const getClearanceWorkflow = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -301,7 +299,7 @@ export const updateClearanceWorkflow = async (
     }
 };
 
-// ─── Audit Logs ──────────────────────────────────────────────────────────────
+// Audit Logs
 
 export const getAuditLogs = async (page: number = 1, limit: number = 50) => {
     const offset = (page - 1) * limit;

@@ -3,7 +3,7 @@ import { RowDataPacket, ResultSetHeader } from "mysql2";
 import fs from "fs";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
-// ─── Templates ────────────────────────────────────────────────────────────────
+// Templates
 
 export const getTemplates = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -79,7 +79,7 @@ export const unsetDefaultTemplate = async (id: number) => {
     );
 };
 
-// ─── PDF template helpers ─────────────────────────────────────────────────────
+// PDF template helpers
 
 export const updateTemplatePdf = async (
     id: number,
@@ -172,7 +172,7 @@ export const stampPdfTemplate = async (
     return mergedPdf.save();
 };
 
-// ─── Approved students for print ─────────────────────────────────────────────
+// Approved students for print
 
 export const getApprovedStudents = async (schoolYear?: string, semester?: string) => {
     let sql = `

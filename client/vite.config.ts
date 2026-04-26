@@ -23,6 +23,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB — background image is ~2.9 MB
         // Cache the app shell and static assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         // Don't cache API calls

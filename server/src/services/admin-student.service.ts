@@ -12,7 +12,7 @@ async function getAdminDeptId(userId: number): Promise<number | null> {
     return rows[0]?.program_id ?? null;
 }
 
-// ─── Student list (dept-filtered) ─────────────────────────────────────────────
+// Student list (dept-filtered)
 
 export interface AdminStudentItem {
     studentId: number;
@@ -115,7 +115,7 @@ export const listStudents = async (
     }));
 };
 
-// ─── Per-student obligation list (for admin panel) ────────────────────────────
+// Per-student obligation list (for admin panel)
 
 export interface AdminObligationItem {
     studentObligationId: number;
@@ -215,7 +215,7 @@ export const getStudentObligationsForAdmin = async (
     });
 };
 
-// ─── Verify proof submission (non-payment obligation) ─────────────────────────
+// Verify proof submission (non-payment obligation)
 
 export const verifyProofObligation = async (
     userId: number,

@@ -2,8 +2,6 @@ import { apiFetch } from "./api";
 
 // Use relative paths so Vite proxy routes them correctly on any device/tunnel
 const API_BASE = "/api/v1";
-// Static files (/uploads/...) are also proxied through Vite
-const SERVER_ORIGIN = "";
 
 export interface FieldPosition {
     x:    number;

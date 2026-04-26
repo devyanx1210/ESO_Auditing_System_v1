@@ -13,7 +13,7 @@ export interface ObligationStudentStatus {
 export interface ObligationStat {
     obligationId: number;
     obligationName: string;
-    scope: string;
+    scope: number;
     programId: number | null;
     programName: string | null;
     totalStudents: number;

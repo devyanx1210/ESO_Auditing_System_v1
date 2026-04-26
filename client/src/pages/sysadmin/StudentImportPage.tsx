@@ -103,7 +103,7 @@ export default function StudentImportPage() {
         if (!periodComplete || !accessToken) { setCheckResult(null); return; }
         let cancelled = false;
         setCheckLoading(true);
-        studentImportService.check(accessToken, { schoolYear: schoolYear.trim(), semester })
+        studentImportService.check(accessToken, { schoolYear: schoolYear.trim(), semester: (SEMESTERS.indexOf(semester) + 1) as 1 | 2 | 3 })
             .then(r => { if (!cancelled) setCheckResult(r); })
             .catch(() => {})
             .finally(() => { if (!cancelled) setCheckLoading(false); });
@@ -135,12 +135,12 @@ export default function StudentImportPage() {
         setImportError("");
         setImportResult(null);
         try {
-            const result = await studentImportService.import(accessToken, { schoolYear: schoolYear.trim(), semester }, file);
+            const result = await studentImportService.import(accessToken, { schoolYear: schoolYear.trim(), semester: (SEMESTERS.indexOf(semester) + 1) as 1 | 2 | 3 }, file);
             setImportResult(result);
             setFile(null);
             setPreview(null);
             const [newCheck, newSessions] = await Promise.all([
-                studentImportService.check(accessToken, { schoolYear: schoolYear.trim(), semester }),
+                studentImportService.check(accessToken, { schoolYear: schoolYear.trim(), semester: (SEMESTERS.indexOf(semester) + 1) as 1 | 2 | 3 }),
                 studentImportService.getSessions(accessToken),
             ]);
             setCheckResult(newCheck);
@@ -162,7 +162,7 @@ export default function StudentImportPage() {
             const newSessions = await studentImportService.getSessions(accessToken);
             setSessions(newSessions);
             if (periodComplete) {
-                const newCheck = await studentImportService.check(accessToken, { schoolYear: schoolYear.trim(), semester });
+                const newCheck = await studentImportService.check(accessToken, { schoolYear: schoolYear.trim(), semester: (SEMESTERS.indexOf(semester) + 1) as 1 | 2 | 3 });
                 setCheckResult(newCheck);
             }
             setDeleteTarget(null);

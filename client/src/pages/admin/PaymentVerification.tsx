@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
     FiRefreshCw, FiCheckSquare, FiClock, FiSearch, FiFilter,
     FiChevronDown, FiChevronUp, FiTrash2, FiList, FiCreditCard,
@@ -41,11 +41,14 @@ function DefaultAvatarSvg() {
 }
 function UserAvatar({ size = "md", src }: { size?: "sm" | "md" | "lg"; src?: string | null }) {
     const sz = size === "lg" ? "w-14 h-14" : size === "md" ? "w-9 h-9" : "w-8 h-8";
+    const imgSrc = src ? (src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`) : null;
     return (
-        <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
-            {src
-                ? <img src={src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`} alt="" className="w-full h-full object-cover" />
-                : <DefaultAvatarSvg />}
+        <div className={`${sz} rounded-full overflow-hidden shrink-0 relative`}>
+            <DefaultAvatarSvg />
+            {imgSrc && (
+                <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            )}
         </div>
     );
 }

@@ -6,9 +6,10 @@ export const errorHandler = (
     res: Response,
     next: NextFunction
 ) => {
-    console.error("Error:", err.message);
+    console.error("Unhandled error:", err);
+    const isProd = process.env.NODE_ENV === "production";
     return res.status(500).json({
         success: false,
-        message: err.message || "Internal Server Error",
+        message: isProd ? "Internal Server Error" : err.message,
     });
 };

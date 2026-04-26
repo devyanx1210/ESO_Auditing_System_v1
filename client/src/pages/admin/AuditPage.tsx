@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import { type ReactNode, useEffect, useState, useCallback, useRef } from "react";
 import {
     FiRefreshCw, FiPlus, FiEdit2, FiTrash2, FiDollarSign,
-    FiTrendingUp, FiTrendingDown, FiActivity, FiChevronDown,
+    FiTrendingUp, FiActivity, FiChevronDown,
     FiArrowUpCircle, FiArrowDownCircle, FiFileText, FiExternalLink,
     FiInfo, FiX, FiPrinter,
 } from "react-icons/fi";
@@ -35,9 +35,6 @@ function fmt(n: number) {
 function semLabel(s: number) {
     return s === 1 ? "1st Sem" : s === 2 ? "2nd Sem" : "Summer";
 }
-function semLabelFull(s: number) {
-    return s === 1 ? "1st Semester" : s === 2 ? "2nd Semester" : "Summer";
-}
 function fmtDate(d: string | null) {
     if (!d) return "—";
     return new Date(d).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
@@ -54,7 +51,7 @@ const receiptUrl = (p: string | null) =>
 // ─── Stat Card (matches Dashboard style) ─────────────────────────────────────
 
 interface StatCardProps {
-    label: string; value: string; icon: React.ReactNode;
+    label: string; value: string; icon: ReactNode;
     sub?: string; darkMode: boolean; highlight?: boolean;
     animDelay?: number; onClick?: () => void;
 }
@@ -474,7 +471,6 @@ const AuditPage = () => {
         },
     };
 
-    const netPositive = (summary?.netBalance ?? 0) >= 0;
     const bg   = darkMode ? "bg-[#111111] text-gray-100" : "bg-gray-50 text-gray-900";
     const card = darkMode ? "bg-[#1a1a1a]" : "bg-white";
     const th   = darkMode ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-500";
@@ -495,13 +491,22 @@ const AuditPage = () => {
         const now = new Date().toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
         const filterLine = [schoolYear, semester ? `Semester ${semester}` : ""].filter(Boolean).join(" · ") || "All Periods";
 
-        const incomeRows = incomeList.map((item, i) => `
+        // Group income by program for print
+        const incomeByProgram: Record<string, { count: number; total: number }> = {};
+        incomeList.forEach(item => {
+            const k = item.programCode || "Unknown";
+            if (!incomeByProgram[k]) incomeByProgram[k] = { count: 0, total: 0 };
+            incomeByProgram[k].count++;
+            incomeByProgram[k].total += item.amountPaid;
+        });
+        const incomeRows = Object.entries(incomeByProgram)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([code, data], i) => `
             <tr class="${i % 2 !== 0 ? "alt" : ""}">
                 <td>${i + 1}</td>
-                <td><b>${item.studentName}</b><br><small>${item.programCode}</small></td>
-                <td>${item.obligationName}</td>
-                <td class="r green">${fmt(item.amountPaid)}</td>
-                <td class="c">${item.verifiedAt ? new Date(item.verifiedAt).toLocaleDateString("en-PH") : ""}</td>
+                <td><b>${code}</b></td>
+                <td class="c">${data.count}</td>
+                <td class="r green">${fmt(data.total)}</td>
             </tr>`).join("");
 
         const expenseRows = expList.map((item, i) => `
@@ -538,6 +543,8 @@ const AuditPage = () => {
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Times New Roman',serif;font-size:11pt;color:#111;background:#fff;padding:30px}
+  .logo{text-align:center;margin-bottom:10px}
+  .logo img{height:72px;object-fit:contain}
   h1{font-size:16pt;text-align:center;margin-bottom:4px}
   .sub{font-size:10pt;text-align:center;color:#555;margin-bottom:20px}
   h2{font-size:12pt;margin:20px 0 8px;border-bottom:1.5px solid #333;padding-bottom:4px}
@@ -555,6 +562,7 @@ const AuditPage = () => {
   @media print{body{padding:10px}}
 </style></head>
 <body>
+<div class="logo"><img src="${window.location.origin}/ESO_Logo.png" alt="ESO Logo" onerror="this.style.display='none'" /></div>
 <h1>ESO Financial Audit Report</h1>
 <div class="sub">Period: ${filterLine} &nbsp;|&nbsp; Generated: ${now}</div>
 
@@ -576,11 +584,11 @@ const AuditPage = () => {
   </div>
 </div>
 
-<h2>Collections (Verified Payments)</h2>
+<h2>Collections by Program</h2>
 <table>
-  <thead><tr><th>#</th><th>Student</th><th>Obligation</th><th class="r">Amount</th><th class="c">Date Verified</th></tr></thead>
-  <tbody>${incomeRows || '<tr><td colspan="5" class="c" style="color:#999;padding:10px">No collections recorded.</td></tr>'}</tbody>
-  <tfoot><tr><td colspan="3" style="padding:5px 8px;font-weight:700;font-size:9pt">Total</td><td class="r green" style="padding:5px 8px;font-weight:700">${summary ? fmt(summary.totalIncome) : "—"}</td><td></td></tr></tfoot>
+  <thead><tr><th>#</th><th>Program</th><th class="c">Payments</th><th class="r">Total Collected</th></tr></thead>
+  <tbody>${incomeRows || '<tr><td colspan="4" class="c" style="color:#999;padding:10px">No collections recorded.</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="2" style="padding:5px 8px;font-weight:700;font-size:9pt">Total</td><td class="c" style="padding:5px 8px;font-weight:700">${incomeList.length}</td><td class="r green" style="padding:5px 8px;font-weight:700">${summary ? fmt(summary.totalIncome) : "—"}</td></tr></tfoot>
 </table>
 
 <h2>Expenses</h2>
@@ -602,7 +610,7 @@ const AuditPage = () => {
   <tbody>${ledgerRows || '<tr><td colspan="5" class="c" style="color:#999;padding:10px">No ledger entries.</td></tr>'}</tbody>
 </table>
 
-<div class="footer">ESO Auditing System &mdash; This report was generated automatically. Verify data with official records.</div>
+<div class="footer">This report was generated automatically by ESO Auditing System. Verify data with official records.</div>
 </body></html>`);
         win.document.close();
         setTimeout(() => { try { win.print(); } catch(e) {} }, 500);
@@ -854,25 +862,31 @@ const AuditPage = () => {
                         <table className="eso-table w-full text-xs">
                             <thead className={th}>
                                 <tr>
-                                    <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-wide font-semibold">Student / Obligation</th>
-                                    <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wide font-semibold">Amount</th>
-                                    <th className="px-4 py-2.5 text-center text-[10px] uppercase tracking-wide font-semibold">Date</th>
+                                    <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-wide font-semibold">Program</th>
+                                    <th className="px-4 py-2.5 text-center text-[10px] uppercase tracking-wide font-semibold">Payments</th>
+                                    <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wide font-semibold">Total Collected</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {incomeList.slice(0, 6).map((item, i) => (
-                                    <tr key={item.paymentId} className={`border-b ${darkMode ? "border-gray-700/40" : "border-gray-100"} ${i % 2 === 0 ? "" : darkMode ? "bg-white/[0.02]" : "bg-gray-50/60"}`}>
-                                        <td className={`px-4 py-2.5 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-                                            <p className="font-medium">{item.studentName} <span className={`text-[10px] ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{item.programCode}</span></p>
-                                            <p className={`text-[10px] ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{item.obligationName}</p>
-                                        </td>
-                                        <td className="px-4 py-2.5 text-right font-semibold text-green-600">{fmt(item.amountPaid)}</td>
-                                        <td className={`px-4 py-2.5 text-center text-[10px] ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{fmtDate(item.verifiedAt)}</td>
-                                    </tr>
-                                ))}
-                                {incomeList.length === 0 && (
-                                    <tr><td colSpan={3} className={`px-4 py-8 text-center text-xs ${darkMode ? "text-gray-600" : "text-gray-400"}`}>No collections yet.</td></tr>
-                                )}
+                                {(() => {
+                                    const byProgram: Record<string, { count: number; total: number }> = {};
+                                    incomeList.forEach(item => {
+                                        const k = item.programCode || "Unknown";
+                                        if (!byProgram[k]) byProgram[k] = { count: 0, total: 0 };
+                                        byProgram[k].count++;
+                                        byProgram[k].total += item.amountPaid;
+                                    });
+                                    const entries = Object.entries(byProgram).sort((a, b) => b[1].total - a[1].total);
+                                    return entries.length > 0
+                                        ? entries.map(([code, data], i) => (
+                                            <tr key={code} className={`border-b ${darkMode ? "border-gray-700/40" : "border-gray-100"} ${i % 2 === 0 ? "" : darkMode ? "bg-white/[0.02]" : "bg-gray-50/60"}`}>
+                                                <td className={`px-4 py-2.5 font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{code}</td>
+                                                <td className={`px-4 py-2.5 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{data.count} payment{data.count !== 1 ? "s" : ""}</td>
+                                                <td className="px-4 py-2.5 text-right font-bold text-green-600">{fmt(data.total)}</td>
+                                            </tr>
+                                        ))
+                                        : <tr><td colSpan={3} className={`px-4 py-8 text-center text-xs ${darkMode ? "text-gray-600" : "text-gray-400"}`}>No collections yet.</td></tr>;
+                                })()}
                             </tbody>
                         </table>
                     </div>
@@ -1005,62 +1019,65 @@ const AuditPage = () => {
             )}
 
             {/* ─── COLLECTIONS TAB ─── */}
-            {activeTab === "income" && (
-                <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden ${card}`}>
-                    <div className="overflow-x-auto">
-                        <table className="eso-table w-full text-xs min-w-[680px]">
-                            <thead className={th}>
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Student</th>
-                                    <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Obligation / OR</th>
-                                    <th className="px-4 py-3 text-center text-[10px] uppercase font-semibold tracking-wide">Semester</th>
-                                    <th className="px-4 py-3 text-center text-[10px] uppercase font-semibold tracking-wide">Method</th>
-                                    <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">Amount</th>
-                                    <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Verified By</th>
-                                    <th className="px-4 py-3 text-center text-[10px] uppercase font-semibold tracking-wide">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {incomeList.map((item, i) => (
-                                    <tr key={item.paymentId} className={`border-b ${darkMode ? "border-gray-700/40" : "border-gray-100"} ${i % 2 === 0 ? "" : darkMode ? "bg-white/[0.02]" : "bg-gray-50/60"}`}>
-                                        <td className={`px-4 py-2.5 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-                                            <p className="font-medium">{item.studentName}</p>
-                                            <p className={`text-[10px] ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{item.studentNo} · {item.programCode}</p>
-                                        </td>
-                                        <td className={`px-4 py-2.5 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                                            <p>{item.obligationName}</p>
-                                            {receiptUrl(null) && <a href="#" className="text-[10px] text-orange-500 hover:underline">View OR</a>}
-                                        </td>
-                                        <td className={`px-4 py-2.5 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                            {semLabel(item.semester)}<br/><span className="text-[10px]">{item.schoolYear}</span>
-                                        </td>
-                                        <td className="px-4 py-2.5 text-center">
-                                            {item.paymentType === 1
-                                                ? <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">GCash</span>
-                                                : <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold">Cash</span>}
-                                        </td>
-                                        <td className="px-4 py-2.5 text-right font-bold text-green-600">{fmt(item.amountPaid)}</td>
-                                        <td className={`px-4 py-2.5 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{item.verifiedByName ?? "—"}</td>
-                                        <td className={`px-4 py-2.5 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{fmtDate(item.verifiedAt)}</td>
+            {activeTab === "income" && (() => {
+                const byProgram: Record<string, { count: number; total: number; gcash: number; cash: number }> = {};
+                incomeList.forEach(item => {
+                    const k = item.programCode || "Unknown";
+                    if (!byProgram[k]) byProgram[k] = { count: 0, total: 0, gcash: 0, cash: 0 };
+                    byProgram[k].count++;
+                    byProgram[k].total += item.amountPaid;
+                    if (item.paymentType === 1) byProgram[k].gcash += item.amountPaid;
+                    else byProgram[k].cash += item.amountPaid;
+                });
+                const entries = Object.entries(byProgram).sort((a, b) => b[1].total - a[1].total);
+                const grandTotal = incomeList.reduce((s, r) => s + r.amountPaid, 0);
+                return (
+                    <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden ${card}`}>
+                        <div className={`px-5 py-3 border-b flex items-center justify-between ${darkMode ? "border-gray-700/50" : "border-gray-100"}`}>
+                            <p className={`text-sm font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>Collections by Program</p>
+                            <span className="text-xs text-green-600 font-semibold">{fmt(grandTotal)} total</span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="eso-table w-full text-xs min-w-[480px]">
+                                <thead className={th}>
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Program</th>
+                                        <th className="px-4 py-3 text-center text-[10px] uppercase font-semibold tracking-wide">Payments</th>
+                                        <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">GCash</th>
+                                        <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">Cash</th>
+                                        <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">Total Collected</th>
                                     </tr>
-                                ))}
-                                {incomeList.length === 0 && (
-                                    <tr><td colSpan={7} className={`px-4 py-12 text-center text-sm ${darkMode ? "text-gray-600" : "text-gray-400"}`}>No collection records.</td></tr>
+                                </thead>
+                                <tbody>
+                                    {entries.length > 0
+                                        ? entries.map(([code, data], i) => (
+                                            <tr key={code} className={`border-b ${darkMode ? "border-gray-700/40" : "border-gray-100"} ${i % 2 === 0 ? "" : darkMode ? "bg-white/[0.02]" : "bg-gray-50/60"}`}>
+                                                <td className={`px-4 py-2.5 font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{code}</td>
+                                                <td className={`px-4 py-2.5 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{data.count}</td>
+                                                <td className={`px-4 py-2.5 text-right ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{data.gcash > 0 ? fmt(data.gcash) : "—"}</td>
+                                                <td className={`px-4 py-2.5 text-right ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{data.cash > 0 ? fmt(data.cash) : "—"}</td>
+                                                <td className="px-4 py-2.5 text-right font-bold text-green-600">{fmt(data.total)}</td>
+                                            </tr>
+                                        ))
+                                        : <tr><td colSpan={5} className={`px-4 py-12 text-center text-sm ${darkMode ? "text-gray-600" : "text-gray-400"}`}>No collection records.</td></tr>
+                                    }
+                                </tbody>
+                                {entries.length > 0 && (
+                                    <tfoot>
+                                        <tr className={`border-t-2 ${darkMode ? "border-gray-600 bg-[#222]/40" : "border-gray-200 bg-gray-50"}`}>
+                                            <td className={`px-4 py-3 text-xs font-bold uppercase ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Total</td>
+                                            <td className={`px-4 py-3 text-center text-xs font-bold ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{incomeList.length}</td>
+                                            <td className={`px-4 py-3 text-right text-sm font-bold ${darkMode ? "text-gray-300" : "text-gray-600"}`}>{fmt(incomeList.filter(r => r.paymentType === 1).reduce((s, r) => s + r.amountPaid, 0))}</td>
+                                            <td className={`px-4 py-3 text-right text-sm font-bold ${darkMode ? "text-gray-300" : "text-gray-600"}`}>{fmt(incomeList.filter(r => r.paymentType !== 1).reduce((s, r) => s + r.amountPaid, 0))}</td>
+                                            <td className="px-4 py-3 text-right text-sm font-bold text-green-600">{fmt(grandTotal)}</td>
+                                        </tr>
+                                    </tfoot>
                                 )}
-                            </tbody>
-                            {incomeList.length > 0 && (
-                                <tfoot>
-                                    <tr className={`border-t-2 ${darkMode ? "border-gray-600 bg-[#222]/40" : "border-gray-200 bg-gray-50"}`}>
-                                        <td colSpan={4} className={`px-4 py-3 text-xs font-bold uppercase ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Total Collections</td>
-                                        <td className="px-4 py-3 text-right text-sm font-bold text-green-600">{fmt(incomeList.reduce((s, r) => s + r.amountPaid, 0))}</td>
-                                        <td colSpan={2}></td>
-                                    </tr>
-                                </tfoot>
-                            )}
-                        </table>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* ─── EXPENSES TAB ─── */}
             {activeTab === "expenses" && (

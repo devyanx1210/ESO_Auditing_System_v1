@@ -93,7 +93,7 @@ export const handleGetApprovedStudents = async (req: Request, res: Response) => 
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// ─── Stream PDF file for preview ─────────────────────────────────────────────
+// Stream PDF file for preview
 
 function resolvePdfPath(stored: string): string | null {
     // 1. Try as-is (already absolute from recent uploads)
@@ -121,7 +121,7 @@ export const handleGetPdfFile = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// ─── PDF upload ───────────────────────────────────────────────────────────────
+// PDF upload
 
 export const handleUploadPdf = async (req: Request, res: Response) => {
     try {
@@ -142,7 +142,7 @@ export const handleUploadPdf = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// ─── Save field positions ─────────────────────────────────────────────────────
+// Save field positions
 
 export const handleSavePositions = async (req: Request, res: Response) => {
     try {
@@ -161,7 +161,7 @@ export const handleSavePositions = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// ─── Remove PDF ───────────────────────────────────────────────────────────────
+// Remove PDF
 
 export const handleRemovePdf = async (req: Request, res: Response) => {
     try {
@@ -177,7 +177,7 @@ export const handleRemovePdf = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// ─── Preview PDF with dummy data ─────────────────────────────────────────────
+// Preview PDF with dummy data
 
 const PREVIEW_DUMMY = {
     firstName:   "Juan",
@@ -208,7 +208,7 @@ export const handlePreviewPdf = async (req: Request, res: Response) => {
     }
 };
 
-// ─── Stamp + stream merged PDF ────────────────────────────────────────────────
+// Stamp + stream merged PDF
 
 export const handlePrintMerge = async (req: Request, res: Response) => {
     try {

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import type React from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
     FiPlus, FiSave, FiTrash2, FiStar, FiChevronDown, FiAlertCircle,
     FiBold, FiItalic, FiUnderline, FiAlignLeft, FiAlignCenter, FiAlignRight,
@@ -23,16 +24,6 @@ const VARIABLES = [
     { key: "date",            label: "Date Issued" },
 ];
 
-const SAMPLE: Record<string, string> = {
-    full_name:       "Dela Cruz, Juan",
-    student_no:      "2021-00001",
-    program_section: "Computer Engineering 3A",
-    program:         "Computer Engineering",
-    year_section:    "3A",
-    school_year:     "2024-2025",
-    semester:        "1",
-    date:            new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }),
-};
 
 // Dummy student used for HTML preview
 const PREVIEW_STUDENT: ApprovedStudent = {
@@ -408,7 +399,7 @@ function PdfCanvasViewer({
     onCanvasDrop, onPositionChange, onRemoveChip,
 }: {
     pdfUrl: string | null; reloadKey: number; positions: FieldPositions;
-    isDragging: boolean; overlayRef: React.RefObject<HTMLDivElement>; darkMode: boolean;
+    isDragging: boolean; overlayRef: React.RefObject<HTMLDivElement | null>; darkMode: boolean;
     onCanvasDrop: (e: React.DragEvent, canvas: HTMLCanvasElement) => void;
     onPositionChange: (key: string, x: number, y: number) => void;
     onRemoveChip: (key: string) => void;
@@ -1021,7 +1012,7 @@ export default function Documents() {
     const [pdfUploading, setPdfUploading] = useState(false);
     const [confirmDel,   setConfirmDel]   = useState(false);
     const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
-    const [printing,         setPrinting]         = useState(false);
+    const [printing] = useState(false);
     const [msg,              setMsg]              = useState<{ text: string; type: "ok" | "err" } | null>(null);
     const [previewMode,      setPreviewMode]      = useState(false);
     const [showPrintHtmlModal, setShowPrintHtmlModal] = useState(false);
@@ -1155,16 +1146,6 @@ export default function Documents() {
             if (upd) await openTemplate(upd);
         } catch (err: any) { flash(err.message, "err"); }
         finally { setPdfUploading(false); if (pdfRef.current) pdfRef.current.value = ""; }
-    }
-
-    async function handlePrintHtml() {
-        if (!accessToken || !content) return;
-        setPrinting(true);
-        try {
-            const students = await documentService.getApprovedStudents(accessToken);
-            printDocuments(content, students);
-        } catch (e: any) { flash(e.message, "err"); }
-        finally { setPrinting(false); }
     }
 
     if (loading) return (

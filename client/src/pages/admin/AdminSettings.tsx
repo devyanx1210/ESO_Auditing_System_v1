@@ -21,12 +21,14 @@ function DefaultAvatarSvg() {
 
 function UserAvatar({ size = "md", src }: { size?: "sm" | "md"; src?: string | null }) {
     const sz = size === "md" ? "w-9 h-9" : "w-8 h-8";
-    const url = src
-        ? (src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`)
-        : null;
+    const imgSrc = src ? (src.startsWith("http") ? src : src.startsWith("/uploads") ? src : `/uploads/${src}`) : null;
     return (
-        <div className={`${sz} rounded-full overflow-hidden shrink-0`}>
-            {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <DefaultAvatarSvg />}
+        <div className={`${sz} rounded-full overflow-hidden shrink-0 relative`}>
+            <DefaultAvatarSvg />
+            {imgSrc && (
+                <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            )}
         </div>
     );
 }
@@ -377,11 +379,12 @@ const AdminSettings = () => {
                             {/* Avatar row */}
                             <div className="flex items-center gap-4 sm:gap-5 mb-5 sm:mb-6">
                                 <div className="relative shrink-0" ref={avatarMenuRef}>
-                                    <div className="w-20 h-20 rounded-full overflow-hidden">
-                                        {avatarPreview
-                                            ? <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
-                                            : <DefaultAvatarSvg />
-                                        }
+                                    <div className="w-20 h-20 rounded-full overflow-hidden relative">
+                                        <DefaultAvatarSvg />
+                                        {avatarPreview && (
+                                            <img src={avatarPreview} alt="Profile" className="absolute inset-0 w-full h-full object-cover"
+                                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                                        )}
                                     </div>
                                     <button
                                         type="button"

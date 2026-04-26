@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "lan": "npm run build && node dist/server.js"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +19,7 @@
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "csv-parse": "^6.2.1",
-    "dotenv": "^17.3.1",
+    "dotenv": "^16.6.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.0",
     "express-validator": "^7.3.1",
