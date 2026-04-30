@@ -33,33 +33,38 @@ export const submitPayment = async (
     amountPaid: number,
     notes: string | null
 ): Promise<PaymentSubmission> => {
+    if (amountPaid <= 0 || amountPaid > 1_000_000) {
+        throw new Error("Invalid payment amount");
+    }
+
     const studentId = await getStudentId(userId);
-
-    // Verify this student_obligation belongs to this student
-    const [soRows]: any = await pool.execute(
-        `SELECT so.student_obligation_id, so.obligation_id, so.status,
-                so.amount_due, o.obligation_name
-         FROM student_obligations so
-         JOIN obligations o ON so.obligation_id = o.obligation_id
-         WHERE so.student_obligation_id = ? AND so.student_id = ?`,
-        [studentObligationId, studentId]
-    );
-    if (!soRows.length) throw new Error("Obligation not found");
-
-    const so = soRows[0];
-    if (so.status === 2 || so.status === 3) {
-        throw new Error("This obligation is already settled");
-    }
-    if (so.status === 1) {
-        throw new Error("A payment is already pending verification for this obligation.");
-    }
-    if (Number(so.amount_due) === 0) {
-        throw new Error("This obligation does not require payment. Upload proof instead.");
-    }
 
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
+
+        // Lock the row first (FOR UPDATE) so concurrent requests can't both pass the status check
+        const [soRows]: any = await conn.execute(
+            `SELECT so.student_obligation_id, so.obligation_id, so.status,
+                    so.amount_due, o.obligation_name
+             FROM student_obligations so
+             JOIN obligations o ON so.obligation_id = o.obligation_id
+             WHERE so.student_obligation_id = ? AND so.student_id = ?
+             FOR UPDATE`,
+            [studentObligationId, studentId]
+        );
+        if (!soRows.length) throw new Error("Obligation not found");
+
+        const so = soRows[0];
+        if (so.status === 2 || so.status === 3) {
+            throw new Error("This obligation is already settled");
+        }
+        if (so.status === 1) {
+            throw new Error("A payment is already pending verification for this obligation.");
+        }
+        if (Number(so.amount_due) === 0) {
+            throw new Error("This obligation does not require payment. Upload proof instead.");
+        }
 
         const [result]: any = await conn.execute(
             `INSERT INTO payment_submissions
@@ -130,25 +135,26 @@ export const submitProof = async (
 ): Promise<ProofSubmission> => {
     const studentId = await getStudentId(userId);
 
-    const [soRows]: any = await pool.execute(
-        `SELECT so.student_obligation_id, so.obligation_id, so.status,
-                so.amount_due, o.obligation_name,
-                st.user_id AS studentUserId
-         FROM student_obligations so
-         JOIN obligations o ON so.obligation_id = o.obligation_id
-         JOIN students st ON st.student_id = so.student_id
-         WHERE so.student_obligation_id = ? AND so.student_id = ?`,
-        [studentObligationId, studentId]
-    );
-    if (!soRows.length) throw new Error("Obligation not found");
-    const so = soRows[0];
-    if (so.status === 2 || so.status === 3) throw new Error("This obligation is already settled");
-    if (so.status === 1) throw new Error("Proof is already pending verification for this obligation.");
-    if (Number(so.amount_due) > 0) throw new Error("This obligation requires payment, not proof.");
-
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
+
+        const [soRows]: any = await conn.execute(
+            `SELECT so.student_obligation_id, so.obligation_id, so.status,
+                    so.amount_due, o.obligation_name,
+                    st.user_id AS studentUserId
+             FROM student_obligations so
+             JOIN obligations o ON so.obligation_id = o.obligation_id
+             JOIN students st ON st.student_id = so.student_id
+             WHERE so.student_obligation_id = ? AND so.student_id = ?
+             FOR UPDATE`,
+            [studentObligationId, studentId]
+        );
+        if (!soRows.length) throw new Error("Obligation not found");
+        const so = soRows[0];
+        if (so.status === 2 || so.status === 3) throw new Error("This obligation is already settled");
+        if (so.status === 1) throw new Error("Proof is already pending verification for this obligation.");
+        if (Number(so.amount_due) > 0) throw new Error("This obligation requires payment, not proof.");
 
         await conn.execute(
             `UPDATE student_obligations

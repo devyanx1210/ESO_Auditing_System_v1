@@ -1,6 +1,5 @@
 import pool from "../config/db.js";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
-import fs from "fs";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 // Templates
@@ -95,11 +94,6 @@ export const updateTemplatePdf = async (
     if (result.affectedRows === 0) throw new Error("Template not found");
 };
 
-export const deletePdfFile = (pdfPath: string) => {
-    try {
-        if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
-    } catch { /* ignore */ }
-};
 
 export interface FieldPositions {
     [variable: string]: { x: number; y: number; size: number };
@@ -127,7 +121,9 @@ export const stampPdfTemplate = async (
     if (!template.pdfPath)  throw new Error("This template has no PDF file. Upload a PDF first.");
 
     const positions: FieldPositions = template.fieldPositions ?? {};
-    const pdfBytes = fs.readFileSync(template.pdfPath);
+    const fetchRes = await fetch(template.pdfPath);
+    if (!fetchRes.ok) throw new Error("Failed to fetch PDF template from storage.");
+    const pdfBytes = Buffer.from(await fetchRes.arrayBuffer());
 
     const srcPdf    = await PDFDocument.load(pdfBytes);
     const mergedPdf = await PDFDocument.create();

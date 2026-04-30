@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import { getAdminProfile, updateAdminProfile } from "../services/admin-profile.service.js";
+import { uploadToCloudinary } from "../middleware/upload.middleware.js";
 
 export const handleGetAdminProfile = async (req: Request, res: Response) => {
     try {
@@ -18,7 +19,7 @@ export const handleUpdateAdminProfile = async (req: Request, res: Response) => {
             return sendError(res, "First name and last name are required", 400);
 
         const avatarPath = req.file
-            ? `/uploads/avatars/${req.file.filename}`
+            ? (await uploadToCloudinary(req.file.buffer, "eso/avatars")).url
             : req.body.clearAvatar === "true" ? null : undefined;
 
         const updated = await updateAdminProfile(req.user!.userId, {

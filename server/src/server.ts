@@ -33,10 +33,19 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 const isProd = process.env.NODE_ENV === "production";
 
+// Trust the first proxy (Cloudflare / nginx) so req.ip reflects the real client IP
+// Required for accurate rate limiting and audit log IPs behind a tunnel
+app.set("trust proxy", 1);
+
 // Security headers
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: isProd ? undefined : false,
+    contentSecurityPolicy: isProd ? {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "img-src": ["'self'", "data:", "blob:"],
+        },
+    } : false,
 }));
 
 // CORS — LAN_MODE allows all origins (safe on a private school network)
@@ -76,16 +85,39 @@ app.use("/api/v1/auth/login", rateLimit({
     message: "Too many login attempts, please try again later.",
 }));
 
+// Prevent mass account creation spam
+app.use("/api/v1/auth/register", rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: LAN_MODE ? 200 : 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Too many registration attempts, please try again later.",
+}));
+
+// Prevent email spam via forgot-password and resend-verification
+const emailRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    max: LAN_MODE ? 50 : 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Too many email requests, please try again later.",
+});
+app.use("/api/v1/auth/forgot-password",      emailRateLimit);
+app.use("/api/v1/auth/resend-verification",  emailRateLimit);
+
+// Prevent brute-force on reset-password tokens
+app.use("/api/v1/auth/reset-password", rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: LAN_MODE ? 50 : 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Too many password reset attempts, please try again later.",
+}));
+
 app.use(compression());
 app.use(morgan(isProd ? "combined" : "dev"));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Static uploads with cross-origin access
-app.use("/uploads", (_req, res, next) => {
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    next();
-}, express.static(path.join(__dirname, "../uploads")));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.use("/api/v1", routes);
 

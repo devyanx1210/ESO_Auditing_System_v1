@@ -150,8 +150,8 @@ export const createAdminAccount = async (data: {
 }) => {
     const hash = await bcrypt.hash(data.password, 10);
     const [result] = await pool.execute<ResultSetHeader>(
-        `INSERT INTO users (first_name, last_name, email, password_hash, role_id, program_id, status)
-         VALUES (?, ?, ?, ?, (SELECT role_id FROM roles WHERE role_name = ?), ?, 'active')`,
+        `INSERT INTO users (first_name, last_name, email, password_hash, role_id, program_id, status, email_verified)
+         VALUES (?, ?, ?, ?, (SELECT role_id FROM roles WHERE role_name = ?), ?, 'active', 1)`,
         [data.firstName, data.lastName, data.email, hash, data.role, data.programId ?? null]
     );
     const userId = result.insertId;

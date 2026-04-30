@@ -12,14 +12,15 @@
 1. [Tech Stack](#tech-stack)
 2. [Project Structure](#project-structure)
 3. [How to Run Locally](#how-to-run-locally)
-4. [Environment Variables](#environment-variables)
-5. [User Roles](#user-roles)
-6. [Clearance Workflow](#clearance-workflow)
-7. [API Routes](#api-routes)
-8. [Frontend Pages](#frontend-pages)
-9. [Database Enums and Status Codes](#database-enums-and-status-codes)
-10. [What Is Done](#what-is-done)
-11. [What Is Missing or Needs Work](#what-is-missing-or-needs-work)
+4. [LAN Deployment Setup](#lan-deployment-setup)
+5. [Environment Variables](#environment-variables)
+6. [User Roles](#user-roles)
+7. [Clearance Workflow](#clearance-workflow)
+8. [API Routes](#api-routes)
+9. [Frontend Pages](#frontend-pages)
+10. [Database Enums and Status Codes](#database-enums-and-status-codes)
+11. [What Is Done](#what-is-done)
+12. [What Is Missing or Needs Work](#what-is-missing-or-needs-work)
 
 ---
 
@@ -94,11 +95,14 @@ ESO_Auditing_System_v1/
 
 **Prerequisites:** Node.js, MySQL 8, cloudflared (for tunnel access)
 
+> For the full production/LAN installation guide, see the [LAN Deployment Setup](#lan-deployment-setup) section below.
+
 **Step 1 - Database**
 
-Import the schema into MySQL:
+Import the schema into MySQL (via phpMyAdmin or CLI):
 ```
-mysql -u root -p < server/src/eso_auditing_db.sql
+mysql -u root -p eso_auditing_db < server/database/schema.sql
+mysql -u root -p eso_auditing_db < server/database/migrate_email_verification.sql
 ```
 
 **Step 2 - Backend**
@@ -131,6 +135,306 @@ Share the printed URL with other devices. The Vite proxy forwards `/api` and `/u
 
 ---
 
+## LAN Deployment Setup
+
+This section is the **complete installation guide** for setting up the system on the deployment laptop inside the school's Wi-Fi network. Students and officers access it from their phones at a fixed URL — no internet required.
+
+---
+
+### Overview
+
+- The system runs on a dedicated laptop connected to the school Wi-Fi.
+- The laptop gets a permanent IP address (e.g. `192.168.1.100`).
+- Students open `http://192.168.1.100:5000` in their phone browser.
+- The URL never changes as long as the laptop has a static IP.
+- No Cloudflare Tunnel is needed.
+
+---
+
+### Prerequisites — Install These on the Laptop First
+
+Do all of this before copying the project.
+
+**1. Node.js (v20 or higher)**
+
+Download and install from: https://nodejs.org (choose the LTS version)
+
+After installing, confirm it works:
+```bash
+node -v
+npm -v
+```
+
+**2. XAMPP**
+
+XAMPP provides both MySQL and phpMyAdmin.
+
+Download from: https://www.apachefriends.org
+
+After installing, open the XAMPP Control Panel and start:
+- **Apache** (needed for phpMyAdmin)
+- **MySQL**
+
+**3. PM2 (process manager)**
+
+After Node.js is installed, open a terminal and run:
+```bash
+npm install -g pm2
+```
+
+---
+
+### Step 1 — Transfer the Project Folder
+
+On your development machine:
+
+1. Delete or exclude the `node_modules` folders before copying — they are large and will be reinstalled on the laptop:
+   - Delete `ESO_Auditing_System_v1/client/node_modules/`
+   - Delete `ESO_Auditing_System_v1/server/node_modules/`
+2. Zip the entire `ESO_Auditing_System_v1/` folder.
+3. Copy the zip to the laptop via USB drive or shared folder.
+4. Extract it somewhere easy to find, e.g. `C:\ESO_Auditing_System_v1\`.
+
+> **Do not include `server/.env` in the zip** — it contains secrets. Copy it separately and edit it on the laptop (see Step 3).
+
+---
+
+### Step 2 — Set Up the Database in phpMyAdmin
+
+1. Open a browser on the laptop and go to: `http://localhost/phpmyadmin`
+2. Log in (default: username `root`, password is blank unless you set one in XAMPP).
+3. Click **New** in the left sidebar to create a new database.
+4. Name it `eso_auditing_db` (must match `DB_NAME` in `.env`) → click **Create**.
+5. Click on the new database in the left sidebar → click the **Import** tab.
+6. Click **Choose File** → select `server/database/schema.sql` → click **Go**.
+7. Wait for it to finish (you'll see a green success message).
+8. Import the migration file the same way:
+   - Import tab → Choose File → `server/database/migrate_email_verification.sql` → Go.
+
+The database is now ready.
+
+---
+
+### Step 3 — Create the `.env` File
+
+Inside the `server/` folder, create a file named `.env` (no extension). Use `.env.example` as a template.
+
+Fill in these values at minimum:
+
+```env
+PORT=5000
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=eso_auditing_db
+
+JWT_ACCESS_SECRET=<generate a long random string>
+JWT_REFRESH_SECRET=<generate a different long random string>
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+CLIENT_URL=http://192.168.1.100:5000
+APP_URL=http://192.168.1.100:5000
+LAN_MODE=true
+
+GMAIL_USER=eso.ceng@gmail.com
+GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
+
+CLOUDINARY_CLOUD_NAME=<your cloudinary name>
+CLOUDINARY_API_KEY=<your cloudinary key>
+CLOUDINARY_API_SECRET=<your cloudinary secret>
+```
+
+Replace `192.168.1.100` with the actual static IP you will assign to the laptop (see Step 6).
+
+For `DB_PASSWORD`: if you set a root password in XAMPP, put it here. If not, leave it blank.
+
+For JWT secrets: generate two different random strings. You can use: https://generate-secret.vercel.app/64
+
+---
+
+### Step 4 — Install Dependencies
+
+Open a terminal in the project root. Run these one at a time:
+
+```bash
+# Backend dependencies
+cd server
+npm install
+
+# Frontend dependencies
+cd ../client
+npm install
+```
+
+This will take a few minutes on the first run.
+
+---
+
+### Step 5 — Build the Frontend
+
+The backend serves the compiled frontend files in production. Build them once:
+
+```bash
+cd client
+npm run build
+```
+
+This creates a `client/dist/` folder. The backend reads files from there.
+
+Every time you update frontend code, you need to run `npm run build` again and then `pm2 restart eso-app`.
+
+---
+
+### Step 6 — Create the First System Admin Account
+
+This only needs to be done once. It creates the initial `system_admin` account used to log in and set everything up.
+
+```bash
+cd server
+npx tsx src/scripts/create-admin.ts
+```
+
+Follow the prompts to set the email and password for the system admin.
+
+---
+
+### Step 7 — Start the Server with PM2
+
+```bash
+cd server
+pm2 start "npx tsx src/server.ts" --name "eso-app"
+pm2 save
+```
+
+Check that it's running:
+```bash
+pm2 status
+```
+
+You should see `eso-app` with status `online`.
+
+Open a browser on the laptop and go to `http://localhost:5000` — you should see the login page. If it works locally, move on to the network steps.
+
+---
+
+### Step 8 — Assign a Static IP to the Laptop
+
+This makes sure the laptop always gets the same IP on the school Wi-Fi so the URL never changes.
+
+**Option A — Windows Static IP**
+
+1. Open **Settings → Network & Internet → Wi-Fi → Hardware properties**
+2. Under **IP assignment**, click **Edit**
+3. Switch from **Automatic (DHCP)** to **Manual**
+4. Enable **IPv4** and fill in:
+   - IP address: `192.168.1.100` *(pick any unused address in the router's range)*
+   - Subnet mask: `255.255.255.0`
+   - Gateway: `192.168.1.1` *(your router's IP — confirm this with IT)*
+   - DNS: `8.8.8.8`
+5. Save and reconnect to Wi-Fi
+
+**Option B — Router DHCP Reservation**
+
+Log into the router admin panel (usually `192.168.1.1`), find the laptop in the connected device list, and assign it a reserved IP. The router will always give it the same address automatically.
+
+After setting the static IP, update `server/.env` so `CLIENT_URL` and `APP_URL` use the correct address, then restart:
+```bash
+pm2 restart eso-app
+```
+
+---
+
+### Step 9 — Open Windows Firewall for Port 5000
+
+By default Windows Firewall blocks other devices from connecting. You need to open port 5000.
+
+1. Open **Windows Defender Firewall with Advanced Security** (search for it in Start)
+2. Click **Inbound Rules → New Rule**
+3. Select **Port** → Next
+4. Select **TCP**, enter `5000` → Next
+5. Select **Allow the connection** → Next
+6. Check all three profiles (Domain, Private, Public) → Next
+7. Name it `ESO App Port 5000` → Finish
+
+Now test from a phone on school Wi-Fi: open `http://192.168.1.100:5000` in the browser.
+
+---
+
+### Step 10 — Auto-Start on Windows Boot
+
+So the system starts automatically every time the laptop turns on:
+
+1. Open a terminal **as Administrator** (right-click → Run as administrator)
+2. Run:
+```bash
+pm2 startup
+```
+3. PM2 will print a command — copy it exactly and run it in the same terminal.
+4. Then run:
+```bash
+pm2 save
+```
+
+After this, PM2 and the `eso-app` process will start automatically on every Windows boot, even before anyone logs in.
+
+---
+
+### Email Setup (Gmail)
+
+Email is required for student registration (verification link) and forgot password (reset link).
+
+1. Create a dedicated Gmail account — e.g. `eso.ceng.marsu@gmail.com`. Do not use a personal Gmail.
+2. Log into that account → go to **Google Account → Security**
+3. Enable **2-Step Verification** (required for App Passwords)
+4. Under 2-Step Verification, scroll down to **App passwords**
+5. Create an App Password — select app: "Mail", device: "Windows Computer"
+6. Google generates a 16-character code — copy it
+7. Put it in `server/.env`:
+
+```env
+GMAIL_USER=eso.ceng.marsu@gmail.com
+GMAIL_APP_PASSWORD=abcd efgh ijkl mnop
+```
+
+Restart the server after updating `.env`:
+```bash
+pm2 restart eso-app
+```
+
+**Note:** Email links (verify email, reset password) use the `APP_URL` in `.env`. These links only work when the student's phone is on the same school Wi-Fi. If a student tries to click the link from home, it won't load — they should be on the school network or ask an admin to assist.
+
+If `GMAIL_USER` and `GMAIL_APP_PASSWORD` are not configured, the server will print verification tokens to the terminal log instead of sending emails (this is the dev fallback).
+
+---
+
+### Daily Operation
+
+| Action | How |
+|---|---|
+| Turn on system | Boot the laptop — PM2 starts `eso-app` automatically |
+| Check it's running | Open terminal → `pm2 status` |
+| View live logs | `pm2 logs eso-app` |
+| Stop the system | `pm2 stop eso-app` or just shut down the laptop |
+| Restart after a config change | `pm2 restart eso-app` |
+
+Students and officers access the system at: **`http://192.168.1.100:5000`**
+
+They can also **install it as an app** on their phone — when they open the URL in Chrome on Android, it will prompt "Add to Home Screen". This installs it as a PWA (Progressive Web App) with its own icon.
+
+---
+
+### Important Notes
+
+- The system uses plain **HTTP** (no HTTPS) on LAN. This is fine for a closed school network. Never expose the laptop directly to the internet without adding HTTPS first.
+- If the school Wi-Fi router assigns a different IP range (e.g. `10.0.0.x`), adjust all addresses above accordingly. Confirm the gateway IP with the IT department.
+- MySQL must be running (XAMPP → Start MySQL) before the Node.js server starts. If MySQL is not running, the server will crash on startup.
+- If you update the code (new features, bug fixes), rebuild the frontend (`npm run build` in `client/`) and restart PM2 (`pm2 restart eso-app`).
+
+---
+
 ## Environment Variables
 
 Create a `.env` file inside the `server/` folder. Reference `.env.example` for the full list.
@@ -152,10 +456,10 @@ Create a `.env` file inside the `server/` folder. Reference `.env.example` for t
 | CLOUDINARY_CLOUD_NAME | Cloudinary account name |
 | CLOUDINARY_API_KEY | Cloudinary API key |
 | CLOUDINARY_API_SECRET | Cloudinary API secret |
-| EMAIL_HOST | SMTP host for Nodemailer |
-| EMAIL_PORT | SMTP port |
-| EMAIL_USER | Sender email address |
-| EMAIL_PASS | Sender email password |
+| GMAIL_USER | Gmail address used to send emails (e.g. eso.ceng@gmail.com) |
+| GMAIL_APP_PASSWORD | 16-character Google App Password (requires 2FA on the Gmail account) |
+| APP_URL | Base URL of the server, used in email links (e.g. http://192.168.1.100:5000) |
+| LAN_MODE | Set to `true` to loosen rate limits for LAN/intranet deployments |
 
 ---
 
@@ -197,7 +501,7 @@ All routes are prefixed with `/api/v1`.
 
 | Route Prefix | File | Description |
 |---|---|---|
-| /auth | auth.routes.ts | Login, logout, refresh token, register, change password |
+| /auth | auth.routes.ts | Login, logout, refresh token, register, change password, email verification, password reset |
 | /students | student.routes.ts | Student profile, obligations, clearance status |
 | /obligations | obligation.routes.ts | Student obligation queries |
 | /payments | payment.routes.ts | Student payment submission |
@@ -224,6 +528,9 @@ All routes are prefixed with `/api/v1`.
 | Landing / Login | / | pages/LandingPage.tsx |
 | Sign Up | /signup | pages/SignupPage.tsx |
 | More Info | /more-info | pages/MoreInfo.tsx |
+| Verify Email | /verify-email?token=... | pages/VerifyEmailPage.tsx |
+| Forgot Password | /forgot-password | pages/ForgotPasswordPage.tsx |
+| Reset Password | /reset-password?token=... | pages/ResetPasswordPage.tsx |
 | Maintenance Screen | shown when maintenance mode is ON | pages/MaintenanceScreen.tsx |
 | 404 Not Found | * | pages/NotFoundPage.tsx |
 
@@ -338,6 +645,8 @@ These are defined in `server/src/config/enums.ts` and mirrored in `client/src/ty
 | Area | Status | Notes |
 |---|---|---|
 | Authentication | Complete | Login, logout, refresh token, change password, account lockout after 5 failed attempts |
+| Email Verification | Complete | Students must verify their email after signup before they can log in. Verification token sent via Gmail SMTP. Admin-created accounts are auto-verified. |
+| Forgot / Reset Password | Complete | Users can request a password reset link sent to their email. Link contains a signed token valid for 1 hour. |
 | JWT Auth Middleware | Complete | Access token validation on all protected routes |
 | Role Middleware | Complete | Role-based route protection |
 | Error Handler | Complete | Centralized error handling middleware |
@@ -377,11 +686,11 @@ These are defined in `server/src/config/enums.ts` and mirrored in `client/src/ty
 | Input Validation | Medium | express-validator is installed. validators.ts in utils is empty. No server-side input validation on most routes. |
 | Student Clearance PDF Download | Medium | Students cannot download their own cleared clearance document. Only admins can print-merge. |
 | ESLint Warnings | Low | Several no-explicit-any, exhaustive-deps, and no-unused-expressions warnings exist across the codebase. The code runs correctly but a future developer should clean these up with care (a previous cleanup attempt broke the student obligations page). |
-| Production Deployment | Low | The system currently runs on a local machine exposed via Cloudflare Tunnel. There is no production server, no domain, no SSL certificate, and no automated startup. A proper deployment would require a VPS or dedicated server. |
+| LAN Deployment (finalize) | Low | LAN deployment instructions are documented. Remaining steps: run the email verification DB migration (`server/database/migrate_email_verification.sql`), configure Gmail credentials in `.env`, set static IP on the laptop, and run `pm2 startup` + `pm2 save`. |
+| HTTPS on LAN | Low | The system currently uses plain HTTP on LAN. Passwords travel in plaintext inside the school network. For higher security, a self-signed certificate or a local reverse proxy (Caddy) can add HTTPS. |
 | Database Migrations | Low | There is no migration tool. Schema changes require manually editing the SQL file and re-importing. |
 | Unit and Integration Tests | Low | No tests exist anywhere in the project. |
-| Forgot Password Flow | Low | No password reset via email is implemented. Admin can change passwords manually through the system admin accounts page. |
-| Student Registration Approval | Low | Students can sign up but there is no admin approval step before an account is activated. The current flow auto-activates on signup. |
+| Student Registration Approval | Low | Students can sign up but there is no admin approval step before an account is activated. The current flow auto-activates on signup after email verification. |
 | Dark Mode | Low | useTheme hook exists and a toggle is present in some layouts but dark mode styles are not fully applied across all pages. |
 
 ---
@@ -390,10 +699,13 @@ These are defined in `server/src/config/enums.ts` and mirrored in `client/src/ty
 
 - Passwords are hashed with bcrypt before storage. Plain text passwords are never saved.
 - Accounts lock after 5 consecutive failed login attempts.
-- All connections through the Cloudflare Tunnel are HTTPS encrypted.
 - JWT access tokens are short-lived. Refresh tokens are used to issue new access tokens silently.
-- The server allows any `*.trycloudflare.com` origin through CORS to support the tunnel setup without manual URL updates.
+- Student accounts require email verification before first login. Admin-created accounts are auto-verified.
+- Password reset tokens are single-use and expire after 1 hour.
+- In LAN deployment, traffic is plain HTTP within the school network (no SSL). This is acceptable for an isolated intranet. Do not expose the laptop directly to the internet.
+- When using the Cloudflare Tunnel (dev/demo only), all tunnel connections are HTTPS encrypted. The server allows `*.trycloudflare.com` origins through CORS for this purpose.
 - File uploads are stored in Cloudinary (cloud) not on the local filesystem, except for PDF templates which are stored in `/uploads/pdf-templates/` on the server machine.
+- Rate limiting: 20 registration requests/hour by default; 200/hour in `LAN_MODE=true` to allow bulk student registration.
 
 ---
 

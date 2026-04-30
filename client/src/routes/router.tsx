@@ -7,10 +7,13 @@ import StudentLayout   from "../layouts/StudentLayout";
 import SysAdminLayout  from "../layouts/SysAdminLayout";
 
 /* Pages - Public */
-import LandingPage  from "../pages/LandingPage";
-import NotFoundPage from "../pages/NotFoundPage";
-import SignupPage   from "../pages/SignupPage";
-import MoreInfo     from "../pages/MoreInfo";
+import LandingPage       from "../pages/LandingPage";
+import NotFoundPage      from "../pages/NotFoundPage";
+import SignupPage        from "../pages/SignupPage";
+import MoreInfo          from "../pages/MoreInfo";
+import VerifyEmailPage   from "../pages/VerifyEmailPage";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import ResetPasswordPage  from "../pages/ResetPasswordPage";
 
 /* Pages - ESO Admin */
 import AdminDashboard       from "../pages/admin/AdminDashboard";
@@ -48,8 +51,11 @@ const router = createBrowserRouter([
         errorElement: <NotFoundPage />,
         children: [
             { index: true, element: <LandingPage /> },
-            { path: "signup",     element: <SignupPage /> },
-            { path: "more-info",  element: <MoreInfo /> },
+            { path: "signup",           element: <SignupPage /> },
+            { path: "more-info",        element: <MoreInfo /> },
+            { path: "verify-email",     element: <VerifyEmailPage /> },
+            { path: "forgot-password",  element: <ForgotPasswordPage /> },
+            { path: "reset-password",   element: <ResetPasswordPage /> },
         ],
     },
 

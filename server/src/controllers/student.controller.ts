@@ -1,11 +1,7 @@
 import { Request, Response } from "express";
 import { getStudents } from "../services/student.service.js";
 import { sendSuccess, sendError } from "../utils/response.js";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+import { uploadToCloudinary } from "../middleware/upload.middleware.js";
 
 export const listStudents = async (req: Request, res: Response) => {
     try {
@@ -51,7 +47,7 @@ export const updateMyProfile = async (req: Request, res: Response) => {
             return sendError(res, "firstName, lastName, yearLevel, section, schoolYear, and semester are required", 400);
 
         const avatarPath = req.file
-            ? `/uploads/avatars/${req.file.filename}`
+            ? (await uploadToCloudinary(req.file.buffer, "eso/avatars")).url
             : undefined;
 
         const profile = await updateStudentProfile(req.user!.userId, {

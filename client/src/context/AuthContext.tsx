@@ -14,7 +14,7 @@ interface AuthContextType {
     accessToken: string | null;
     isLoading: boolean;
     login: (input: LoginInput) => Promise<AuthenticatedUser>;
-    register: (input: RegisterInput) => Promise<AuthenticatedUser>;
+    register: (input: RegisterInput) => Promise<{ email: string }>;
     logout: () => Promise<void>;
     changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -80,13 +80,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return user;
     }, []);
 
-    const register = useCallback(async (input: RegisterInput): Promise<AuthenticatedUser> => {
-        const { user, tokens } = await authService.register(input);
-        setUser(user);
-        setAccessToken(tokens.accessToken);
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
-        localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
-        return user;
+    const register = useCallback(async (input: RegisterInput): Promise<{ email: string }> => {
+        const { email } = await authService.register(input);
+        return { email };
     }, []);
 
     const logout = useCallback(async () => {

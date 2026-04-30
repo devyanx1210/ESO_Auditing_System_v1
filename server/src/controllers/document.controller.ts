@@ -1,19 +1,11 @@
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
-
-const _dir       = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.resolve(_dir, "../../uploads");
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../middleware/upload.middleware.js";
 import * as svc from "../services/document.service.js";
 
 function attachPdfUrl(tpl: any): any {
-    if (tpl?.pdfPath) {
-        tpl.pdfUrl = `/uploads/pdf-templates/${path.basename(tpl.pdfPath)}`;
-    } else {
-        tpl.pdfUrl = null;
-    }
+    // pdfPath is now a full Cloudinary URL; expose it directly as pdfUrl
+    tpl.pdfUrl = tpl?.pdfPath ?? null;
     return tpl;
 }
 
@@ -56,9 +48,8 @@ export const handleDeleteTemplate = async (req: Request, res: Response) => {
     try {
         const id = Number(req.params.id);
         if (!id) return sendError(res, "Invalid ID", 400);
-        // clean up PDF file if any
         const tpl = await svc.getTemplate(id);
-        if (tpl?.pdfPath) svc.deletePdfFile(tpl.pdfPath);
+        if (tpl?.pdfPath) await deleteFromCloudinary(tpl.pdfPath, "raw");
         await svc.deleteTemplate(id);
         sendSuccess(res, null, "Template deleted");
     } catch (e: any) { sendError(res, e.message); }
@@ -93,19 +84,7 @@ export const handleGetApprovedStudents = async (req: Request, res: Response) => 
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// Stream PDF file for preview
-
-function resolvePdfPath(stored: string): string | null {
-    // 1. Try as-is (already absolute from recent uploads)
-    if (fs.existsSync(stored)) return stored;
-    // 2. Resolve relative path against cwd
-    const fromCwd = path.resolve(stored);
-    if (fs.existsSync(fromCwd)) return fromCwd;
-    // 3. Extract filename and look in the known uploads/pdf-templates directory
-    const fromUploads = path.join(UPLOADS_DIR, "pdf-templates", path.basename(stored));
-    if (fs.existsSync(fromUploads)) return fromUploads;
-    return null;
-}
+// PDF file — redirect to Cloudinary URL (stored directly as URL in DB)
 
 export const handleGetPdfFile = async (req: Request, res: Response) => {
     try {
@@ -113,32 +92,25 @@ export const handleGetPdfFile = async (req: Request, res: Response) => {
         if (!id) return sendError(res, "Invalid ID", 400);
         const tpl = await svc.getTemplate(id);
         if (!tpl?.pdfPath) return sendError(res, "No PDF attached to this template", 404);
-        const filePath = resolvePdfPath(tpl.pdfPath);
-        if (!filePath) return sendError(res, "PDF file not found on server", 404);
-        res.sendFile(filePath, { headers: { "Content-Disposition": "inline" } }, (err) => {
-            if (err && !res.headersSent) sendError(res, "Failed to stream PDF file");
-        });
+        res.redirect(tpl.pdfPath);
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// PDF upload
+// PDF upload — goes to Cloudinary, URL stored in DB
 
 export const handleUploadPdf = async (req: Request, res: Response) => {
     try {
         const id = Number(req.params.id);
         if (!id) return sendError(res, "Invalid ID", 400);
+        if (!req.file) return sendError(res, "No PDF file uploaded", 400);
 
-        const file = req.file;
-        if (!file) return sendError(res, "No PDF file uploaded", 400);
-
-        // remove old PDF if exists
+        // Delete old PDF from Cloudinary if one exists
         const existing = await svc.getTemplate(id);
-        if (existing?.pdfPath) svc.deletePdfFile(existing.pdfPath);
+        if (existing?.pdfPath) await deleteFromCloudinary(existing.pdfPath, "raw");
 
-        const pdfPath = path.resolve(file.path);
-        await svc.updateTemplatePdf(id, pdfPath, existing?.fieldPositions ?? null);
-        const pdfUrl = `/uploads/pdf-templates/${path.basename(pdfPath)}`;
-        sendSuccess(res, { pdfPath: pdfPath.replace(/\\/g, "/"), pdfUrl }, "PDF uploaded");
+        const { url } = await uploadToCloudinary(req.file.buffer, "eso/pdf-templates", "raw");
+        await svc.updateTemplatePdf(id, url, existing?.fieldPositions ?? null);
+        sendSuccess(res, { pdfPath: url, pdfUrl: url }, "PDF uploaded");
     } catch (e: any) { sendError(res, e.message); }
 };
 
@@ -170,7 +142,7 @@ export const handleRemovePdf = async (req: Request, res: Response) => {
 
         const tpl = await svc.getTemplate(id);
         if (!tpl) return sendError(res, "Template not found", 404);
-        if (tpl.pdfPath) svc.deletePdfFile(tpl.pdfPath);
+        if (tpl.pdfPath) await deleteFromCloudinary(tpl.pdfPath, "raw");
 
         await svc.updateTemplatePdf(id, null, null);
         sendSuccess(res, null, "PDF removed");

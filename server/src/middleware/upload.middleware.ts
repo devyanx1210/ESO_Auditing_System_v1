@@ -1,37 +1,60 @@
 import multer from "multer";
 import path from "path";
-import fs from "fs";
+import cloudinary from "../config/cloudinary.js";
 
-const UPLOAD_ROOT = process.env.UPLOAD_PATH ?? "uploads";
+// All files go through memory first, then get pushed to Cloudinary.
+// Nothing is written to the local disk.
+const memory = multer.memoryStorage();
 
-function ensureDir(dir: string) {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-}
+// ── Cloudinary helpers ───────────────────────────────────────────────────────
 
-function makeStorage(subDir: string) {
-    const dir = path.join(UPLOAD_ROOT, subDir);
-    ensureDir(dir);
-    return multer.diskStorage({
-        destination: (_req, _file, cb) => {
-            ensureDir(dir);
-            cb(null, dir);
-        },
-        filename: (_req, file, cb) => {
-            const ext = path.extname(file.originalname).toLowerCase();
-            const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-            cb(null, unique);
-        },
+export async function uploadToCloudinary(
+    buffer: Buffer,
+    folder: string,
+    resourceType: "image" | "raw" = "image"
+): Promise<{ url: string; publicId: string }> {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            { folder, resource_type: resourceType },
+            (error, result) => {
+                if (error || !result) return reject(error ?? new Error("Cloudinary upload failed"));
+                resolve({ url: result.secure_url, publicId: result.public_id });
+            }
+        );
+        stream.end(buffer);
     });
 }
+
+export async function deleteFromCloudinary(
+    url: string,
+    resourceType: "image" | "raw" = "image"
+): Promise<void> {
+    try {
+        // Extract public_id from URL: everything after /upload/v{digits}/
+        const match = url.match(/\/upload\/(?:v\d+\/)?(.+)/);
+        if (!match) return;
+        let publicId = match[1];
+        // For images Cloudinary stores public_id without extension; for raw it keeps it
+        if (resourceType === "image") publicId = publicId.replace(/\.[^/.]+$/, "");
+        await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    } catch { /* ignore delete errors — file may already be gone */ }
+}
+
+// ── File filters ─────────────────────────────────────────────────────────────
+
+const ALLOWED_IMAGE_EXTS  = new Set([".jpg", ".jpeg", ".png"]);
+const ALLOWED_IMAGE_MIMES = new Set(["image/jpeg", "image/png"]);
+const ALLOWED_RECEIPT_EXTS  = new Set([".jpg", ".jpeg", ".png", ".pdf"]);
+const ALLOWED_RECEIPT_MIMES = new Set(["image/jpeg", "image/png", "application/pdf"]);
+const ALLOWED_PDF_MIMES     = new Set(["application/pdf"]);
 
 const imageFilter = (
     _req: any,
     file: Express.Multer.File,
     cb: multer.FileFilterCallback
 ) => {
-    const allowed = [".jpg", ".jpeg", ".png"];
     const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) cb(null, true);
+    if (ALLOWED_IMAGE_EXTS.has(ext) && ALLOWED_IMAGE_MIMES.has(file.mimetype)) cb(null, true);
     else cb(new Error("Only JPG or PNG images are allowed"));
 };
 
@@ -40,47 +63,49 @@ const receiptFilter = (
     file: Express.Multer.File,
     cb: multer.FileFilterCallback
 ) => {
-    const allowed = [".jpg", ".jpeg", ".png", ".pdf"];
     const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) cb(null, true);
+    if (ALLOWED_RECEIPT_EXTS.has(ext) && ALLOWED_RECEIPT_MIMES.has(file.mimetype)) cb(null, true);
     else cb(new Error("Only JPG, PNG, or PDF files are allowed"));
 };
-
-export const uploadReceipt = multer({
-    storage:    makeStorage("receipts"),
-    fileFilter: receiptFilter,
-    limits:     { fileSize: 5 * 1024 * 1024 },
-}).single("receipt");
-
-export const uploadQR = multer({
-    storage:    makeStorage("qr"),
-    fileFilter: imageFilter,
-    limits:     { fileSize: 2 * 1024 * 1024 },
-}).single("qrCode");
-
-export const uploadAvatar = multer({
-    storage:    makeStorage("avatars"),
-    fileFilter: imageFilter,
-    limits:     { fileSize: 3 * 1024 * 1024 },
-}).single("avatar");
-
-export const uploadProof = multer({
-    storage:    makeStorage("proofs"),
-    fileFilter: receiptFilter,
-    limits:     { fileSize: 5 * 1024 * 1024 },
-}).single("proof");
 
 const pdfFilter = (
     _req: any,
     file: Express.Multer.File,
     cb: multer.FileFilterCallback
 ) => {
-    if (path.extname(file.originalname).toLowerCase() === ".pdf") cb(null, true);
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === ".pdf" && ALLOWED_PDF_MIMES.has(file.mimetype)) cb(null, true);
     else cb(new Error("Only PDF files are allowed"));
 };
 
+// ── Multer instances (memory storage, validation only) ───────────────────────
+
+export const uploadReceipt = multer({
+    storage:    memory,
+    fileFilter: receiptFilter,
+    limits:     { fileSize: 5 * 1024 * 1024 },
+}).single("receipt");
+
+export const uploadQR = multer({
+    storage:    memory,
+    fileFilter: imageFilter,
+    limits:     { fileSize: 2 * 1024 * 1024 },
+}).single("qrCode");
+
+export const uploadAvatar = multer({
+    storage:    memory,
+    fileFilter: imageFilter,
+    limits:     { fileSize: 3 * 1024 * 1024 },
+}).single("avatar");
+
+export const uploadProof = multer({
+    storage:    memory,
+    fileFilter: receiptFilter,
+    limits:     { fileSize: 5 * 1024 * 1024 },
+}).single("proof");
+
 export const uploadPdfTemplate = multer({
-    storage:    makeStorage("pdf-templates"),
+    storage:    memory,
     fileFilter: pdfFilter,
-    limits:     { fileSize: 20 * 1024 * 1024 }, // 20 MB
+    limits:     { fileSize: 20 * 1024 * 1024 },
 }).single("pdf");

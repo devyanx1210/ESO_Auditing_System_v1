@@ -9,7 +9,7 @@ import {
     restoreObligation,
     syncObligationStudents,
 } from "../services/obligation.service.js";
-import { uploadQR } from "../middleware/upload.middleware.js";
+import { uploadQR, uploadToCloudinary } from "../middleware/upload.middleware.js";
 import { sendSuccess, sendError } from "../utils/response.js";
 import pool from "../config/db.js";
 
@@ -52,7 +52,9 @@ export const addObligation = (req: Request, res: Response) => {
             const parsedAmount = parseFloat(amount) || 0;
             const parsedScope = Number(scope);
             const parsedSemester = Number(semester);
-            const qrPath = req.file ? `qr/${req.file.filename}` : null;
+            const qrPath = req.file
+                ? (await uploadToCloudinary(req.file.buffer, "eso/qr")).url
+                : null;
 
             const obligation = await createObligation(
                 {
@@ -88,7 +90,7 @@ export const editObligation = (req: Request, res: Response) => {
 
             const updates: any = { ...req.body };
             if (updates.amount !== undefined) updates.amount = parseFloat(updates.amount) || 0;
-            if (req.file) updates.gcashQrPath = `qr/${req.file.filename}`;
+            if (req.file) updates.gcashQrPath = (await uploadToCloudinary(req.file.buffer, "eso/qr")).url;
 
             await updateObligation(id, updates);
             return sendSuccess(res, null, "Obligation updated");

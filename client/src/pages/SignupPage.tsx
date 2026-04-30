@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { IoArrowBackOutline, IoEyeOutline, IoEyeOffOutline } from "react-icons/io5";
-import { useNavigate } from "react-router-dom";
+import { IoArrowBackOutline, IoEyeOutline, IoEyeOffOutline, IoMailOutline } from "react-icons/io5";
 import { useAuth } from "../hooks/useAuth";
+import { authService } from "../services/auth.service";
 
 interface SignupProps { onCancel?: () => void; }
 
@@ -22,7 +22,6 @@ function getCurrentSchoolYear(): string {
 
 
 export default function Signup({ onCancel }: SignupProps) {
-    const navigate = useNavigate();
     const { register } = useAuth();
 
     const [form, setForm] = useState({
@@ -31,10 +30,13 @@ export default function Signup({ onCancel }: SignupProps) {
         yearLevel: "", section: "", semester: "", password: "", retypePassword: "",
     });
 
-    const [showPassword, setShowPassword] = useState(false);
-    const [showRetype,   setShowRetype]   = useState(false);
-    const [error,        setError]        = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPassword,   setShowPassword]   = useState(false);
+    const [showRetype,     setShowRetype]     = useState(false);
+    const [error,          setError]          = useState("");
+    const [isSubmitting,   setIsSubmitting]   = useState(false);
+    const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+    const [resending,      setResending]      = useState(false);
+    const [resendMsg,      setResendMsg]      = useState("");
 
     const set = (field: keyof typeof form, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
@@ -59,7 +61,7 @@ export default function Signup({ onCancel }: SignupProps) {
 
         setIsSubmitting(true);
         try {
-            await register({
+            const { email } = await register({
                 firstName:  form.firstName.trim(),
                 lastName:   form.lastName.trim(),
                 middleName: form.middleName.trim() || undefined,
@@ -72,14 +74,61 @@ export default function Signup({ onCancel }: SignupProps) {
                 schoolYear: getCurrentSchoolYear(),
                 semester:   Number(form.semester),
             });
-            sessionStorage.setItem("justSignedUp", "1");
-            navigate("/student/dashboard");
+            setRegisteredEmail(email);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    const handleResend = async () => {
+        if (!registeredEmail || resending) return;
+        setResending(true); setResendMsg("");
+        try {
+            await authService.resendVerification(registeredEmail);
+            setResendMsg("Verification email resent. Please check your inbox.");
+        } catch {
+            setResendMsg("Failed to resend. Please try again.");
+        } finally {
+            setResending(false);
+        }
+    };
+
+    // ── "Check your email" screen ────────────────────────────────
+    if (registeredEmail) {
+        return (
+            <div className="w-full min-h-full flex items-center justify-center py-8 px-4">
+                <div className="w-full max-w-md bg-black/50 border border-white/10 rounded-2xl shadow-2xl text-white p-8 flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-orange-500/20 flex items-center justify-center">
+                        <IoMailOutline size={32} className="text-orange-400" />
+                    </div>
+                    <h2 className="text-xl font-bold">Check your email</h2>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                        We sent a verification link to <span className="text-orange-400 font-semibold">{registeredEmail}</span>.
+                        Click the link in the email to activate your account.
+                    </p>
+                    <p className="text-xs text-white/40">
+                        Didn't receive it? Check your spam folder or resend below.
+                    </p>
+                    <button
+                        onClick={handleResend}
+                        disabled={resending}
+                        className="px-6 py-2 rounded-xl border border-orange-500/40 text-orange-400 text-sm font-semibold hover:bg-orange-500/10 transition disabled:opacity-50"
+                    >
+                        {resending ? "Sending..." : "Resend verification email"}
+                    </button>
+                    {resendMsg && <p className="text-xs text-green-400">{resendMsg}</p>}
+                    <button
+                        onClick={onCancel}
+                        className="text-xs text-white/40 hover:text-white/70 transition mt-2"
+                    >
+                        Back to sign in
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const inp = "w-full rounded-xl px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm text-gray-800 bg-gray-200/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 border-2 border-transparent transition";
     const lbl = "block text-[10px] sm:text-xs font-semibold text-white/70 uppercase tracking-wide mb-1 sm:mb-1.5";

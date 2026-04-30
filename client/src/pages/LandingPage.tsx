@@ -3,6 +3,7 @@ import "../../styles/index.css";
 import Signup from "./SignupPage";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { authService } from "../services/auth.service";
 import { IoEyeOutline, IoEyeOffOutline } from "react-icons/io5";
 
 import logo from "../assets/ESO_Logo.png";
@@ -30,15 +31,19 @@ const LandingPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
+    const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+    const [resending, setResending] = useState(false);
+    const [resendMsg, setResendMsg] = useState("");
 
     const navigate = useNavigate();
     const { login } = useAuth();
 
     const handleSigninSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSigninError("");
+        setSigninError(""); setUnverifiedEmail(null); setResendMsg("");
         const { email, password } = state;
-        if (!email || !password) { setSigninError("Please enter both email and password."); return; }
+        if (!email)    { setSigninError("Please enter your email address."); return; }
+        if (!password) { setSigninError("Please enter your password."); return; }
         setIsSubmitting(true);
         try {
             const user = await login({ email, password });
@@ -47,9 +52,27 @@ const LandingPage = () => {
             else if (user.role === "system_admin") navigate("/sysadmin/home");
             else navigate("/dashboard/home");
         } catch (error) {
-            setSigninError(error instanceof Error ? error.message : "Login failed. Please try again.");
+            const msg = error instanceof Error ? error.message : "Login failed. Please try again.";
+            if (msg === "EMAIL_NOT_VERIFIED") {
+                setUnverifiedEmail(state.email);
+            } else {
+                setSigninError(msg);
+            }
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        if (!unverifiedEmail || resending) return;
+        setResending(true); setResendMsg("");
+        try {
+            await authService.resendVerification(unverifiedEmail);
+            setResendMsg("Verification email sent. Please check your inbox.");
+        } catch {
+            setResendMsg("Failed to resend. Please try again.");
+        } finally {
+            setResending(false);
         }
     };
 
@@ -179,6 +202,24 @@ const LandingPage = () => {
                                 {signinError && (
                                     <p className="text-red-400 text-sm">{signinError}</p>
                                 )}
+
+                                {unverifiedEmail && (
+                                    <div className="rounded-lg bg-orange-500/10 border border-orange-500/30 px-3 py-2.5 text-sm">
+                                        <p className="text-orange-300 font-medium mb-1">Email not verified</p>
+                                        <p className="text-orange-200/70 text-xs mb-2">
+                                            Please check your inbox for the verification link.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleResendVerification}
+                                            disabled={resending}
+                                            className="text-xs text-orange-400 underline hover:text-orange-300 disabled:opacity-50"
+                                        >
+                                            {resending ? "Sending..." : "Resend verification email"}
+                                        </button>
+                                        {resendMsg && <p className="text-xs text-green-400 mt-1">{resendMsg}</p>}
+                                    </div>
+                                )}
                             </form>
 
                             <p className="mt-3 text-sm">
@@ -188,6 +229,14 @@ const LandingPage = () => {
                                     onClick={() => setShowSignup(true)}
                                 >
                                     Sign up here
+                                </span>
+                            </p>
+                            <p className="mt-1 text-sm">
+                                <span
+                                    className="cursor-pointer text-white/50 hover:text-orange-300 transition"
+                                    onClick={() => navigate("/forgot-password")}
+                                >
+                                    Forgot password?
                                 </span>
                             </p>
                         </div>

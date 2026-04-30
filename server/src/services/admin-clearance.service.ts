@@ -96,7 +96,9 @@ export const getPendingClearance = async (
     userId: number,
     role: string,
 ): Promise<PendingClearanceItem[]> => {
-    const { clearanceStep, programId, yearLevel, section } = await getAdminClearanceStep(userId);
+    const adminInfo = await getAdminClearanceStep(userId);
+    const { clearanceStep, programId, yearLevel, section } = adminInfo;
+    console.log(`[clearance] userId=${userId} role=${role} clearanceStep=${clearanceStep} programId=${programId} yearLevel=${yearLevel} section=${section}`);
 
     let sql: string;
     const params: any[] = [];
@@ -164,6 +166,7 @@ export const getPendingClearance = async (
     }
 
     const [rows]: any = await pool.execute(sql, params);
+    console.log(`[clearance] userId=${userId} params=${JSON.stringify(params)} rowCount=${rows.length}`);
     return rows.map((r: any) => ({
         ...r,
         obligationsTotal: Number(r.obligationsTotal),

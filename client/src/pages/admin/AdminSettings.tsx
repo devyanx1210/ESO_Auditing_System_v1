@@ -70,7 +70,7 @@ const BLANK: CreateAdminInput = {
 type AdminSortKey = "name" | "program" | "year_level" | "section" | "role";
 
 const AdminSettings = () => {
-    const { accessToken, user, changePassword } = useAuth();
+    const { accessToken, user, changePassword, logout } = useAuth();
     const { darkMode, setDarkMode, notificationsEnabled, setNotificationsEnabled } = useTheme();
     const isSysAdmin = user?.role === "system_admin";
 
@@ -90,6 +90,12 @@ const AdminSettings = () => {
 
     const [saving,     setSaving]     = useState(false);
     const [saveMsg,    setSaveMsg]    = useState("");
+
+    // Delete own account modal
+    const [showDeleteModal,  setShowDeleteModal]  = useState(false);
+    const [deletePassword,   setDeletePassword]   = useState("");
+    const [deleteError,      setDeleteError]      = useState("");
+    const [deletingSelf,     setDeletingSelf]     = useState(false);
     const [saveErr,    setSaveErr]    = useState("");
     const [toastVisible, setToastVisible] = useState(false);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -218,6 +224,26 @@ const AdminSettings = () => {
     }
 
     // ── Accounts handlers ──────────────────────────────────────────────────────
+    async function handleDeleteAccount() {
+        if (!deletePassword) { setDeleteError("Please enter your password."); return; }
+        setDeletingSelf(true);
+        setDeleteError("");
+        try {
+            const res = await fetch("/api/v1/auth/account", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+                body: JSON.stringify({ password: deletePassword }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setDeleteError(data.message || "Failed to delete account."); return; }
+            await logout();
+        } catch {
+            setDeleteError("Something went wrong. Please try again.");
+        } finally {
+            setDeletingSelf(false);
+        }
+    }
+
     async function handleCreate(e: React.FormEvent) {
         e.preventDefault();
         if (!accessToken) return;
@@ -813,7 +839,72 @@ const AdminSettings = () => {
                     </div>
                 </div>
 
+                {/* ── DANGER ZONE ───────────────────────────────────────────── */}
+                <div className="border border-red-200 dark:border-red-900 rounded-2xl p-4 sm:p-5 w-full">
+                    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-red-100 dark:border-red-900">
+                        <FiTrash2 className="w-4 h-4 text-red-500" />
+                        <h2 className="font-semibold text-red-600 dark:text-red-400 text-sm">Danger Zone</h2>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-semibold text-gray-800 dark:text-white">Delete Account</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Permanently delete your account. This cannot be undone.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => { setShowDeleteModal(true); setDeletePassword(""); setDeleteError(""); }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition shadow"
+                        >
+                            <FiTrash2 className="w-3.5 h-3.5" />
+                            Delete
+                        </button>
+                    </div>
+                </div>
+
             </div>
+
+            {/* ── DELETE ACCOUNT MODAL ──────────────────────────────────────── */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+                        <div className="flex items-center gap-2 mb-4">
+                            <FiTrash2 className="w-5 h-5 text-red-500" />
+                            <h3 className="font-bold text-gray-800 dark:text-white text-base">Delete Account</h3>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            This will permanently delete your account and all your data. Enter your password to confirm.
+                        </p>
+                        <input
+                            type="password"
+                            autoFocus
+                            placeholder="Enter your password"
+                            value={deletePassword}
+                            onChange={e => setDeletePassword(e.target.value)}
+                            onKeyDown={e => e.key === "Enter" && handleDeleteAccount()}
+                            className="border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-red-400 focus:outline-none rounded-lg px-3 py-2.5 w-full text-sm mb-3 bg-white dark:bg-[#252525] text-gray-800 dark:text-white"
+                        />
+                        {deleteError && <p className="text-red-500 text-xs mb-3">{deleteError}</p>}
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={deletingSelf}
+                                className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333] transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteAccount}
+                                disabled={deletingSelf}
+                                className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition disabled:opacity-60"
+                            >
+                                {deletingSelf ? "Deleting..." : "Delete Account"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── CREATE ADMIN MODAL ──────────────────────────────────────────── */}
             {showForm && (

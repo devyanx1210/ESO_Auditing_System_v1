@@ -12,8 +12,7 @@ interface LoginResponse {
 }
 
 interface RegisterResponse {
-    user: AuthenticatedUser;
-    tokens: AuthTokens;
+    email: string;
 }
 
 interface RefreshResponse {
@@ -57,4 +56,25 @@ export const authService = {
             method: "POST",
             body: JSON.stringify({ password }),
         }, accessToken),
+
+    verifyEmail: (token: string) =>
+        apiFetch<null>(`/auth/verify-email?token=${encodeURIComponent(token)}`),
+
+    resendVerification: (email: string) =>
+        apiFetch<null>("/auth/resend-verification", {
+            method: "POST",
+            body: JSON.stringify({ email }),
+        }),
+
+    forgotPassword: (email: string) =>
+        apiFetch<null>("/auth/forgot-password", {
+            method: "POST",
+            body: JSON.stringify({ email }),
+        }),
+
+    resetPassword: (token: string, newPassword: string) =>
+        apiFetch<null>("/auth/reset-password", {
+            method: "POST",
+            body: JSON.stringify({ token, newPassword }),
+        }),
 };
