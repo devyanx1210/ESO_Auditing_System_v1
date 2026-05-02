@@ -225,7 +225,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                         userId = ur.insertId;
                     }
 
-                    await conn.execute(
+                    const [sr]: any = await conn.execute(
                         `INSERT INTO students
                             (user_id, student_no, first_name, last_name, program_id,
                              year_level, section, school_year, semester, shirt_size,
@@ -244,6 +244,23 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                             normalizeShirtSize(row.shirtSize),
                         ]
                     );
+
+                    const guardianName = row.guardian?.trim() || null;
+                    const contactNumber = row.contact?.trim() || null;
+                    const address = row.address?.trim() || null;
+                    if (guardianName || contactNumber || address) {
+                        await conn.execute(
+                            `INSERT INTO guardian (student_id, guardian_name, contact_number, address, created_at, updated_at)
+                             VALUES (?, ?, ?, ?, NOW(), NOW())
+                             ON DUPLICATE KEY UPDATE
+                                 guardian_name  = VALUES(guardian_name),
+                                 contact_number = VALUES(contact_number),
+                                 address        = VALUES(address),
+                                 updated_at     = NOW()`,
+                            [sr.insertId, guardianName, contactNumber, address]
+                        );
+                    }
+
                     imported++;
                 } catch (err: any) {
                     errors.push(`${row.studentNo || row.name}: ${err.message}`);

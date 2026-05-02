@@ -34,6 +34,9 @@ export interface AdminStudentItem {
     email: string | null;
     shirtSize: string | null;
     userStatus: "active" | "inactive" | "suspended";
+    address: string | null;
+    contactNumber: string | null;
+    guardianName: string | null;
 }
 
 export const listStudents = async (
@@ -66,6 +69,9 @@ export const listStudents = async (
             u.status               AS userStatus,
             d.name                 AS programName,
             d.code                 AS programCode,
+            g.address,
+            g.contact_number       AS contactNumber,
+            g.guardian_name        AS guardianName,
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
             SUM(so.status IN (2,3))                                 AS obligationsPaid,
             SUM(so.status = 1)                                      AS obligationsPending,
@@ -75,6 +81,7 @@ export const listStudents = async (
         FROM students s
         JOIN users u           ON u.user_id    = s.user_id
         LEFT JOIN programs d   ON d.program_id = s.program_id
+        LEFT JOIN guardian g   ON g.student_id = s.student_id
         LEFT JOIN student_obligations so ON so.student_id = s.student_id
         LEFT JOIN obligations o ON o.obligation_id = so.obligation_id
         LEFT JOIN clearances cl
@@ -105,6 +112,9 @@ export const listStudents = async (
         obligationsPending: Number(r.obligationsPending),
         totalPayable:       Number(r.totalPayable),
         totalPaid:          Number(r.totalPaid),
+        address:            r.address       ?? null,
+        contactNumber:      r.contactNumber ?? null,
+        guardianName:       r.guardianName  ?? null,
     }));
 };
 
