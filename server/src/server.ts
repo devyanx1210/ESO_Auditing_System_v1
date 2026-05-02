@@ -76,28 +76,31 @@ app.use("/api", rateLimit({
     message: "Too many requests, please try again later.",
 }));
 
-// Stricter limit on auth endpoints (brute-force protection)
+// Login: rate-limit per email (not per IP) so many students on the same school
+// network / Railway proxy don't block each other — only brute-force on one account is blocked
 app.use("/api/v1/auth/login", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: LAN_MODE ? 500 : 30,   // LAN: many users share one IP
+    max: 20,
+    keyGenerator: (req) => (req.body?.email ?? "").toString().toLowerCase().trim() || req.ip!,
     standardHeaders: true,
     legacyHeaders: false,
-    message: "Too many login attempts, please try again later.",
+    message: "Too many login attempts for this account, please try again later.",
 }));
 
-// Prevent mass account creation spam
+// Prevent mass account creation spam (per IP, low volume expected)
 app.use("/api/v1/auth/register", rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: LAN_MODE ? 200 : 20,
+    max: 50,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many registration attempts, please try again later.",
 }));
 
-// Prevent email spam via forgot-password and resend-verification
+// Prevent email spam via forgot-password and resend-verification (per email key)
 const emailRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000,  // 15 minutes
-    max: LAN_MODE ? 50 : 5,
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: (req) => (req.body?.email ?? "").toString().toLowerCase().trim() || req.ip!,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many email requests, please try again later.",
@@ -105,10 +108,10 @@ const emailRateLimit = rateLimit({
 app.use("/api/v1/auth/forgot-password",      emailRateLimit);
 app.use("/api/v1/auth/resend-verification",  emailRateLimit);
 
-// Prevent brute-force on reset-password tokens
+// Prevent brute-force on reset-password tokens (per IP, token is already single-use)
 app.use("/api/v1/auth/reset-password", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: LAN_MODE ? 50 : 10,
+    max: 20,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many password reset attempts, please try again later.",
