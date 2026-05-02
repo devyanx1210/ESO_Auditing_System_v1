@@ -12,20 +12,19 @@ type Props = {
 
 export default function ProtectedRoute({ role, children }: Props) {
     const { user, isLoading } = useAuth();
-    const [maintenance, setMaintenance] = useState<{ on: boolean; msg: string } | null>(null);
+    const [maintenance, setMaintenance] = useState<{ on: boolean; msg: string }>({ on: false, msg: "" });
 
     useEffect(() => {
         sysadminService.getMaintenanceStatus().then(s => {
             setMaintenance({ on: Boolean(s.maintenance_mode), msg: s.maintenance_msg });
-        }).catch(() => {
-            setMaintenance({ on: false, msg: "" });
-        });
+        }).catch(() => {});
     }, []);
 
-    if (isLoading || maintenance === null) {
+    // Only block rendering while auth is initializing (brief, on first load)
+    if (isLoading) {
         return (
-            <div className="fixed inset-0 flex items-center justify-center bg-black">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-orange-500" />
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-[#111]">
+                <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-orange-200 border-t-orange-500" />
             </div>
         );
     }
