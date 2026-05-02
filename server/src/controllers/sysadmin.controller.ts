@@ -113,6 +113,17 @@ export const handleVerifyAllStudents = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
+export const handleBulkVerify = async (req: Request, res: Response) => {
+    try {
+        const { userIds } = req.body;
+        if (!Array.isArray(userIds) || !userIds.length)
+            return sendError(res, "userIds array is required", 400);
+        const count = await svc.bulkVerifyEmails(userIds.map(Number));
+        logAction({ performedBy: req.user!.userId, action: "bulk_verify_email", details: { count, userIds } });
+        sendSuccess(res, { count }, `${count} account(s) verified`);
+    } catch (e: any) { sendError(res, e.message); }
+};
+
 export const handlePreviewAdvancement = async (_req: Request, res: Response) => {
     try {
         const preview = await svc.previewYearAdvancement();

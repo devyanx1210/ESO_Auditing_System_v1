@@ -59,6 +59,12 @@ export const sysadminService = {
     verifyAllStudents: (token: string) =>
         apiFetch<{ count: number }>("/sysadmin/accounts/verify-all-students", { method: "POST" }, token),
 
+    bulkVerify: (token: string, userIds: number[]) =>
+        apiFetch<{ count: number }>("/sysadmin/accounts/bulk-verify", {
+            method: "POST",
+            body: JSON.stringify({ userIds }),
+        }, token),
+
     // Year Advancement
     previewAdvancement: (token: string) =>
         apiFetch<any>("/sysadmin/students/advancement-preview", {}, token),

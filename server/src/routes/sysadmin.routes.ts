@@ -21,6 +21,7 @@ router.patch ("/accounts/:userId",            ctrl.handleUpdateAccount);
 router.patch ("/accounts/:userId/status",       ctrl.handleUpdateAccountStatus);
 router.patch ("/accounts/:userId/verify-email", ctrl.handleVerifyEmail);
 router.post  ("/accounts/verify-all-students",  ctrl.handleVerifyAllStudents);
+router.post  ("/accounts/bulk-verify",          ctrl.handleBulkVerify);
 router.delete("/accounts/:userId",              ctrl.handleDeleteAccount);
 
 router.get   ("/students/advancement-preview", ctrl.handlePreviewAdvancement);

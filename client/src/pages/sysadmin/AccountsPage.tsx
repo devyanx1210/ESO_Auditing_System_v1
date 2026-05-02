@@ -79,10 +79,11 @@ export default function AccountsPage() {
     const { accessToken } = useAuth();
 
     // Data
-    const [accounts,  setAccounts]  = useState<Account[]>([]);
-    const [programs,  setPrograms]  = useState<{ program_id: number; name: string; code: string }[]>([]);
-    const [roles,     setRoles]     = useState<{ role_id: number; role_name: string; role_label: string }[]>([]);
-    const [loading,   setLoading]   = useState(true);
+    const [accounts,       setAccounts]       = useState<Account[]>([]);
+    const [programs,       setPrograms]       = useState<{ program_id: number; name: string; code: string }[]>([]);
+    const [roles,          setRoles]          = useState<{ role_id: number; role_name: string; role_label: string }[]>([]);
+    const [loading,        setLoading]        = useState(true);
+    const [actionLoading,  setActionLoading]  = useState(false);
 
     // UI state
     const [tab,           setTab]           = useState<"active" | "archived">("active");
@@ -319,18 +320,22 @@ export default function AccountsPage() {
 
     const handleVerifyAllStudents = async () => {
         if (!accessToken || !someSelected) return;
+        setActionLoading(true);
         try {
-            await Promise.all([...selected].map(id => sysadminService.verifyEmail(accessToken, id)));
-            showToast(`${selected.size} account(s) verified.`); setSelected(new Set()); load();
+            const res = await sysadminService.bulkVerify(accessToken, [...selected]);
+            showToast(`${res.count} account(s) verified.`); setSelected(new Set()); load();
         } catch (e: any) { showToast(e.message); }
+        finally { setActionLoading(false); }
     };
 
     const handleBulkArchive = async () => {
         if (!accessToken || !someSelected) return;
+        setActionLoading(true);
         try {
             await Promise.all([...selected].map(id => sysadminService.updateAccountStatus(accessToken, id, "inactive")));
             showToast(`${selected.size} account(s) archived.`); setSelected(new Set()); load();
         } catch (e: any) { showToast(e.message); }
+        finally { setActionLoading(false); }
     };
 
     const handleBulkDelete = async () => {
@@ -346,8 +351,10 @@ export default function AccountsPage() {
     };
 
     // Render
+    const isBusy = loading || actionLoading;
+
     return (
-        <div className="p-4 sm:p-6 md:p-8 min-h-screen bg-gray-50">
+        <div className="p-4 sm:p-6 md:p-8 min-h-screen bg-gray-50 relative">
             <style>{`
                 @keyframes fadeInUp {
                     from { opacity: 0; transform: translateY(14px); }
@@ -500,16 +507,16 @@ export default function AccountsPage() {
                     <span className="text-sm font-semibold text-gray-600">{selected.size} selected</span>
                     {tab === "active" && (
                         <>
-                            <button onClick={handleVerifyAllStudents}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold transition">
+                            <button onClick={handleVerifyAllStudents} disabled={isBusy}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
                                 Verify All
                             </button>
-                            <button onClick={() => setSuspendTargets(selectedAccounts)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition">
+                            <button onClick={() => setSuspendTargets(selectedAccounts)} disabled={isBusy}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
                                 <MdBlock size={13} /> Suspend
                             </button>
-                            <button onClick={handleBulkArchive}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold transition">
+                            <button onClick={handleBulkArchive} disabled={isBusy}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
                                 <MdDeleteOutline size={13} /> Archive
                             </button>
                         </>
@@ -696,6 +703,19 @@ export default function AccountsPage() {
                     onConfirm={handleSuspendConfirm}
                     onClose={() => setSuspendTargets([])}
                 />
+            )}
+
+            {/* Loading overlay */}
+            {isBusy && (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-[1px]"
+                    style={{ animation: "fadeInScrim 0.15s ease both" }}>
+                    <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] px-8 py-6 flex items-center gap-4">
+                        <div className="animate-spin rounded-full h-7 w-7 border-[3px] border-orange-200 border-t-orange-500" />
+                        <span className="text-gray-700 font-semibold text-sm">
+                            {actionLoading ? "Processing..." : "Loading accounts..."}
+                        </span>
+                    </div>
+                </div>
             )}
 
             {/* Toast */}

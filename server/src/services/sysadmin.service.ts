@@ -75,6 +75,16 @@ export const forceVerifyEmail = async (userId: number) => {
     );
 };
 
+export const bulkVerifyEmails = async (userIds: number[]): Promise<number> => {
+    if (!userIds.length) return 0;
+    const placeholders = userIds.map(() => "?").join(",");
+    const [result] = await pool.execute<ResultSetHeader>(
+        `UPDATE users SET email_verified = 1 WHERE user_id IN (${placeholders})`,
+        userIds
+    );
+    return result.affectedRows;
+};
+
 export const verifyAllUnverifiedStudents = async (): Promise<number> => {
     const [result] = await pool.execute<ResultSetHeader>(
         `UPDATE users SET email_verified = 1
