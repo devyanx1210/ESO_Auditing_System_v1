@@ -48,6 +48,9 @@ export const addObligation = (req: Request, res: Response) => {
             if (!obligationName || !scope || !schoolYear || !semester) {
                 return sendError(res, "obligationName, scope, schoolYear, semester are required", 400);
             }
+            if (description && description.length > 500) {
+                return sendError(res, "Description must not exceed 500 characters", 400);
+            }
 
             const parsedAmount = parseFloat(amount) || 0;
             const parsedScope = Number(scope);
@@ -89,6 +92,8 @@ export const editObligation = (req: Request, res: Response) => {
             if (!id) return sendError(res, "Invalid obligation ID", 400);
 
             const updates: any = { ...req.body };
+            if (updates.description && updates.description.length > 500)
+                return sendError(res, "Description must not exceed 500 characters", 400);
             if (updates.amount !== undefined) updates.amount = parseFloat(updates.amount) || 0;
             if (req.file) updates.gcashQrPath = (await uploadToCloudinary(req.file.buffer, "eso/qr")).url;
 

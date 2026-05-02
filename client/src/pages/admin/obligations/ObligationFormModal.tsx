@@ -166,13 +166,25 @@ export function ObligationFormModal({
                         </div>
 
                         <div className="col-span-2">
-                            <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                                Description
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    Description
+                                </label>
+                                <span className={`text-[10px] font-medium tabular-nums ${
+                                    (form.description?.length ?? 0) >= 500
+                                        ? "text-red-500"
+                                        : (form.description?.length ?? 0) >= 400
+                                        ? "text-orange-400"
+                                        : "text-gray-400 dark:text-gray-500"
+                                }`}>
+                                    {form.description?.length ?? 0}/500
+                                </span>
+                            </div>
                             <textarea
                                 className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors resize-none bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
                                 rows={3}
                                 placeholder="Optional details..."
+                                maxLength={500}
                                 value={form.description ?? ""}
                                 onChange={e => onChangeForm({ ...form, description: e.target.value })}
                             />

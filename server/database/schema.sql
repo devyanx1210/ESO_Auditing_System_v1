@@ -144,7 +144,7 @@ CREATE TABLE students (
 CREATE TABLE obligations (
     obligation_id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     obligation_name VARCHAR(250) NOT NULL,
-    description     VARCHAR(250) NULL,
+    description     VARCHAR(500) NULL,
     amount          DECIMAL(10,2) NOT NULL,
     is_required     TINYINT(1)   NOT NULL DEFAULT 1,
     scope           ENUM('all','department','year_level','section') NOT NULL DEFAULT 'all',
