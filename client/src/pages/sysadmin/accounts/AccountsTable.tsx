@@ -57,7 +57,7 @@ export default function AccountsTable({
     if (tab === "active") {
         if (loading) {
             return (
-                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] flex items-center gap-2 text-gray-400 text-sm py-10 justify-center"
+                <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] flex items-center gap-2 text-gray-400 text-sm py-10 justify-center"
                     style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-orange-400 border-t-transparent" />
                     Loading accounts...
@@ -67,7 +67,7 @@ export default function AccountsTable({
 
         if (activeAccounts.length === 0) {
             return (
-                <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] text-center py-12 text-gray-400"
+                <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] text-center py-12 text-gray-400"
                     style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                     <FiUsers className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="font-medium text-gray-500">No active accounts</p>
@@ -76,7 +76,7 @@ export default function AccountsTable({
         }
 
         return (
-            <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
+            <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
                 style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                 <div className="overflow-x-auto">
                     <table className="eso-table w-full min-w-[860px] text-xs">
@@ -168,7 +168,7 @@ export default function AccountsTable({
     // Archived tab
     if (archivedAccounts.length === 0) {
         return (
-            <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] text-center py-10 text-gray-400"
+            <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] text-center py-10 text-gray-400"
                 style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                 <FiArchive className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No archived accounts yet.</p>
@@ -177,7 +177,7 @@ export default function AccountsTable({
     }
 
     return (
-        <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
+        <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
             style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
             <div className="overflow-x-auto">
                 <table className="eso-table w-full min-w-[780px] text-xs">

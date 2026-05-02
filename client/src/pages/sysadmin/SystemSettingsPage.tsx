@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { MdSave, MdSettings, MdBuild, MdSchool, MdClose } from "react-icons/md";
-import { FiArrowUp, FiUserCheck, FiUser, FiLock, FiEye, FiEyeOff, FiGitBranch, FiTrash2, FiPlus } from "react-icons/fi";
+import { FiArrowUp, FiUserCheck, FiUser, FiLock, FiEye, FiEyeOff, FiGitBranch, FiTrash2, FiPlus, FiShield } from "react-icons/fi";
 import { useAuth } from "../../hooks/useAuth";
 import { sysadminService } from "../../services/sysadmin.service";
+import { authService } from "../../services/auth.service";
 import { adminProfileService, adminAvatarUrl } from "../../services/admin-profile.service";
 import type { AdminProfile } from "../../services/admin-profile.service";
 
@@ -90,6 +91,12 @@ export default function SystemSettingsPage() {
     const [preview,       setPreview]       = useState<AdvancementPreview | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [savingAdvance, setSavingAdvance]  = useState(false);
+
+    // Password confirmation modal state
+    const [pendingAction, setPendingAction] = useState<"maintenance" | "semester" | "workflow" | null>(null);
+    const [confirmPass,   setConfirmPass]   = useState("");
+    const [confirmErr,    setConfirmErr]    = useState("");
+    const [confirming,    setConfirming]    = useState(false);
 
     useEffect(() => {
         if (!accessToken) return;
@@ -181,7 +188,12 @@ export default function SystemSettingsPage() {
         setAddRoleId("");
     };
 
-    const handleSaveWorkflow = async () => {
+    const handleSaveWorkflow = () => {
+        setPendingAction("workflow");
+        setConfirmPass(""); setConfirmErr("");
+    };
+
+    const doSaveWorkflow = async () => {
         if (!accessToken) return;
         setWorkflowSaving(true);
         try {
@@ -193,6 +205,25 @@ export default function SystemSettingsPage() {
             showToast("Clearance workflow saved.");
         } catch (e: any) { showToast(e.message); }
         finally { setWorkflowSaving(false); }
+    };
+
+    const handleConfirmPassword = async () => {
+        if (!confirmPass) { setConfirmErr("Enter your password to confirm."); return; }
+        if (!accessToken) return;
+        setConfirming(true);
+        try {
+            await authService.verifyPassword(accessToken, confirmPass);
+            const action = pendingAction;
+            setPendingAction(null);
+            setConfirmPass("");
+            if (action === "maintenance") await doSaveMaintenance();
+            else if (action === "semester") await doSaveSemester();
+            else if (action === "workflow") await doSaveWorkflow();
+        } catch {
+            setConfirmErr("Incorrect password. Please try again.");
+        } finally {
+            setConfirming(false);
+        }
     };
 
     const showToast = (t: string) => { setToast(t); setTimeout(() => setToast(""), 3500); };
@@ -217,7 +248,12 @@ export default function SystemSettingsPage() {
         }
     };
 
-    const handleSaveMaintenance = async () => {
+    const handleSaveMaintenance = () => {
+        setPendingAction("maintenance");
+        setConfirmPass(""); setConfirmErr("");
+    };
+
+    const doSaveMaintenance = async () => {
         if (!accessToken) return;
         setSavingM(true);
         try {
@@ -230,24 +266,23 @@ export default function SystemSettingsPage() {
     // Detect if this save requires year advancement
     const isNewAcademicYear = schoolYear !== savedSchoolYear && semester === 1;
 
-    const handleSaveSemester = async () => {
-        if (!accessToken || !schoolYear || !semester) { showToast("Please fill in all fields."); return; }
+    const handleSaveSemester = () => {
+        if (!schoolYear || !semester) { showToast("Please fill in all fields."); return; }
+        setPendingAction("semester");
+        setConfirmPass(""); setConfirmErr("");
+    };
 
-        // If new school year + 1st sem: fetch preview first, show modal
+    const doSaveSemester = async () => {
+        if (!accessToken) return;
         if (isNewAcademicYear) {
             setLoadingPreview(true);
             try {
                 const data = await sysadminService.previewAdvancement(accessToken);
                 setPreview(data);
-            } catch (e: any) {
-                showToast(e.message);
-            } finally {
-                setLoadingPreview(false);
-            }
+            } catch (e: any) { showToast(e.message); }
+            finally { setLoadingPreview(false); }
             return;
         }
-
-        // Otherwise just save
         setSavingS(true);
         try {
             await sysadminService.updateSemester(accessToken, schoolYear, semester as number);
@@ -315,7 +350,7 @@ export default function SystemSettingsPage() {
 
                     {/* ── My Profile ── */}
                     <form onSubmit={handleSaveProfile}
-                        className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
+                        className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
                         style={{ animation: "fadeInUp 0.4s ease both 0.03s" }}>
                         <div className="flex items-center gap-2">
                             <FiUser className="text-orange-500" size={16} />
@@ -375,7 +410,7 @@ export default function SystemSettingsPage() {
 
                     {/* ── Change Password ── */}
                     <form onSubmit={handleChangePassword}
-                        className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-4"
+                        className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-4"
                         style={{ animation: "fadeInUp 0.4s ease both 0.05s" }}>
                         <div className="flex items-center gap-2">
                             <FiLock className="text-orange-500" size={16} />
@@ -415,7 +450,7 @@ export default function SystemSettingsPage() {
                     </form>
 
                     {/* ── Maintenance Mode ── */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-6"
+                    <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-6"
                         style={{ animation: "fadeInUp 0.4s ease both 0.06s" }}>
                         <div className="flex items-center gap-2">
                             <MdBuild className="text-orange-500" size={18} />
@@ -465,7 +500,7 @@ export default function SystemSettingsPage() {
                     </div>
 
                     {/* ── Academic Period ── */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
+                    <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
                         style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                         <div className="flex items-center gap-2">
                             <MdSettings className="text-orange-500" size={18} />
@@ -531,7 +566,7 @@ export default function SystemSettingsPage() {
                         </button>
                     </div>
                     {/* ── Clearance Workflow ── */}
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
+                    <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 sm:p-6 space-y-5"
                         style={{ animation: "fadeInUp 0.4s ease both 0.15s" }}>
                         <div className="flex items-center gap-2">
                             <FiGitBranch className="text-orange-500" size={16} />
@@ -623,6 +658,57 @@ export default function SystemSettingsPage() {
                         </button>
                     </div>
 
+                </div>
+            )}
+
+            {/* ── Password Confirmation Modal ── */}
+            {pendingAction && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+                    style={{ animation: "fadeInScrim 0.2s ease both" }}
+                    onClick={() => setPendingAction(null)}>
+                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-sm p-6 relative"
+                        style={{ animation: "modalPop 0.25s cubic-bezier(.34,1.4,.64,1) both" }}
+                        onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setPendingAction(null)}
+                            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+                            <MdClose size={20} />
+                        </button>
+                        <div className="flex items-center gap-2 mb-3">
+                            <FiShield className="text-orange-500" size={20} />
+                            <h3 className="text-gray-800 font-bold text-base">Confirm Changes</h3>
+                        </div>
+                        <p className="text-gray-500 text-sm mb-4">
+                            Enter your password to save{" "}
+                            {pendingAction === "maintenance" ? "maintenance settings"
+                                : pendingAction === "semester" ? "academic period settings"
+                                : "clearance workflow"}.
+                        </p>
+                        <div className="mb-4">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                Your password
+                            </label>
+                            <input
+                                type="password"
+                                value={confirmPass}
+                                onChange={e => { setConfirmPass(e.target.value); setConfirmErr(""); }}
+                                placeholder="Enter your password"
+                                className="w-full rounded-xl border-2 border-gray-300 focus:border-orange-400 focus:outline-none px-3.5 py-2.5 text-sm"
+                                onKeyDown={e => e.key === "Enter" && handleConfirmPassword()}
+                                autoFocus
+                            />
+                            {confirmErr && <p className="text-red-500 text-xs mt-1">{confirmErr}</p>}
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => setPendingAction(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button onClick={handleConfirmPassword} disabled={confirming}
+                                className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-sm font-semibold text-white disabled:opacity-60">
+                                {confirming ? "Verifying..." : "Confirm"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

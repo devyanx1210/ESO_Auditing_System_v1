@@ -135,7 +135,7 @@ export default function AuditLogsPage() {
             )}
 
             {/* Table */}
-            <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
+            <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
                 style={{ animation: "fadeInUp 0.42s ease both 0.08s" }}>
                 <div className="overflow-x-auto">
                     <table className="eso-table w-full min-w-[720px] text-xs">
