@@ -245,9 +245,9 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                         ]
                     );
 
-                    const guardianName = row.guardian?.trim() || null;
-                    const contactNumber = row.contact?.trim() || null;
-                    const address = row.address?.trim() || null;
+                    const guardianName  = (row.guardian?.trim()  || null)?.slice(0, 100) ?? null;
+                    const contactNumber = (row.contact?.trim()   || null)?.slice(0, 20)  ?? null;
+                    const address       = (row.address?.trim()   || null)?.slice(0, 255) ?? null;
                     if (guardianName || contactNumber || address) {
                         await conn.execute(
                             `INSERT INTO guardian (student_id, guardian_name, contact_number, address, created_at, updated_at)
@@ -263,7 +263,11 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
 
                     imported++;
                 } catch (err: any) {
-                    errors.push(`${row.studentNo || row.name}: ${err.message}`);
+                    const ref = row.studentNo || row.name;
+                    if (err.code === "ER_DUP_ENTRY" && err.message.includes("user_id"))
+                        errors.push(`${ref}: shares the same email with another student — only one account can exist per email`);
+                    else
+                        errors.push(`${ref}: ${err.message}`);
                 }
             }
 
