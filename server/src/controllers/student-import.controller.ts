@@ -39,21 +39,29 @@ export const handleImportCSV = async (req: Request, res: Response) => {
         });
 
         // Map CAPS CSV headers → our format
-        const rows = records
-            .map(r => ({
-                name:             r["NAME"]                                                      || "",
-                studentNo:        r["STUDENT NUMBER"] || r["STUDENT ID"] || r["STUDENT NO"]     || "",
-                program:          r["PROGRAM"]                                                   || "",
-                yearSection:      r["YEAR/SECTION"] || r["YEAR SECTION"]                        || "",
-                address:          r["ADDRESS"]                                                   || null,
-                contact:          r["CONTACT"]                                                   || null,
-                email:            r["EMAIL ADDRESS"] || r["EMAIL"]                              || "",
-                guardian:         r["GUARDIAN"]                                                  || null,
-                // "CONTACT NUMBER" = guardian emergency contact in the actual CSV format
-                emergencyContact: r["CONTACT NUMBER"] || r["EMERGENCY CONTACT NUMBER"] || r["EMERGENCY CONTACT"] || null,
-                shirtSize:        r["SHIRT SIZE"] || r["SHIRTSIZE"]                             || null,
-            }))
-            .filter(r => r.name && r.studentNo && r.email);
+        const mapped = records.map(r => ({
+            name:             r["NAME"]                                                      || "",
+            studentNo:        r["STUDENT NUMBER"] || r["STUDENT ID"] || r["STUDENT NO"]     || "",
+            program:          r["PROGRAM"]                                                   || "",
+            yearSection:      r["YEAR/SECTION"] || r["YEAR SECTION"]                        || "",
+            address:          r["ADDRESS"]                                                   || null,
+            contact:          r["CONTACT"]                                                   || null,
+            email:            r["EMAIL ADDRESS"] || r["EMAIL"]                              || "",
+            guardian:         r["GUARDIAN"]                                                  || null,
+            // "CONTACT NUMBER" = guardian emergency contact in the actual CSV format
+            emergencyContact: r["CONTACT NUMBER"] || r["EMERGENCY CONTACT NUMBER"] || r["EMERGENCY CONTACT"] || null,
+            shirtSize:        r["SHIRT SIZE"] || r["SHIRTSIZE"]                             || null,
+        }));
+
+        // Separate valid rows from rows missing required fields (report them, don't silently drop)
+        const rows = mapped.filter(r => r.name && r.studentNo && r.email);
+        const badRows = mapped.filter(r => !(r.name && r.studentNo && r.email));
+        const prefixErrors: string[] = badRows.map(r => {
+            const id = r.studentNo || r.name || "(unknown)";
+            const missing = [!r.name && "NAME", !r.studentNo && "STUDENT NUMBER", !r.email && "EMAIL ADDRESS"]
+                .filter(Boolean).join(", ");
+            return `Row ${id}: missing required field(s): ${missing} — skipped`;
+        });
 
         if (!rows.length)
             return sendError(res, "No valid rows found in CSV (NAME, STUDENT NUMBER, EMAIL ADDRESS are required)", 400);
@@ -63,6 +71,10 @@ export const handleImportCSV = async (req: Request, res: Response) => {
             semester:   Number(semester),
             importedBy: req.user!.userId,
         });
+
+        // Prepend bad-row errors so they're visible in the UI
+        result.errors   = [...prefixErrors, ...result.errors];
+        result.skipped += badRows.length;
 
         return sendSuccess(res, result,
             `Import complete: ${result.imported} added, ${result.skipped} skipped`);
