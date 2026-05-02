@@ -38,19 +38,31 @@ export const handleImportCSV = async (req: Request, res: Response) => {
             relax_column_count: true,
         });
 
-        // Map CAPS CSV headers → our format
-        const mapped = records.map(r => ({
-            name:             r["NAME"]                                                      || "",
-            studentNo:        r["STUDENT NUMBER"] || r["STUDENT ID"] || r["STUDENT NO"]     || "",
-            program:          r["PROGRAM"]                                                   || "",
-            yearSection:      r["YEAR/SECTION"] || r["YEAR SECTION"]                        || "",
-            address:          r["ADDRESS"]                                                   || null,
-            contact:          r["CONTACT"]                                                   || null,
-            email:            r["EMAIL ADDRESS"] || r["EMAIL"]                              || "",
-            guardian:         r["GUARDIAN"]                                                  || null,
-            // "CONTACT NUMBER" = guardian emergency contact in the actual CSV format
-            emergencyContact: r["CONTACT NUMBER"] || r["EMERGENCY CONTACT NUMBER"] || r["EMERGENCY CONTACT"] || null,
-            shirtSize:        r["SHIRT SIZE"] || r["SHIRTSIZE"]                             || null,
+        // Normalize all headers to lowercase+trimmed so casing/spacing variants all match
+        const normalizedRecords = records.map(r => {
+            const out: Record<string, string> = {};
+            for (const key of Object.keys(r)) out[key.trim().toLowerCase()] = r[key];
+            return out;
+        });
+
+        // Pick first matching key from a list of lowercase candidates
+        const col = (r: Record<string, string>, ...keys: string[]) =>
+            keys.map(k => r[k]).find(v => v !== undefined && v !== "") ?? null;
+
+        // Map CSV headers → our format (all candidate keys are lowercase)
+        const mapped = normalizedRecords.map(r => ({
+            name:             col(r, "name")                                                                          || "",
+            studentNo:        col(r, "student number", "student no.", "student no", "student id", "student")         || "",
+            program:          col(r, "program", "program name", "course")                                             || "",
+            yearSection:      col(r, "year/section", "year section", "year/sec", "year sec", "year & section")       || "",
+            address:          col(r, "address"),
+            contact:          col(r, "contact", "contact no", "contact no.", "contact number"),
+            email:            col(r, "email address", "email addr", "email ad", "email", "e-mail", "school email",
+                                   "institutional email")                                                             || "",
+            guardian:         col(r, "guardian", "guardian name"),
+            emergencyContact: col(r, "contact number", "emergency contact number", "emergency contact",
+                                   "emergency no", "emergency"),
+            shirtSize:        col(r, "shirt size", "shirtsize", "shirt"),
         }));
 
         // Separate valid rows from rows missing required fields (report them, don't silently drop)
