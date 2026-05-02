@@ -48,7 +48,7 @@ export const getStudents = async (): Promise<StudentListItem[]> => {
              WHERE cl.student_id = s.student_id
              ORDER BY cl.created_at DESC LIMIT 1)                                    AS clearanceStatus
         FROM students s
-        JOIN programs d ON s.program_id = d.program_id
+        LEFT JOIN programs d ON d.program_id = s.program_id
         JOIN users u ON s.user_id = u.user_id
         LEFT JOIN guardian g ON g.student_id = s.student_id
         LEFT JOIN student_obligations so ON s.student_id = so.student_id
