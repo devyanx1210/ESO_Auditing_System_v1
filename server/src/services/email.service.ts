@@ -71,7 +71,7 @@ function baseTemplate(title: string, body: string): string {
 }
 
 export async function sendVerificationEmail(to: string, token: string): Promise<void> {
-    const appUrl = process.env.APP_URL || "http://localhost:5173";
+    const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const link   = `${appUrl}/verify-email?token=${token}`;
     const body   = `
       <p style="color:#ccc;font-size:14px;line-height:1.6;margin:0 0 20px;">
@@ -89,7 +89,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
-    const appUrl = process.env.APP_URL || "http://localhost:5173";
+    const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const link   = `${appUrl}/reset-password?token=${token}`;
     const body   = `
       <p style="color:#ccc;font-size:14px;line-height:1.6;margin:0 0 20px;">
