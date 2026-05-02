@@ -228,10 +228,9 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                     await conn.execute(
                         `INSERT INTO students
                             (user_id, student_no, first_name, last_name, program_id,
-                             year_level, section, school_year, semester,
-                             address, contact_number, guardian_name, emergency_contact, shirt_size,
+                             year_level, section, school_year, semester, shirt_size,
                              created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
                         [
                             userId,
                             row.studentNo.trim(),
@@ -242,10 +241,6 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                             row.section,
                             ctx.schoolYear.trim(),
                             ctx.semester,
-                            row.address?.trim()          || null,
-                            row.contact?.trim()          || null,
-                            row.guardian?.trim()         || null,
-                            row.emergencyContact?.trim() || null,
                             normalizeShirtSize(row.shirtSize),
                         ]
                     );
