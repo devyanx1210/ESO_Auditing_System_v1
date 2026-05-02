@@ -500,55 +500,68 @@ export default function AccountsPage() {
                 </span>
             </div>
 
-            {/* Bulk action bar */}
-            {someSelected && (
-                <div className="flex flex-wrap items-center gap-3 mb-3 py-2"
-                    style={{ animation: "slideDown 0.22s cubic-bezier(.34,1.3,.64,1) both" }}>
-                    <span className="text-sm font-semibold text-gray-600">{selected.size} selected</span>
-                    {tab === "active" && (
-                        <>
-                            <button onClick={handleVerifyAllStudents} disabled={isBusy}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                Verify All
+            {/* Bulk action bar + Table — wrapped for scoped loading overlay */}
+            <div className="relative">
+                {someSelected && (
+                    <div className="flex flex-wrap items-center gap-3 mb-3 py-2"
+                        style={{ animation: "slideDown 0.22s cubic-bezier(.34,1.3,.64,1) both" }}>
+                        <span className="text-sm font-semibold text-gray-600">{selected.size} selected</span>
+                        {tab === "active" && (
+                            <>
+                                <button onClick={handleVerifyAllStudents} disabled={isBusy}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Verify All
+                                </button>
+                                <button onClick={() => setSuspendTargets(selectedAccounts)} disabled={isBusy}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <MdBlock size={13} /> Suspend
+                                </button>
+                                <button onClick={handleBulkArchive} disabled={isBusy}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <MdDeleteOutline size={13} /> Archive
+                                </button>
+                            </>
+                        )}
+                        {tab === "archived" && (
+                            <button onClick={() => { setShowBulkDelete(true); setBulkDeletePass(""); setBulkDeleteErr(""); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition">
+                                <FiTrash2 size={13} /> Delete Selected
                             </button>
-                            <button onClick={() => setSuspendTargets(selectedAccounts)} disabled={isBusy}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                <MdBlock size={13} /> Suspend
-                            </button>
-                            <button onClick={handleBulkArchive} disabled={isBusy}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                <MdDeleteOutline size={13} /> Archive
-                            </button>
-                        </>
-                    )}
-                    {tab === "archived" && (
-                        <button onClick={() => { setShowBulkDelete(true); setBulkDeletePass(""); setBulkDeleteErr(""); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition">
-                            <FiTrash2 size={13} /> Delete Selected
+                        )}
+                        <button onClick={() => setSelected(new Set())}
+                            className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition">
+                            Clear
                         </button>
-                    )}
-                    <button onClick={() => setSelected(new Set())}
-                        className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition">
-                        Clear
-                    </button>
-                </div>
-            )}
+                    </div>
+                )}
 
-            {/* Accounts table */}
-            <AccountsTable
-                tab={tab} loading={loading}
-                activeAccounts={activeAccounts}
-                archivedAccounts={archivedAccounts}
-                filterAndSort={filterAndSort}
-                selected={selected} allSelected={allSelected}
-                toggleAll={toggleAll} toggleOne={toggleOne}
-                onEdit={openEdit}
-                onSuspend={setSuspendTargets}
-                onArchive={setArchiveTarget}
-                onActivate={id => handleStatus(id, "active")}
-                onDelete={a => { setDeleteTarget(a); setDeletePassword(""); setDeleteErr(""); }}
-                onVerifyEmail={handleVerifyEmail}
-            />
+                {/* Accounts table */}
+                <AccountsTable
+                    tab={tab} loading={loading}
+                    activeAccounts={activeAccounts}
+                    archivedAccounts={archivedAccounts}
+                    filterAndSort={filterAndSort}
+                    selected={selected} allSelected={allSelected}
+                    toggleAll={toggleAll} toggleOne={toggleOne}
+                    onEdit={openEdit}
+                    onSuspend={setSuspendTargets}
+                    onArchive={setArchiveTarget}
+                    onActivate={id => handleStatus(id, "active")}
+                    onDelete={a => { setDeleteTarget(a); setDeletePassword(""); setDeleteErr(""); }}
+                    onVerifyEmail={handleVerifyEmail}
+                />
+
+                {/* Scoped action overlay (only while processing bulk actions) */}
+                {actionLoading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 rounded-xl backdrop-blur-[2px]"
+                        style={{ animation: "fadeInScrim 0.15s ease both" }}>
+                        <div className="bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.18)] px-6 py-4 flex items-center gap-3">
+                            <div className="animate-spin rounded-full h-6 w-6 border-[3px] border-orange-200 border-t-orange-500" />
+                            <span className="text-gray-700 font-semibold text-sm">Processing...</span>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* Create account modal */}
             {showCreate && (
@@ -703,19 +716,6 @@ export default function AccountsPage() {
                     onConfirm={handleSuspendConfirm}
                     onClose={() => setSuspendTargets([])}
                 />
-            )}
-
-            {/* Loading overlay */}
-            {isBusy && (
-                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-[1px]"
-                    style={{ animation: "fadeInScrim 0.15s ease both" }}>
-                    <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] px-8 py-6 flex items-center gap-4">
-                        <div className="animate-spin rounded-full h-7 w-7 border-[3px] border-orange-200 border-t-orange-500" />
-                        <span className="text-gray-700 font-semibold text-sm">
-                            {actionLoading ? "Processing..." : "Loading accounts..."}
-                        </span>
-                    </div>
-                </div>
             )}
 
             {/* Toast */}

@@ -35,6 +35,7 @@ export interface AdminStudentItem {
     address: string | null;
     contactNumber: string | null;
     guardianName: string | null;
+    emergencyContact: string | null;
     shirtSize: string | null;
     userStatus: "active" | "inactive" | "suspended";
 }
@@ -54,24 +55,25 @@ export const listStudents = async (
 
     let sql = `
         SELECT
-            s.student_id        AS studentId,
-            s.user_id           AS userId,
-            s.student_no        AS studentNo,
-            s.first_name        AS firstName,
-            s.last_name         AS lastName,
-            s.year_level        AS yearLevel,
+            s.student_id           AS studentId,
+            s.user_id              AS userId,
+            s.student_no           AS studentNo,
+            s.first_name           AS firstName,
+            s.last_name            AS lastName,
+            s.year_level           AS yearLevel,
             s.section,
-            s.school_year       AS schoolYear,
+            s.school_year          AS schoolYear,
             s.semester,
-            s.avatar_path       AS avatarPath,
-            g.address,
-            g.contact_number    AS contactNumber,
-            g.guardian_name     AS guardianName,
-            s.shirt_size        AS shirtSize,
+            s.avatar_path          AS avatarPath,
+            s.address,
+            s.contact_number       AS contactNumber,
+            s.guardian_name        AS guardianName,
+            s.emergency_contact    AS emergencyContact,
+            s.shirt_size           AS shirtSize,
             u.email,
-            u.status            AS userStatus,
-            d.name              AS programName,
-            d.code              AS programCode,
+            u.status               AS userStatus,
+            d.name                 AS programName,
+            d.code                 AS programCode,
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
             SUM(so.status IN (2,3))                                 AS obligationsPaid,
             SUM(so.status = 1)                                      AS obligationsPending,
@@ -79,9 +81,8 @@ export const listStudents = async (
             COALESCE(SUM(CASE WHEN o.amount > 0 THEN so.amount_due ELSE 0 END), 0)                    AS totalPayable,
             COALESCE(SUM(CASE WHEN o.amount > 0 AND so.status = 2 THEN so.amount_due ELSE 0 END), 0)  AS totalPaid
         FROM students s
-        JOIN users u       ON u.user_id       = s.user_id
-        JOIN programs d ON d.program_id = s.program_id
-        LEFT JOIN guardian g ON g.student_id = s.student_id
+        JOIN users u           ON u.user_id    = s.user_id
+        LEFT JOIN programs d   ON d.program_id = s.program_id
         LEFT JOIN student_obligations so ON so.student_id = s.student_id
         LEFT JOIN obligations o ON o.obligation_id = so.obligation_id
         LEFT JOIN clearances cl
