@@ -28,8 +28,9 @@ export interface Account {
     position:     string | null;
     year_level:   number | null;
     section:      string | null;
-    avatar_path:  string | null;
-    status:       string;
+    avatar_path:    string | null;
+    status:         string;
+    email_verified: number;
 }
 
 export type EditForm = {

@@ -53,6 +53,9 @@ export const sysadminService = {
     deleteAccount: (token: string, userId: number) =>
         apiFetch<any>(`/sysadmin/accounts/${userId}`, { method: "DELETE" }, token),
 
+    verifyEmail: (token: string, userId: number) =>
+        apiFetch<any>(`/sysadmin/accounts/${userId}/verify-email`, { method: "PATCH" }, token),
+
     // Year Advancement
     previewAdvancement: (token: string) =>
         apiFetch<any>("/sysadmin/students/advancement-preview", {}, token),

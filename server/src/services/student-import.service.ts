@@ -199,8 +199,8 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 try {
                     const [ur]: any = await conn.execute(
                         `INSERT INTO users
-                            (first_name, last_name, email, password_hash, role_id, program_id, status, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
+                            (first_name, last_name, email, password_hash, role_id, program_id, status, email_verified, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, 'active', 1, NOW(), NOW())`,
                         [row.firstName, row.lastName,
                          row.email.toLowerCase().trim(), hashes[i],
                          roleId, row.programId]

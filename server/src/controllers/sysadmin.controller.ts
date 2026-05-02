@@ -96,6 +96,15 @@ export const handleDeleteAccount = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
+export const handleVerifyEmail = async (req: Request, res: Response) => {
+    try {
+        const userId = Number(req.params.userId);
+        await svc.forceVerifyEmail(userId);
+        logAction({ performedBy: req.user!.userId, action: "verify_email", targetType: "user", targetId: userId });
+        sendSuccess(res, null, "Email verified");
+    } catch (e: any) { sendError(res, e.message); }
+};
+
 export const handlePreviewAdvancement = async (_req: Request, res: Response) => {
     try {
         const preview = await svc.previewYearAdvancement();

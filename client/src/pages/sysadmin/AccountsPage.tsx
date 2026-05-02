@@ -309,6 +309,14 @@ export default function AccountsPage() {
         } finally { setEditSaving(false); }
     };
 
+    const handleVerifyEmail = async (userId: number) => {
+        if (!accessToken) return;
+        try {
+            await sysadminService.verifyEmail(accessToken, userId);
+            showToast("Email verified successfully."); load();
+        } catch (e: any) { showToast(e.message); }
+    };
+
     const handleBulkArchive = async () => {
         if (!accessToken || !someSelected) return;
         try {
@@ -520,6 +528,7 @@ export default function AccountsPage() {
                 onArchive={setArchiveTarget}
                 onActivate={id => handleStatus(id, "active")}
                 onDelete={a => { setDeleteTarget(a); setDeletePassword(""); setDeleteErr(""); }}
+                onVerifyEmail={handleVerifyEmail}
             />
 
             {/* Create account modal */}

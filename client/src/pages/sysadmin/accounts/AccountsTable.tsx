@@ -43,6 +43,7 @@ export interface AccountsTableProps {
     onArchive:       (a: Account) => void;
     onActivate:      (userId: number) => void;
     onDelete:        (a: Account) => void;
+    onVerifyEmail:   (userId: number) => void;
 }
 
 export default function AccountsTable({
@@ -50,7 +51,7 @@ export default function AccountsTable({
     activeAccounts, archivedAccounts,
     filterAndSort,
     selected, allSelected, toggleAll, toggleOne,
-    onEdit, onSuspend, onArchive, onActivate, onDelete,
+    onEdit, onSuspend, onArchive, onActivate, onDelete, onVerifyEmail,
 }: AccountsTableProps) {
 
     // Active tab
@@ -131,9 +132,16 @@ export default function AccountsTable({
                                         {a.position ?? <span className="text-gray-300">—</span>}
                                     </td>
                                     <td className="px-3 py-2.5 text-center">
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500 text-white">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-white/70" />Active
-                                        </span>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500 text-white">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white/70" />Active
+                                            </span>
+                                            {!a.email_verified && (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-600">
+                                                    Unverified
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-3 py-2.5">
                                         <div className="flex items-center justify-center gap-1.5">
@@ -142,6 +150,13 @@ export default function AccountsTable({
                                                 title="Edit account">
                                                 <FiEdit2 className="w-3.5 h-3.5" />
                                             </button>
+                                            {!a.email_verified && (
+                                                <button onClick={() => onVerifyEmail(a.user_id)}
+                                                    className="px-2.5 py-1.5 text-xs rounded-lg font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
+                                                    title="Force verify email">
+                                                    Verify
+                                                </button>
+                                            )}
                                             {a.role_name !== "system_admin" && (
                                                 <>
                                                     <button onClick={() => onSuspend([a])}

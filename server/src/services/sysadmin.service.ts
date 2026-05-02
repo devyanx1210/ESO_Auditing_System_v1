@@ -57,7 +57,7 @@ export const getAllAccounts = async () => {
                 COALESCE(a.position, '') AS position,
                 a.year_level, a.section,
                 a.avatar_path,
-                u.status, u.created_at
+                u.status, u.email_verified, u.created_at
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
          LEFT JOIN programs d ON u.program_id = d.program_id
@@ -66,6 +66,13 @@ export const getAllAccounts = async () => {
          ORDER BY r.role_id ASC, u.last_name ASC`
     );
     return rows;
+};
+
+export const forceVerifyEmail = async (userId: number) => {
+    await pool.execute(
+        `UPDATE users SET email_verified = 1 WHERE user_id = ?`,
+        [userId]
+    );
 };
 
 export const updateAccountStatus = async (userId: number, status: "active" | "inactive" | "suspended") => {

@@ -18,8 +18,9 @@ router.patch ("/settings/semester",           ctrl.handleUpdateSemesterSettings)
 router.get   ("/accounts",                    ctrl.handleGetAccounts);
 router.post  ("/accounts",                    ctrl.handleCreateAccount);
 router.patch ("/accounts/:userId",            ctrl.handleUpdateAccount);
-router.patch ("/accounts/:userId/status",     ctrl.handleUpdateAccountStatus);
-router.delete("/accounts/:userId",            ctrl.handleDeleteAccount);
+router.patch ("/accounts/:userId/status",       ctrl.handleUpdateAccountStatus);
+router.patch ("/accounts/:userId/verify-email", ctrl.handleVerifyEmail);
+router.delete("/accounts/:userId",              ctrl.handleDeleteAccount);
 
 router.get   ("/students/advancement-preview", ctrl.handlePreviewAdvancement);
 router.post  ("/students/advance-year",        ctrl.handleExecuteAdvancement);
