@@ -31,6 +31,7 @@ const thCtrCls = "px-3 py-2 text-center text-[10px] font-semibold text-gray-500 
 export interface AccountsTableProps {
     tab:             "active" | "archived";
     loading:         boolean;
+    actionLoading?:  boolean;
     activeAccounts:  Account[];
     archivedAccounts: Account[];
     filterAndSort:   (list: Account[]) => Account[];
@@ -47,7 +48,7 @@ export interface AccountsTableProps {
 }
 
 export default function AccountsTable({
-    tab, loading,
+    tab, loading, actionLoading,
     activeAccounts, archivedAccounts,
     filterAndSort,
     selected, allSelected, toggleAll, toggleOne,
@@ -77,7 +78,7 @@ export default function AccountsTable({
         }
 
         return (
-            <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
+            <div className="relative bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
                 style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
                 <div className="overflow-x-auto">
                     <table className="eso-table w-full min-w-[860px] text-xs">
@@ -176,6 +177,14 @@ export default function AccountsTable({
                         </tbody>
                     </table>
                 </div>
+                {actionLoading && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/75 backdrop-blur-[2px] rounded-2xl">
+                        <div className="bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.18)] px-6 py-4 flex items-center gap-3">
+                            <div className="animate-spin rounded-full h-6 w-6 border-[3px] border-orange-200 border-t-orange-500" />
+                            <span className="text-gray-700 font-semibold text-sm">Processing...</span>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -192,7 +201,7 @@ export default function AccountsTable({
     }
 
     return (
-        <div className="bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
+        <div className="relative bg-white rounded-lg sm:rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] overflow-hidden"
             style={{ animation: "fadeInUp 0.4s ease both 0.12s" }}>
             <div className="overflow-x-auto">
                 <table className="eso-table w-full min-w-[780px] text-xs">
@@ -257,6 +266,14 @@ export default function AccountsTable({
                     </tbody>
                 </table>
             </div>
+            {actionLoading && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/75 backdrop-blur-[2px] rounded-2xl">
+                    <div className="bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.18)] px-6 py-4 flex items-center gap-3">
+                        <div className="animate-spin rounded-full h-6 w-6 border-[3px] border-orange-200 border-t-orange-500" />
+                        <span className="text-gray-700 font-semibold text-sm">Processing...</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

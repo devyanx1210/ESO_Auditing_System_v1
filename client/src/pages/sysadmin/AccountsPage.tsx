@@ -500,8 +500,8 @@ export default function AccountsPage() {
                 </span>
             </div>
 
-            {/* Bulk action bar + Table — wrapped for scoped loading overlay */}
-            <div className="relative">
+            {/* Bulk action bar + Table */}
+            <div>
                 {someSelected && (
                     <div className="flex flex-wrap items-center gap-3 mb-3 py-2"
                         style={{ animation: "slideDown 0.22s cubic-bezier(.34,1.3,.64,1) both" }}>
@@ -537,7 +537,7 @@ export default function AccountsPage() {
 
                 {/* Accounts table */}
                 <AccountsTable
-                    tab={tab} loading={loading}
+                    tab={tab} loading={loading} actionLoading={actionLoading}
                     activeAccounts={activeAccounts}
                     archivedAccounts={archivedAccounts}
                     filterAndSort={filterAndSort}
@@ -550,17 +550,6 @@ export default function AccountsPage() {
                     onDelete={a => { setDeleteTarget(a); setDeletePassword(""); setDeleteErr(""); }}
                     onVerifyEmail={handleVerifyEmail}
                 />
-
-                {/* Scoped action overlay (only while processing bulk actions) */}
-                {actionLoading && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 rounded-xl backdrop-blur-[2px]"
-                        style={{ animation: "fadeInScrim 0.15s ease both" }}>
-                        <div className="bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.18)] px-6 py-4 flex items-center gap-3">
-                            <div className="animate-spin rounded-full h-6 w-6 border-[3px] border-orange-200 border-t-orange-500" />
-                            <span className="text-gray-700 font-semibold text-sm">Processing...</span>
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Create account modal */}
