@@ -250,11 +250,41 @@ export const getDashboardStats = async (
 
     const obligations: ObligationStat[] = Array.from(obligationMap.values());
 
-    // Totals
-    const totalRegisteredStudents = programs.reduce((s, p) => s + p.totalStudents, 0);
-    const totalVerifiedStudents   = programs.reduce((s, p) => s + p.verifiedStudents, 0);
-    const totalAmountToCollect    = programs.reduce((s, p) => s + p.totalAmountToCollect, 0);
-    const totalApprovedPayments   = programs.reduce((s, p) => s + p.totalApprovedPayments, 0);
+    // Totals — run direct student-table counts to include students with NULL/bad program_id
+    const directConds: string[] = ["u.deleted_at IS NULL"];
+    const directParams: any[]   = [];
+    if (isClassOfficer) {
+        if (programId) { directConds.push("s.program_id = ?"); directParams.push(programId); }
+        directConds.push("s.year_level = ?", "s.section = ?");
+        directParams.push(yearLevel ?? null, section ?? null);
+    } else if (isProgramOfficer && programId) {
+        directConds.push("s.program_id = ?");
+        directParams.push(programId);
+    }
+    const whereClause = directConds.join(" AND ");
+
+    const [regRows]: any = await pool.execute(
+        `SELECT COUNT(*) AS total FROM students s JOIN users u ON u.user_id = s.user_id WHERE ${whereClause}`,
+        directParams
+    );
+    const totalRegisteredStudents = Number(regRows[0].total);
+
+    const [verRows]: any = await pool.execute(
+        `SELECT COUNT(DISTINCT s.student_id) AS total
+         FROM students s
+         JOIN users u ON u.user_id = s.user_id
+         JOIN clearances cl
+             ON cl.student_id        = s.student_id
+            AND cl.school_year       = s.school_year
+            AND cl.semester          = s.semester
+            AND cl.clearance_status  = 2
+         WHERE ${whereClause}`,
+        directParams
+    );
+    const totalVerifiedStudents = Number(verRows[0].total);
+
+    const totalAmountToCollect  = programs.reduce((s, p) => s + p.totalAmountToCollect, 0);
+    const totalApprovedPayments = programs.reduce((s, p) => s + p.totalApprovedPayments, 0);
 
     // filterLabel
     let filterLabel: string | null = null;

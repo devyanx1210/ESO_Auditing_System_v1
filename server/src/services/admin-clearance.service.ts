@@ -88,7 +88,7 @@ const CLEARANCE_SELECT = `
         MIN(cl.printed_at)                       AS printedAt
     FROM students s
     JOIN users u       ON u.user_id       = s.user_id
-    JOIN programs d ON d.program_id = s.program_id
+    LEFT JOIN programs d ON d.program_id = s.program_id
     LEFT JOIN student_obligations so ON so.student_id = s.student_id
 `;
 
