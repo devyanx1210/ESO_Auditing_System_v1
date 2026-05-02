@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, startTransition } from "react";
 import { createPortal } from "react-dom";
 import {
     FiPlus, FiCheck, FiUsers, FiArchive, FiFilter, FiTrash2,
@@ -193,10 +193,12 @@ export default function AccountsPage() {
     const selectableIds = displayed.filter(a => a.role_name !== "system_admin").map(a => a.user_id);
     const allSelected   = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
     const someSelected  = selected.size > 0;
-    const toggleAll     = () => allSelected ? setSelected(new Set()) : setSelected(new Set(selectableIds));
-    const toggleOne     = (id: number) => setSelected(prev => {
-        const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+    const toggleAll     = () => startTransition(() => {
+        allSelected ? setSelected(new Set()) : setSelected(new Set(selectableIds));
     });
+    const toggleOne     = (id: number) => startTransition(() => setSelected(prev => {
+        const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+    }));
     const selectedAccounts = displayed.filter(a => selected.has(a.user_id));
 
     // Actions

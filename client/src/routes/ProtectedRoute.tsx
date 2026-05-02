@@ -20,14 +20,7 @@ export default function ProtectedRoute({ role, children }: Props) {
         }).catch(() => {});
     }, []);
 
-    // Only block rendering while auth is initializing (brief, on first load)
-    if (isLoading) {
-        return (
-            <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-[#111]">
-                <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-orange-200 border-t-orange-500" />
-            </div>
-        );
-    }
+    if (isLoading) return null;
 
     if (!user) return <Navigate to="/" replace />;
     if (!role.includes(user.role)) return <Navigate to="/" replace />;
