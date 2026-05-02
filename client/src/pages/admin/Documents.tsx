@@ -1,5 +1,7 @@
 import type React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
+// @ts-ignore — Vite ?url import for local PDF.js worker (avoids CDN dependency)
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.js?url";
 import {
     FiPlus, FiSave, FiTrash2, FiStar, FiChevronDown, FiAlertCircle,
     FiBold, FiItalic, FiUnderline, FiAlignLeft, FiAlignCenter, FiAlignRight,
@@ -424,8 +426,7 @@ function PdfCanvasViewer({
         (async () => {
             try {
                 const pdfjsLib = await import("pdfjs-dist");
-                (pdfjsLib as any).GlobalWorkerOptions.workerSrc =
-                    `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+                (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
                 const pdf  = await (pdfjsLib as any).getDocument(pdfUrl).promise;
                 if (cancelled) return;
                 const page = await pdf.getPage(1);
