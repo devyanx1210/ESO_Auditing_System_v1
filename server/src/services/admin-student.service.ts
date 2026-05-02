@@ -32,10 +32,6 @@ export interface AdminStudentItem {
     clearanceStatus: number | null;
     avatarPath: string | null;
     email: string | null;
-    address: string | null;
-    contactNumber: string | null;
-    guardianName: string | null;
-    emergencyContact: string | null;
     shirtSize: string | null;
     userStatus: "active" | "inactive" | "suspended";
 }
@@ -65,10 +61,6 @@ export const listStudents = async (
             s.school_year          AS schoolYear,
             s.semester,
             s.avatar_path          AS avatarPath,
-            s.address,
-            s.contact_number       AS contactNumber,
-            s.guardian_name        AS guardianName,
-            s.emergency_contact    AS emergencyContact,
             s.shirt_size           AS shirtSize,
             u.email,
             u.status               AS userStatus,
