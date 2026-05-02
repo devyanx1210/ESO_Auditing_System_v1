@@ -31,8 +31,23 @@ export default function SysAdminLayout() {
     const navigate    = useNavigate();
     const location    = useLocation();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
-    const [collapsed,       setCollapsed]       = useState(false);
+    const [collapsed,       setCollapsed]       = useState(() => window.innerWidth >= 768 && window.innerWidth < 1024);
     useForceLightMode();
+
+    useEffect(() => {
+        const tabletMQ = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+        const laptopMQ = window.matchMedia("(min-width: 1024px)");
+        function handleChange() {
+            if (laptopMQ.matches)      setCollapsed(false);
+            else if (tabletMQ.matches) setCollapsed(true);
+        }
+        tabletMQ.addEventListener("change", handleChange);
+        laptopMQ.addEventListener("change", handleChange);
+        return () => {
+            tabletMQ.removeEventListener("change", handleChange);
+            laptopMQ.removeEventListener("change", handleChange);
+        };
+    }, []);
 
     async function handleLogout() {
         await logout();
@@ -85,7 +100,7 @@ export default function SysAdminLayout() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-auto pb-20 md:pb-0">
+            <div className="flex-1 min-w-0 overflow-auto pb-20 md:pb-0">
                 <Outlet key={location.pathname} />
             </div>
 
