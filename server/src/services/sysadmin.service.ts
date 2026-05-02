@@ -75,6 +75,15 @@ export const forceVerifyEmail = async (userId: number) => {
     );
 };
 
+export const verifyAllUnverifiedStudents = async (): Promise<number> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        `UPDATE users SET email_verified = 1
+         WHERE email_verified = 0
+           AND role_id = (SELECT role_id FROM roles WHERE role_name = 'student')`
+    );
+    return result.affectedRows;
+};
+
 export const updateAccountStatus = async (userId: number, status: "active" | "inactive" | "suspended") => {
     await pool.execute(
         `UPDATE users SET status = ? WHERE user_id = ?`,

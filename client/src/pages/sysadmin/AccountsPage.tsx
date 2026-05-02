@@ -317,6 +317,14 @@ export default function AccountsPage() {
         } catch (e: any) { showToast(e.message); }
     };
 
+    const handleVerifyAllStudents = async () => {
+        if (!accessToken) return;
+        try {
+            const res = await sysadminService.verifyAllStudents(accessToken);
+            showToast(`${res.count} student account(s) verified.`); load();
+        } catch (e: any) { showToast(e.message); }
+    };
+
     const handleBulkArchive = async () => {
         if (!accessToken || !someSelected) return;
         try {
@@ -396,10 +404,18 @@ export default function AccountsPage() {
                     </button>
                 </div>
                 {tab === "active" && (
-                    <button onClick={() => { setShowCreate(true); setFormError(""); setForm(BLANK_FORM); }}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition shadow-sm">
-                        <FiPlus className="w-4 h-4" /> Create Account
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {accounts.some(a => !a.email_verified && a.status === "active") && (
+                            <button onClick={handleVerifyAllStudents}
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition shadow-sm">
+                                Verify All Unverified
+                            </button>
+                        )}
+                        <button onClick={() => { setShowCreate(true); setFormError(""); setForm(BLANK_FORM); }}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition shadow-sm">
+                            <FiPlus className="w-4 h-4" /> Create Account
+                        </button>
+                    </div>
                 )}
             </div>
 

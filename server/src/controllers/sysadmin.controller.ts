@@ -105,6 +105,14 @@ export const handleVerifyEmail = async (req: Request, res: Response) => {
     } catch (e: any) { sendError(res, e.message); }
 };
 
+export const handleVerifyAllStudents = async (req: Request, res: Response) => {
+    try {
+        const count = await svc.verifyAllUnverifiedStudents();
+        logAction({ performedBy: req.user!.userId, action: "verify_all_students", details: { count } });
+        sendSuccess(res, { count }, `${count} student account(s) verified`);
+    } catch (e: any) { sendError(res, e.message); }
+};
+
 export const handlePreviewAdvancement = async (_req: Request, res: Response) => {
     try {
         const preview = await svc.previewYearAdvancement();

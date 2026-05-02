@@ -56,6 +56,9 @@ export const sysadminService = {
     verifyEmail: (token: string, userId: number) =>
         apiFetch<any>(`/sysadmin/accounts/${userId}/verify-email`, { method: "PATCH" }, token),
 
+    verifyAllStudents: (token: string) =>
+        apiFetch<{ count: number }>("/sysadmin/accounts/verify-all-students", { method: "POST" }, token),
+
     // Year Advancement
     previewAdvancement: (token: string) =>
         apiFetch<any>("/sysadmin/students/advancement-preview", {}, token),
