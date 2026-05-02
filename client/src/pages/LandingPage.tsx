@@ -136,7 +136,7 @@ const LandingPage = () => {
                         <div className="w-full max-w-sm flex flex-col items-center text-center text-white
                             md:w-[50%] md:max-w-none md:items-start md:text-left">
 
-                            <h1 className="mb-5 font-extrabold leading-tight tracking-tight text-2xl sm:text-3xl md:text-[clamp(32px,4vw,60px)]">
+                            <h1 className="mb-5 font-extrabold leading-tight tracking-tight text-2xl sm:text-3xl md:text-4xl lg:text-5xl">
                                 <span className="block">Engineering Student</span>
                                 <span className="block">Organization <span className="text-orange-400">(ESO)</span></span>
                                 <span className="block">Auditing System</span>
