@@ -67,10 +67,10 @@ app.use(cors({
     credentials: true,
 }));
 
-// Rate limiting — generous for shared school WiFi IPs
+// Rate limiting — high cap for shared school WiFi / Railway proxy (many users share one IP)
 app.use("/api", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: isProd ? 2000 : 10000,
+    max: isProd ? 10000 : 50000,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many requests, please try again later.",
