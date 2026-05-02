@@ -132,25 +132,34 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             existingStudentNos = new Set(exSt.map((r: any) => r.student_no));
         }
 
-// 4. Bulk-check existing emails
+// 4. Bulk-check existing emails — distinguish fully-imported vs user-only (missing students record)
         const allEmails = [...new Set(rows.map(r => r.email.toLowerCase().trim()).filter(Boolean))];
-        let existingEmails = new Set<string>();
+        // email → user_id for accounts that exist in users but have NO students record (need repair)
+        const repairUserIds = new Map<string, number>();
+        // emails that are fully imported (users + students both exist)
+        let fullyImportedEmails = new Set<string>();
         if (allEmails.length) {
             const placeholders = allEmails.map(() => "?").join(",");
             const [exEm]: any = await conn.execute(
-                `SELECT email FROM users WHERE email IN (${placeholders})`,
+                `SELECT u.user_id, u.email,
+                        EXISTS(SELECT 1 FROM students s WHERE s.user_id = u.user_id) AS has_student
+                 FROM users u WHERE u.email IN (${placeholders})`,
                 allEmails
             );
-            existingEmails = new Set(exEm.map((r: any) => r.email));
+            for (const r of exEm) {
+                if (r.has_student) fullyImportedEmails.add(r.email);
+                else               repairUserIds.set(r.email, r.user_id);
+            }
         }
 
 // 5. Filter to valid rows only
         type ValidRow = ImportRow & {
-            programId: number;
-            yearLevel: number;
-            section:   string;
-            firstName: string;
-            lastName:  string;
+            programId:    number;
+            yearLevel:    number;
+            section:      string;
+            firstName:    string;
+            lastName:     string;
+            repairUserId: number | null; // non-null = skip users INSERT, only create students
         };
 
         const validRows: ValidRow[] = [];
@@ -169,7 +178,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 continue;
             }
             const emailKey = row.email.toLowerCase().trim();
-            if (existingEmails.has(emailKey)) {
+            if (fullyImportedEmails.has(emailKey)) {
                 errors.push(`${ref}: email "${row.email}" already registered — skipped`);
                 skipped++;
                 continue;
@@ -177,18 +186,22 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
 
             const { yearLevel, section } = parseYearSection(row.yearSection);
             const { firstName, lastName } = parseName(row.name);
+            const repairUserId = repairUserIds.get(emailKey) ?? null;
 
-            validRows.push({ ...row, programId, yearLevel, section, firstName, lastName });
+            validRows.push({ ...row, programId, yearLevel, section, firstName, lastName, repairUserId });
         }
 
-// 6. Hash passwords in parallel batches
-        const hashes: string[] = new Array(validRows.length);
-        for (let i = 0; i < validRows.length; i += HASH_BATCH) {
-            const batch = validRows.slice(i, i + HASH_BATCH);
+// 6. Hash passwords — only needed for rows that require a new users INSERT
+        const newUserRows    = validRows.filter(r => r.repairUserId === null);
+        const hashes: string[] = new Array(validRows.length).fill("");
+        const newUserIndices  = validRows.map((r, i) => r.repairUserId === null ? i : -1).filter(i => i >= 0);
+
+        for (let b = 0; b < newUserRows.length; b += HASH_BATCH) {
+            const batch = newUserRows.slice(b, b + HASH_BATCH);
             const batchHashes = await Promise.all(
                 batch.map(r => bcrypt.hash(r.studentNo.trim(), SALT_ROUNDS))
             );
-            batchHashes.forEach((h, j) => { hashes[i + j] = h; });
+            batchHashes.forEach((h, j) => { hashes[newUserIndices[b + j]] = h; });
         }
 
 // 7. Insert in a transaction
@@ -197,15 +210,20 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             for (let i = 0; i < validRows.length; i++) {
                 const row = validRows[i];
                 try {
-                    const [ur]: any = await conn.execute(
-                        `INSERT INTO users
-                            (first_name, last_name, email, password_hash, role_id, program_id, status, email_verified, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, 'active', 1, NOW(), NOW())`,
-                        [row.firstName, row.lastName,
-                         row.email.toLowerCase().trim(), hashes[i],
-                         roleId, row.programId]
-                    );
-                    const userId = ur.insertId;
+                    let userId = row.repairUserId;
+
+                    if (userId === null) {
+                        // Full insert: new user + student record
+                        const [ur]: any = await conn.execute(
+                            `INSERT INTO users
+                                (first_name, last_name, email, password_hash, role_id, program_id, status, email_verified, created_at, updated_at)
+                             VALUES (?, ?, ?, ?, ?, ?, 'active', 1, NOW(), NOW())`,
+                            [row.firstName, row.lastName,
+                             row.email.toLowerCase().trim(), hashes[i],
+                             roleId, row.programId]
+                        );
+                        userId = ur.insertId;
+                    }
 
                     await conn.execute(
                         `INSERT INTO students
