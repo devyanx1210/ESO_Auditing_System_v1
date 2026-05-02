@@ -117,12 +117,16 @@ export default function AccountsPage() {
     const [showEditPass, setShowEditPass] = useState(false);
 
     // Confirmation modals
-    const [suspendTargets, setSuspendTargets] = useState<Account[]>([]);
-    const [archiveTarget,  setArchiveTarget]  = useState<Account | null>(null);
-    const [deleteTarget,   setDeleteTarget]   = useState<Account | null>(null);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteErr,      setDeleteErr]      = useState("");
-    const [deleting,       setDeleting]       = useState(false);
+    const [suspendTargets,    setSuspendTargets]    = useState<Account[]>([]);
+    const [archiveTarget,     setArchiveTarget]     = useState<Account | null>(null);
+    const [deleteTarget,      setDeleteTarget]      = useState<Account | null>(null);
+    const [deletePassword,    setDeletePassword]    = useState("");
+    const [deleteErr,         setDeleteErr]         = useState("");
+    const [deleting,          setDeleting]          = useState(false);
+    const [showBulkDelete,    setShowBulkDelete]    = useState(false);
+    const [bulkDeletePass,    setBulkDeletePass]    = useState("");
+    const [bulkDeleteErr,     setBulkDeleteErr]     = useState("");
+    const [bulkDeleting,      setBulkDeleting]      = useState(false);
 
     const filterRef   = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -313,6 +317,18 @@ export default function AccountsPage() {
         } catch (e: any) { showToast(e.message); }
     };
 
+    const handleBulkDelete = async () => {
+        if (!accessToken || !someSelected) return;
+        setBulkDeleting(true); setBulkDeleteErr("");
+        try {
+            await authService.verifyPassword(accessToken, bulkDeletePass);
+            await Promise.all([...selected].map(id => sysadminService.deleteAccount(accessToken, id)));
+            showToast(`${selected.size} account(s) permanently deleted.`);
+            setSelected(new Set()); setShowBulkDelete(false); setBulkDeletePass(""); load();
+        } catch (e: any) { setBulkDeleteErr(e.message ?? "Failed to delete."); }
+        finally { setBulkDeleting(false); }
+    };
+
     // Render
     return (
         <div className="p-4 sm:p-6 md:p-8 min-h-screen bg-gray-50">
@@ -467,15 +483,23 @@ export default function AccountsPage() {
                     style={{ animation: "slideDown 0.22s cubic-bezier(.34,1.3,.64,1) both" }}>
                     <span className="text-sm font-semibold text-gray-600">{selected.size} selected</span>
                     {tab === "active" && (
-                        <button onClick={() => setSuspendTargets(selectedAccounts)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition">
-                            <MdBlock size={13} /> Suspend
+                        <>
+                            <button onClick={() => setSuspendTargets(selectedAccounts)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition">
+                                <MdBlock size={13} /> Suspend
+                            </button>
+                            <button onClick={handleBulkArchive}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold transition">
+                                <MdDeleteOutline size={13} /> Archive
+                            </button>
+                        </>
+                    )}
+                    {tab === "archived" && (
+                        <button onClick={() => { setShowBulkDelete(true); setBulkDeletePass(""); setBulkDeleteErr(""); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition">
+                            <FiTrash2 size={13} /> Delete Selected
                         </button>
                     )}
-                    <button onClick={handleBulkArchive}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white text-xs font-semibold transition">
-                        <MdDeleteOutline size={13} /> Archive
-                    </button>
                     <button onClick={() => setSelected(new Set())}
                         className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition">
                         Clear
@@ -596,6 +620,48 @@ export default function AccountsPage() {
                             <button onClick={handlePermanentDelete} disabled={deleting}
                                 className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 disabled:opacity-60">
                                 {deleting ? "Deleting..." : "Delete Permanently"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk delete confirmation */}
+            {showBulkDelete && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+                    style={{ animation: "fadeInScrim 0.2s ease both" }}
+                    onClick={() => { setShowBulkDelete(false); setBulkDeletePass(""); setBulkDeleteErr(""); }}>
+                    <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.35)] w-full max-w-md p-6 relative"
+                        style={{ animation: "modalPop 0.28s cubic-bezier(.34,1.4,.64,1) both" }}
+                        onClick={e => e.stopPropagation()}>
+                        <button onClick={() => { setShowBulkDelete(false); setBulkDeletePass(""); setBulkDeleteErr(""); }}
+                            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition">
+                            <MdClose size={20} />
+                        </button>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                <FiTrash2 className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-800 text-lg">Delete {selected.size} Account{selected.size !== 1 ? "s" : ""}?</h3>
+                                <p className="text-xs text-gray-500">This action cannot be undone.</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">Enter your password to confirm:</p>
+                        <input type="password" value={bulkDeletePass}
+                            onChange={e => setBulkDeletePass(e.target.value)}
+                            placeholder="Enter your password"
+                            className="w-full rounded-xl border-2 border-gray-300 focus:border-red-400 focus:outline-none px-3.5 py-2.5 text-sm mb-2"
+                            onKeyDown={e => e.key === "Enter" && handleBulkDelete()} autoFocus />
+                        {bulkDeleteErr && <p className="text-red-500 text-xs mb-3">{bulkDeleteErr}</p>}
+                        <div className="flex gap-3 mt-3">
+                            <button onClick={() => { setShowBulkDelete(false); setBulkDeletePass(""); setBulkDeleteErr(""); }}
+                                className="flex-1 py-2.5 rounded-xl bg-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-300">
+                                Cancel
+                            </button>
+                            <button onClick={handleBulkDelete} disabled={bulkDeleting}
+                                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 disabled:opacity-60">
+                                {bulkDeleting ? "Deleting..." : "Delete Permanently"}
                             </button>
                         </div>
                     </div>

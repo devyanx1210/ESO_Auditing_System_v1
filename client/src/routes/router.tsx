@@ -9,7 +9,6 @@ import SysAdminLayout  from "../layouts/SysAdminLayout";
 /* Pages - Public */
 import LandingPage       from "../pages/LandingPage";
 import NotFoundPage      from "../pages/NotFoundPage";
-import SignupPage        from "../pages/SignupPage";
 import MoreInfo          from "../pages/MoreInfo";
 import VerifyEmailPage   from "../pages/VerifyEmailPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
@@ -51,7 +50,6 @@ const router = createBrowserRouter([
         errorElement: <NotFoundPage />,
         children: [
             { index: true, element: <LandingPage /> },
-            { path: "signup",           element: <SignupPage /> },
             { path: "more-info",        element: <MoreInfo /> },
             { path: "verify-email",     element: <VerifyEmailPage /> },
             { path: "forgot-password",  element: <ForgotPasswordPage /> },

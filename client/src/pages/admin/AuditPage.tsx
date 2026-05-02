@@ -45,8 +45,7 @@ function fmtDateTime(d: string | null) {
     return dt.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
         + " " + dt.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
 }
-const receiptUrl = (p: string | null) =>
-    !p ? null : p.startsWith("http") ? p : `/uploads/${p}`;
+const receiptUrl = (p: string | null) => (!p ? null : p);
 
 // ─── Stat Card (matches Dashboard style) ─────────────────────────────────────
 
@@ -222,6 +221,16 @@ function InfoModal({ onClose, darkMode }: { onClose: () => void; darkMode: boole
 
 // ─── Expense / Budget Modal ───────────────────────────────────────────────────
 
+const EXPENSE_CATEGORIES = [
+    "Events & Activities",
+    "Office Supplies",
+    "Printing & Reproduction",
+    "Food & Meals",
+    "Transportation",
+    "Equipment & Materials",
+    "Miscellaneous",
+];
+
 interface RecordModalProps {
     token:       string;
     schoolYears: string[];
@@ -237,24 +246,28 @@ function RecordModal({ token, schoolYears, editing, mode, onClose, onDone, darkM
     const editBudg  = !isExpense ? (editing as BudgetItem | null) : null;
 
     const [title,       setTitle]       = useState(editing?.title ?? "");
+    const [category,    setCategory]    = useState(editExp?.category ?? "");
     const [description, setDescription] = useState(editing?.description ?? "");
     const [amount,      setAmount]      = useState(editExp ? String(editExp.amount) : editBudg ? String(editBudg.allocatedAmount) : "");
     const [semester,    setSemester]    = useState(editing ? String(editing.semester) : "1");
     const [schoolYear,  setSchoolYear]  = useState(editing?.schoolYear ?? (schoolYears[0] ?? "2024-2025"));
+    const [receiptFile, setReceiptFile] = useState<File | null>(null);
     const [saving,      setSaving]      = useState(false);
     const [err,         setErr]         = useState("");
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     async function submit() {
-        if (!title.trim())          return setErr("Title is required");
+        if (!title.trim()) return setErr("Title is required");
         if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return setErr("Enter a valid amount");
         setSaving(true); setErr("");
         try {
             const sem = Number(semester);
             const sy  = schoolYear;
             if (isExpense) {
-                const payload = { title: title.trim(), description: description.trim() || undefined, amount: Number(amount), semester: sem, school_year: sy };
-                if (editExp) await auditService.updateExpense(token, editExp.expenseId, payload);
-                else         await auditService.createExpense(token, payload);
+                const payload = { title: title.trim(), category: category || undefined, description: description.trim() || undefined, amount: Number(amount), semester: sem, school_year: sy };
+                if (editExp) await auditService.updateExpense(token, editExp.expenseId, payload, receiptFile);
+                else         await auditService.createExpense(token, payload, receiptFile);
             } else {
                 const payload = { title: title.trim(), description: description.trim() || undefined, allocated_amount: Number(amount), semester: sem, school_year: sy };
                 if (editBudg) await auditService.updateBudget(token, editBudg.budgetId, payload);
@@ -285,10 +298,19 @@ function RecordModal({ token, schoolYears, editing, mode, onClose, onDone, darkM
                 </p>
                 <div className="flex flex-col gap-3">
                     <div>
-                        <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Title / Description</label>
+                        <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Title / Particulars</label>
                         <input className={inp} value={title} onChange={e => setTitle(e.target.value)}
                             placeholder={isExpense ? "e.g. Tarpaulin printing" : "e.g. Sports Fest Budget"} />
                     </div>
+                    {isExpense && (
+                        <div>
+                            <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Category</label>
+                            <select className={inp} value={category} onChange={e => setCategory(e.target.value)}>
+                                <option value="">— Select category —</option>
+                                {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                    )}
                     <div>
                         <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Details (optional)</label>
                         <textarea className={`${inp} resize-none`} rows={2} value={description} onChange={e => setDescription(e.target.value)} placeholder="Additional details..." />
@@ -316,6 +338,39 @@ function RecordModal({ token, schoolYears, editing, mode, onClose, onDone, darkM
                             </select>
                         </div>
                     </div>
+                    {isExpense && (
+                        <div>
+                            <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                Official Receipt / Proof {editExp?.receiptPath ? "(existing attached)" : "(optional)"}
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <button type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold border-2 border-dashed transition text-center
+                                        ${receiptFile
+                                            ? "border-orange-400 text-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                                            : darkMode ? "border-gray-600 text-gray-500 hover:border-gray-400" : "border-gray-200 text-gray-400 hover:border-gray-300"
+                                        }`}>
+                                    {receiptFile ? receiptFile.name : "Click to attach OR / photo"}
+                                </button>
+                                {editExp?.receiptPath && !receiptFile && (
+                                    <a href={editExp.receiptPath} target="_blank" rel="noopener noreferrer"
+                                        className="text-[10px] text-orange-500 hover:underline whitespace-nowrap flex items-center gap-0.5 font-semibold">
+                                        <FiExternalLink className="w-3 h-3" /> View
+                                    </a>
+                                )}
+                                {receiptFile && (
+                                    <button type="button" onClick={() => { setReceiptFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                                        className="text-gray-400 hover:text-red-500 transition">
+                                        <FiX className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <input ref={fileInputRef} type="file" accept="image/*,application/pdf"
+                                className="hidden"
+                                onChange={e => { const f = e.target.files?.[0]; if (f) setReceiptFile(f); }} />
+                        </div>
+                    )}
                     {err && <p className="text-red-500 text-xs">{err}</p>}
                 </div>
                 <div className="flex gap-3 justify-end mt-5">
@@ -512,10 +567,10 @@ const AuditPage = () => {
         const expenseRows = expList.map((item, i) => `
             <tr class="${i % 2 !== 0 ? "alt" : ""}">
                 <td>${i + 1}</td>
-                <td><b>${item.title}</b></td>
+                <td><b>${item.title}</b>${item.category ? `<br><span style="font-size:8pt;color:#6b7280">${item.category}</span>` : ""}</td>
                 <td>${semLabel(item.semester)} · ${item.schoolYear}</td>
                 <td class="r red">${fmt(item.amount)}</td>
-                <td class="c">${item.receiptPath ? "Yes" : "No"}</td>
+                <td class="c">${item.receiptPath ? '<span style="color:#16a34a">Yes</span>' : '<span style="color:#9ca3af">No</span>'}</td>
             </tr>`).join("");
 
         const budgetRows = budgets.map((item, i) => `
@@ -558,7 +613,12 @@ const AuditPage = () => {
   td{padding:4px 8px;border-bottom:1px solid #eee;vertical-align:top}
   tr.alt td{background:#f9fafb}
   .c{text-align:center}.r{text-align:right}
-  .footer{margin-top:24px;font-size:8pt;color:#888;text-align:center;border-top:1px solid #ddd;padding-top:8px}
+  .footer{margin-top:16px;font-size:8pt;color:#888;text-align:center;border-top:1px solid #ddd;padding-top:8px}
+  .sig-section{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:40px;margin-bottom:16px}
+  .sig-block{text-align:center}
+  .sig-line{border-bottom:1.5px solid #333;margin-bottom:6px;height:40px}
+  .sig-name{font-size:9pt;font-weight:700}
+  .sig-title{font-size:7.5pt;color:#666;margin-top:2px}
   @media print{body{padding:10px}}
 </style></head>
 <body>
@@ -610,6 +670,28 @@ const AuditPage = () => {
   <tbody>${ledgerRows || '<tr><td colspan="5" class="c" style="color:#999;padding:10px">No ledger entries.</td></tr>'}</tbody>
 </table>
 
+<div class="sig-section">
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-name">ESO Treasurer</div>
+    <div class="sig-title">Signature over Printed Name</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-name">ESO President</div>
+    <div class="sig-title">Signature over Printed Name</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-name">ESO Adviser</div>
+    <div class="sig-title">Signature over Printed Name</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-name">College Dean</div>
+    <div class="sig-title">Signature over Printed Name</div>
+  </div>
+</div>
 <div class="footer">This report was generated automatically by ESO Auditing System. Verify data with official records.</div>
 </body></html>`);
         win.document.close();
@@ -1090,10 +1172,11 @@ const AuditPage = () => {
                         </button>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="eso-table w-full text-xs min-w-[640px]">
+                        <table className="eso-table w-full text-xs min-w-[700px]">
                             <thead className={th}>
                                 <tr>
                                     <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Title</th>
+                                    <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Category</th>
                                     <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Details</th>
                                     <th className="px-4 py-3 text-center text-[10px] uppercase font-semibold tracking-wide">Semester</th>
                                     <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">Amount</th>
@@ -1107,7 +1190,12 @@ const AuditPage = () => {
                                 {expList.map((item, i) => (
                                     <tr key={item.expenseId} className={`border-b ${darkMode ? "border-gray-700/40" : "border-gray-100"} ${i % 2 === 0 ? "" : darkMode ? "bg-white/[0.02]" : "bg-gray-50/60"}`}>
                                         <td className={`px-4 py-2.5 font-medium ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{item.title}</td>
-                                        <td className={`px-4 py-2.5 max-w-[160px] truncate ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{item.description ?? "—"}</td>
+                                        <td className="px-4 py-2.5">
+                                            {item.category
+                                                ? <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${darkMode ? "bg-orange-900/40 text-orange-300" : "bg-orange-100 text-orange-700"}`}>{item.category}</span>
+                                                : <span className={`text-[10px] ${darkMode ? "text-gray-700" : "text-gray-300"}`}>—</span>}
+                                        </td>
+                                        <td className={`px-4 py-2.5 max-w-[140px] truncate ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{item.description ?? "—"}</td>
                                         <td className={`px-4 py-2.5 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                             {semLabel(item.semester)}<br/><span className="text-[10px]">{item.schoolYear}</span>
                                         </td>
@@ -1137,13 +1225,13 @@ const AuditPage = () => {
                                     </tr>
                                 ))}
                                 {expList.length === 0 && (
-                                    <tr><td colSpan={8} className={`px-4 py-12 text-center text-sm ${darkMode ? "text-gray-600" : "text-gray-400"}`}>No expense records.</td></tr>
+                                    <tr><td colSpan={9} className={`px-4 py-12 text-center text-sm ${darkMode ? "text-gray-600" : "text-gray-400"}`}>No expense records.</td></tr>
                                 )}
                             </tbody>
                             {expList.length > 0 && (
                                 <tfoot>
                                     <tr className={`border-t-2 ${darkMode ? "border-gray-600 bg-[#222]/40" : "border-gray-200 bg-gray-50"}`}>
-                                        <td colSpan={3} className={`px-4 py-3 text-xs font-bold uppercase ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Total Expenses</td>
+                                        <td colSpan={4} className={`px-4 py-3 text-xs font-bold uppercase ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Total Expenses</td>
                                         <td className="px-4 py-3 text-right text-sm font-bold text-red-500">{fmt(expList.reduce((s, r) => s + r.amount, 0))}</td>
                                         <td colSpan={4}></td>
                                     </tr>

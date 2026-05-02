@@ -1,6 +1,5 @@
 import { useState, useReducer, useEffect } from "react";
 import "../../styles/index.css";
-import Signup from "./SignupPage";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { authService } from "../services/auth.service";
@@ -25,7 +24,6 @@ function signinReducer(state: SigninState, action: FormAction): SigninState {
 }
 
 const LandingPage = () => {
-    const [showSignup, setShowSignup] = useState(false);
     const [state, dispatch] = useReducer(signinReducer, initialState);
     const [signinError, setSigninError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +80,7 @@ const LandingPage = () => {
     }, []);
 
     return (
-        <div className="landing-page relative min-h-screen w-screen bg-black">
+        <div className="landing-page relative min-h-screen w-screen bg-black overflow-x-hidden">
 
             <div
                 className="landing-bg fixed inset-0 bg-cover bg-center z-0"
@@ -93,15 +91,16 @@ const LandingPage = () => {
             <div className="fixed inset-0 z-0 pointer-events-none"
                 style={{ background: "radial-gradient(ellipse 60% 50% at 18% 8%, rgba(234,88,12,0.18) 0%, transparent 60%)" }} />
 
-            <header className="landing-header fixed top-0 left-0 right-0 z-20 flex h-[72px] w-full items-center justify-between px-4 sm:px-6 text-white"
+            <header className="landing-header fixed top-0 left-0 right-0 z-20 flex min-h-[72px] w-full items-center justify-between px-4 sm:px-6 text-white py-2"
                 style={{ background: "linear-gradient(to right, #fbbf24, #f97316, #ea580c)" }}>
-                <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="leading-tight">
-                        <div className="font-bold text-[clamp(11px,1.4vw,18px)] tracking-wide">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+                    <div className="leading-snug min-w-0">
+                        <div className="font-bold text-xs sm:text-base tracking-wide">
                             Marinduque State University
                         </div>
-                        <div className="text-white/80 text-[10px] tracking-widest uppercase font-medium hidden sm:block">
-                            College of Engineering &nbsp;·&nbsp; Engineering Student Organization
+                        <div className="text-white/80 text-[8px] sm:text-[10px] tracking-wider uppercase font-medium leading-tight">
+                            <div>College of Engineering</div>
+                            <div>Engineering Student Organization</div>
                         </div>
                     </div>
                 </div>
@@ -115,19 +114,8 @@ const LandingPage = () => {
                     More Info
                 </a>
             </header>
-            {/* Accent line under fixed header */}
-            <div className="fixed top-[72px] left-0 right-0 z-20 h-[3px]"
-                style={{ background: "linear-gradient(to right, #fbbf24, #ea580c, #9a3412)" }} />
+            <main className="landing-main relative z-10 min-h-screen overflow-x-hidden overflow-y-auto pt-[72px]">
 
-            <main className="landing-main relative z-10 min-h-screen overflow-y-auto pt-[75px]">
-
-                {showSignup ? (
-                    /* ── Signup: full-width centered, no side logo ── */
-                    <div className="flex items-start justify-center py-6 px-4 min-h-[calc(100vh-75px)]">
-                        <Signup onCancel={() => setShowSignup(false)} />
-                    </div>
-                ) : (
-                    /* ── Login: side-by-side logo + form ── */
                     <div className="flex flex-col items-center justify-center gap-4 py-8 px-4
                         md:flex-row md:items-center md:justify-start md:gap-0 md:py-0 min-h-[calc(100vh-75px)]">
 
@@ -148,14 +136,10 @@ const LandingPage = () => {
                         <div className="w-full max-w-sm flex flex-col items-center text-center text-white
                             md:w-[50%] md:max-w-none md:items-start md:text-left">
 
-                            <h1 className="mb-5 font-extrabold leading-tight md:leading-snug tracking-tight
-                                text-2xl sm:text-3xl md:text-[clamp(32px,4vw,60px)]">
-                                Engineering Student
-                                <br className="hidden sm:block" />{" "}
-                                Organization{" "}
-                                <span className="text-orange-400">(ESO)</span>
-                                <br />
-                                Auditing System
+                            <h1 className="mb-5 font-extrabold leading-tight tracking-tight text-2xl sm:text-3xl md:text-[clamp(32px,4vw,60px)]">
+                                <span className="block">Engineering Student</span>
+                                <span className="block">Organization <span className="text-orange-400">(ESO)</span></span>
+                                <span className="block">Auditing System</span>
                             </h1>
 
                             <form onSubmit={handleSigninSubmit} className="flex flex-col gap-3 w-full max-w-[280px] md:max-w-[300px]">
@@ -223,15 +207,6 @@ const LandingPage = () => {
                             </form>
 
                             <p className="mt-3 text-sm">
-                                Does not have an account?{" "}
-                                <span
-                                    className="cursor-pointer text-orange-400 hover:text-orange-300 font-semibold"
-                                    onClick={() => setShowSignup(true)}
-                                >
-                                    Sign up here
-                                </span>
-                            </p>
-                            <p className="mt-1 text-sm">
                                 <span
                                     className="cursor-pointer text-white/50 hover:text-orange-300 transition"
                                     onClick={() => navigate("/forgot-password")}
@@ -241,7 +216,6 @@ const LandingPage = () => {
                             </p>
                         </div>
                     </div>
-                )}
             </main>
 
             {loading && (

@@ -1,26 +1,34 @@
 import nodemailer from "nodemailer";
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD;
-const APP_NAME   = "ESO Auditing System";
+const APP_NAME = "ESO Auditing System";
 
-// Reuse the same transporter for the lifetime of the process
-const transporter = (GMAIL_USER && GMAIL_PASS)
-    ? nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass: GMAIL_PASS } })
-    : null;
+let _transporter: nodemailer.Transporter | null = null;
+
+function getTransporter(): nodemailer.Transporter | null {
+    if (_transporter) return _transporter;
+    const user = process.env.GMAIL_USER;
+    const pass = process.env.GMAIL_APP_PASSWORD;
+    console.log("[email] GMAIL_USER:", user ?? "NOT SET");
+    console.log("[email] GMAIL_APP_PASSWORD:", pass ? "SET" : "NOT SET");
+    if (!user || !pass) return null;
+    _transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+    return _transporter;
+}
 
 async function send(to: string, subject: string, html: string): Promise<void> {
-    if (!transporter) {
-        // Dev fallback: print to console so the system still works without email configured
+    const transporter = getTransporter();
+    const user = process.env.GMAIL_USER;
+    if (!transporter || !user) {
         console.log(`[email] To: ${to} | Subject: ${subject}`);
         return;
     }
-    await transporter.sendMail({
-        from: `"${APP_NAME}" <${GMAIL_USER}>`,
-        to,
-        subject,
-        html,
-    });
+    try {
+        await transporter.sendMail({ from: `"${APP_NAME}" <${user}>`, to, subject, html });
+        console.log(`[email] Sent to: ${to}`);
+    } catch (err: any) {
+        console.error("[email] Send failed:", err.message);
+        throw err;
+    }
 }
 
 function baseTemplate(title: string, body: string): string {

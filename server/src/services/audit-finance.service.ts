@@ -28,6 +28,7 @@ export interface IncomeItem {
 export interface ExpenseItem {
     expenseId:      number;
     title:          string;
+    category:       string | null;
     description:    string | null;
     amount:         number;
     semester:       number;
@@ -154,6 +155,7 @@ export const getExpenseList = async (
         SELECT
             e.expense_id     AS expenseId,
             e.title,
+            e.category,
             e.description,
             e.amount,
             e.semester,
@@ -231,6 +233,7 @@ export const getChartData = async (schoolYear: string | null): Promise<ChartData
 export const addExpense = async (
     userId: number,
     title: string,
+    category: string | null,
     description: string | null,
     amount: number,
     semester: number,
@@ -238,9 +241,9 @@ export const addExpense = async (
     receiptPath: string | null
 ): Promise<number> => {
     const [result]: any = await pool.execute(
-        `INSERT INTO expenses (title, description, amount, semester, school_year, recorded_by, receipt_path)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [title, description ?? null, amount, semester, schoolYear, userId, receiptPath ?? null]
+        `INSERT INTO expenses (title, category, description, amount, semester, school_year, recorded_by, receipt_path)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [title, category ?? null, description ?? null, amount, semester, schoolYear, userId, receiptPath ?? null]
     );
     return result.insertId;
 };
@@ -250,16 +253,26 @@ export const addExpense = async (
 export const updateExpense = async (
     expenseId: number,
     title: string,
+    category: string | null,
     description: string | null,
     amount: number,
     semester: number,
-    schoolYear: string
+    schoolYear: string,
+    receiptPath?: string | null
 ): Promise<void> => {
-    await pool.execute(
-        `UPDATE expenses SET title=?, description=?, amount=?, semester=?, school_year=?, updated_at=NOW()
-         WHERE expense_id=? AND deleted_at IS NULL`,
-        [title, description ?? null, amount, semester, schoolYear, expenseId]
-    );
+    if (receiptPath !== undefined) {
+        await pool.execute(
+            `UPDATE expenses SET title=?, category=?, description=?, amount=?, semester=?, school_year=?, receipt_path=?, updated_at=NOW()
+             WHERE expense_id=? AND deleted_at IS NULL`,
+            [title, category ?? null, description ?? null, amount, semester, schoolYear, receiptPath, expenseId]
+        );
+    } else {
+        await pool.execute(
+            `UPDATE expenses SET title=?, category=?, description=?, amount=?, semester=?, school_year=?, updated_at=NOW()
+             WHERE expense_id=? AND deleted_at IS NULL`,
+            [title, category ?? null, description ?? null, amount, semester, schoolYear, expenseId]
+        );
+    }
 };
 
 // Delete (soft) expense

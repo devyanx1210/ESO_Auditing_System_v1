@@ -261,7 +261,6 @@ export const getAllRoles = async () => {
     const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT role_id, role_name, role_label, clearance_step
          FROM roles
-         WHERE role_name != 'student'
          ORDER BY role_label`
     );
     return rows;

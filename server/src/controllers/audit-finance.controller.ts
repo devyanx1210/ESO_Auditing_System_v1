@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import * as auditService from "../services/audit-finance.service.js";
+import { uploadReceipt, uploadToCloudinary } from "../middleware/upload.middleware.js";
 
 function parseSemester(v: any): number | null {
     const n = Number(v);
@@ -68,44 +69,66 @@ export const getSchoolYears = async (_req: Request, res: Response): Promise<void
     }
 };
 
-// POST /admin/audit/expenses
-export const createExpense = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const userId = (req as any).user.userId;
-        const { title, description, amount, semester, school_year } = req.body;
-        if (!title || !amount || !semester || !school_year)
-            return sendError(res, "title, amount, semester, and school_year are required", 400) as any;
-        const sem = parseSemester(semester);
-        if (!sem) return sendError(res, "semester must be 1, 2, or 3", 400) as any;
-        const sy  = parseSchoolYear(school_year);
-        if (!sy)  return sendError(res, "school_year must be in format YYYY-YYYY", 400) as any;
+// POST /admin/audit/expenses  (multipart — optional receipt upload)
+export const createExpense = (req: Request, res: Response): void => {
+    uploadReceipt(req, res, async (err) => {
+        if (err) return sendError(res, err.message, 400) as any;
+        try {
+            const userId = (req as any).user.userId;
+            const { title, category, description, amount, semester, school_year } = req.body;
+            if (!title || !amount || !semester || !school_year)
+                return sendError(res, "title, amount, semester, and school_year are required", 400) as any;
+            const sem = parseSemester(semester);
+            if (!sem) return sendError(res, "semester must be 1, 2, or 3", 400) as any;
+            const sy  = parseSchoolYear(school_year);
+            if (!sy)  return sendError(res, "school_year must be in format YYYY-YYYY", 400) as any;
 
-        const id = await auditService.addExpense(
-            userId, title, description ?? null, Number(amount), sem, sy, null
-        );
-        sendSuccess(res, { expenseId: id }, "Created", 201);
-    } catch (e: any) {
-        sendError(res, e.message, 500);
-    }
+            let receiptUrl: string | null = null;
+            if (req.file) {
+                const { url } = await uploadToCloudinary(req.file.buffer, "eso/expense-receipts");
+                receiptUrl = url;
+            }
+
+            const id = await auditService.addExpense(
+                userId, title, category ?? null, description ?? null,
+                Number(amount), sem, sy, receiptUrl
+            );
+            sendSuccess(res, { expenseId: id }, "Created", 201);
+        } catch (e: any) {
+            sendError(res, e.message, 500);
+        }
+    });
 };
 
-// PUT /admin/audit/expenses/:id
-export const editExpense = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const id = Number(req.params.id);
-        const { title, description, amount, semester, school_year } = req.body;
-        if (!title || !amount || !semester || !school_year)
-            return sendError(res, "title, amount, semester, and school_year are required", 400) as any;
-        const sem = parseSemester(semester);
-        if (!sem) return sendError(res, "semester must be 1, 2, or 3", 400) as any;
-        const sy  = parseSchoolYear(school_year);
-        if (!sy)  return sendError(res, "school_year must be in format YYYY-YYYY", 400) as any;
+// PUT /admin/audit/expenses/:id  (multipart — optional new receipt upload)
+export const editExpense = (req: Request, res: Response): void => {
+    uploadReceipt(req, res, async (err) => {
+        if (err) return sendError(res, err.message, 400) as any;
+        try {
+            const id = Number(req.params.id);
+            const { title, category, description, amount, semester, school_year } = req.body;
+            if (!title || !amount || !semester || !school_year)
+                return sendError(res, "title, amount, semester, and school_year are required", 400) as any;
+            const sem = parseSemester(semester);
+            if (!sem) return sendError(res, "semester must be 1, 2, or 3", 400) as any;
+            const sy  = parseSchoolYear(school_year);
+            if (!sy)  return sendError(res, "school_year must be in format YYYY-YYYY", 400) as any;
 
-        await auditService.updateExpense(id, title, description ?? null, Number(amount), sem, sy);
-        sendSuccess(res, { ok: true });
-    } catch (e: any) {
-        sendError(res, e.message, 500);
-    }
+            let receiptUrl: string | undefined = undefined;
+            if (req.file) {
+                const { url } = await uploadToCloudinary(req.file.buffer, "eso/expense-receipts");
+                receiptUrl = url;
+            }
+
+            await auditService.updateExpense(
+                id, title, category ?? null, description ?? null,
+                Number(amount), sem, sy, receiptUrl
+            );
+            sendSuccess(res, { ok: true });
+        } catch (e: any) {
+            sendError(res, e.message, 500);
+        }
+    });
 };
 
 // DELETE /admin/audit/expenses/:id

@@ -403,7 +403,7 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
         [email.toLowerCase().trim()]
     );
     // Always return silently — do not reveal whether the email exists
-    if (!rows.length || !rows[0].email_verified) return;
+    if (!rows.length) return;
     const token    = crypto.randomBytes(32).toString("hex");
     const tokenExp = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await pool.execute(

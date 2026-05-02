@@ -26,6 +26,7 @@ export interface IncomeItem {
 export interface ExpenseItem {
     expenseId:      number;
     title:          string;
+    category:       string | null;
     description:    string | null;
     amount:         number;
     semester:       number;
@@ -89,17 +90,29 @@ export const auditService = {
     getSchoolYears: (token: string) =>
         apiFetch<string[]>("/admin/audit/school-years", {}, token),
 
-    createExpense: (token: string, data: { title: string; description?: string; amount: number; semester: number; school_year: string }) =>
-        apiFetch<{ expenseId: number }>("/admin/audit/expenses", {
-            method: "POST",
-            body: JSON.stringify(data),
-        }, token),
+    createExpense: (token: string, data: { title: string; category?: string; description?: string; amount: number; semester: number; school_year: string }, receipt?: File | null) => {
+        const fd = new FormData();
+        fd.append("title", data.title);
+        if (data.category)    fd.append("category", data.category);
+        if (data.description) fd.append("description", data.description);
+        fd.append("amount",      String(data.amount));
+        fd.append("semester",    String(data.semester));
+        fd.append("school_year", data.school_year);
+        if (receipt) fd.append("receipt", receipt);
+        return apiFetch<{ expenseId: number }>("/admin/audit/expenses", { method: "POST", body: fd }, token);
+    },
 
-    updateExpense: (token: string, id: number, data: { title: string; description?: string; amount: number; semester: number; school_year: string }) =>
-        apiFetch<{ ok: boolean }>(`/admin/audit/expenses/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(data),
-        }, token),
+    updateExpense: (token: string, id: number, data: { title: string; category?: string; description?: string; amount: number; semester: number; school_year: string }, receipt?: File | null) => {
+        const fd = new FormData();
+        fd.append("title", data.title);
+        if (data.category)    fd.append("category", data.category);
+        if (data.description) fd.append("description", data.description);
+        fd.append("amount",      String(data.amount));
+        fd.append("semester",    String(data.semester));
+        fd.append("school_year", data.school_year);
+        if (receipt) fd.append("receipt", receipt);
+        return apiFetch<{ ok: boolean }>(`/admin/audit/expenses/${id}`, { method: "PUT", body: fd }, token);
+    },
 
     deleteExpense: (token: string, id: number) =>
         apiFetch<{ ok: boolean }>(`/admin/audit/expenses/${id}`, {
