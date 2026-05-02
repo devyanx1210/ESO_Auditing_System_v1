@@ -34,7 +34,15 @@ const LandingPage = () => {
     const [resendMsg, setResendMsg] = useState("");
 
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { login, user, isLoading } = useAuth();
+
+    useEffect(() => {
+        if (!isLoading && user) {
+            if (user.role === "student") navigate("/student/dashboard", { replace: true });
+            else if (user.role === "system_admin") navigate("/sysadmin/home", { replace: true });
+            else navigate("/dashboard/home", { replace: true });
+        }
+    }, [user, isLoading, navigate]);
 
     const handleSigninSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
