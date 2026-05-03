@@ -51,4 +51,13 @@ export const paymentService = {
         if (!res.ok) throw new Error(json.message || "Failed to submit proof");
         return json.data;
     },
+
+    retractSubmission: async (token: string, studentObligationId: number): Promise<void> => {
+        const res = await fetch(`${BASE_URL}/payments/${studentObligationId}/retract`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || "Failed to retract submission");
+    },
 };

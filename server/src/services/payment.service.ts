@@ -198,3 +198,61 @@ export const submitProof = async (
         conn.release();
     }
 };
+
+export const retractSubmission = async (
+    userId: number,
+    studentObligationId: number
+): Promise<void> => {
+    const studentId = await getStudentId(userId);
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const [soRows]: any = await conn.execute(
+            `SELECT so.status, so.amount_due
+             FROM student_obligations so
+             WHERE so.student_obligation_id = ? AND so.student_id = ?
+             FOR UPDATE`,
+            [studentObligationId, studentId]
+        );
+        if (!soRows.length) throw new Error("Obligation not found");
+        const so = soRows[0];
+        if (so.status !== 1) throw new Error("Nothing to retract — this obligation is not pending review");
+
+        if (Number(so.amount_due) > 0) {
+            // Payment — only retract if not yet reviewed
+            const [pmtRows]: any = await conn.execute(
+                `SELECT payment_id FROM payment_submissions
+                 WHERE student_obligation_id = ? AND payment_status = 0 LIMIT 1`,
+                [studentObligationId]
+            );
+            if (!pmtRows.length) throw new Error("Payment is already under review and cannot be retracted");
+            await conn.execute(
+                `DELETE FROM payment_submissions WHERE payment_id = ?`,
+                [pmtRows[0].payment_id]
+            );
+        } else {
+            // Proof — clear proof image
+            await conn.execute(
+                `UPDATE student_obligations SET proof_image = NULL, updated_at = NOW()
+                 WHERE student_obligation_id = ?`,
+                [studentObligationId]
+            );
+        }
+
+        // Reset to unpaid/unsubmitted
+        await conn.execute(
+            `UPDATE student_obligations SET status = 0, updated_at = NOW()
+             WHERE student_obligation_id = ?`,
+            [studentObligationId]
+        );
+
+        await conn.commit();
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
+    }
+};

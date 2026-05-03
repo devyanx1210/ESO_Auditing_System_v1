@@ -11,7 +11,7 @@ import {
     FiBell, FiCreditCard, FiCamera, FiTrash2, FiX, FiZoomIn,
     FiDownload, FiCheckCircle, FiFileText, FiUpload,
     FiAlertCircle, FiClock, FiCircle,
-    FiList, FiAlertTriangle, FiTrendingUp, FiShield, FiCheckSquare,
+    FiList, FiAlertTriangle, FiTrendingUp, FiShield, FiCheckSquare, FiRotateCcw,
 } from "react-icons/fi";
 
 /* ── helpers ── */
@@ -114,6 +114,8 @@ export default function StudentDashboard() {
     const [payNotes,    setPayNotes]    = useState("");
     const [paying,      setPaying]      = useState(false);
     const [payError,    setPayError]    = useState("");
+    const [retracting,  setRetracting]  = useState<number | null>(null);
+    const [retractErr,  setRetractErr]  = useState("");
 
     // QR viewer modal
     const [qrView, setQrView] = useState<{ url: string; name: string } | null>(null);
@@ -265,6 +267,22 @@ export default function StudentDashboard() {
             setPayError(err.message ?? "Failed to submit.");
         } finally {
             setPaying(false);
+        }
+    }
+
+    /* ── retract a pending submission ── */
+    async function handleRetract(o: StudentObligationItem) {
+        if (!accessToken) return;
+        setRetracting(o.studentObligationId);
+        setRetractErr("");
+        try {
+            await paymentService.retractSubmission(accessToken, o.studentObligationId);
+            const [updatedObs] = await Promise.all([studentService.getMyObligations(accessToken)]);
+            setObligations(updatedObs);
+        } catch (err: any) {
+            setRetractErr(err.message ?? "Failed to retract.");
+        } finally {
+            setRetracting(null);
         }
     }
 
@@ -531,6 +549,9 @@ export default function StudentDashboard() {
                         )}
                     </div>
 
+                    {retractErr && (
+                        <p className="text-red-500 text-xs mb-3">{retractErr}</p>
+                    )}
                     {visibleObs.length === 0 ? (
                         <p className="text-center text-gray-400 text-sm py-10">
                             {obligations.length === 0 ? "No obligations assigned yet." : "No obligations in this category."}
@@ -615,6 +636,23 @@ export default function StudentDashboard() {
                                                 >
                                                     <FiCamera className="w-3 h-3" />
                                                     {isRejected ? "Re-submit" : "Submit Proof"}
+                                                </button>
+                                            )}
+
+                                            {/* Retract button — only on pending (not-yet-reviewed) submissions */}
+                                            {isPending && !isRejected && (
+                                                <button
+                                                    onClick={() => handleRetract(o)}
+                                                    disabled={retracting === o.studentObligationId}
+                                                    title="Withdraw your submission so you can re-upload"
+                                                    className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 border ${
+                                                        dk
+                                                            ? "border-gray-600 text-gray-400 hover:text-orange-400 hover:border-orange-500 disabled:opacity-40"
+                                                            : "border-gray-300 text-gray-500 hover:text-orange-600 hover:border-orange-400 disabled:opacity-40"
+                                                    }`}
+                                                >
+                                                    <FiRotateCcw className="w-3 h-3" />
+                                                    {retracting === o.studentObligationId ? "..." : "Retract"}
                                                 </button>
                                             )}
                                         </div>

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { uploadReceipt, uploadProof, uploadToCloudinary } from "../middleware/upload.middleware.js";
-import { submitPayment, submitProof } from "../services/payment.service.js";
+import { submitPayment, submitProof, retractSubmission } from "../services/payment.service.js";
 import { sendSuccess, sendError } from "../utils/response.js";
 
 export const handleSubmitPayment = (req: Request, res: Response) => {
@@ -46,4 +46,15 @@ export const handleSubmitProof = (req: Request, res: Response) => {
             return sendError(res, e.message, 400);
         }
     });
+};
+
+export const handleRetractSubmission = async (req: Request, res: Response) => {
+    try {
+        const studentObligationId = Number(req.params.id);
+        if (!studentObligationId) return sendError(res, "Invalid obligation ID", 400);
+        await retractSubmission(req.user!.userId, studentObligationId);
+        return sendSuccess(res, null, "Submission retracted successfully");
+    } catch (e: any) {
+        return sendError(res, e.message, 400);
+    }
 };
