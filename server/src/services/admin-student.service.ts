@@ -36,7 +36,8 @@ export interface AdminStudentItem {
     shirtSize: string | null;
     userStatus: "active" | "inactive" | "suspended";
     address: string | null;
-    contactNumber: string | null;
+    contactNumber: string | null;     // student's own contact number
+    emergencyContact: string | null;  // guardian / emergency contact number
     guardianName: string | null;
 }
 
@@ -70,8 +71,9 @@ export const listStudents = async (
             u.status               AS userStatus,
             d.name                 AS programName,
             d.code                 AS programCode,
+            s.contact_number       AS contactNumber,
             g.address,
-            g.contact_number       AS contactNumber,
+            g.contact_number       AS emergencyContact,
             g.guardian_name        AS guardianName,
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
             SUM(so.status IN (2,3))                                 AS obligationsPaid,
@@ -113,9 +115,10 @@ export const listStudents = async (
         obligationsPending: Number(r.obligationsPending),
         totalPayable:       Number(r.totalPayable),
         totalPaid:          Number(r.totalPaid),
-        address:            r.address       ?? null,
-        contactNumber:      r.contactNumber ?? null,
-        guardianName:       r.guardianName  ?? null,
+        address:            r.address          ?? null,
+        contactNumber:      r.contactNumber   ?? null,
+        emergencyContact:   r.emergencyContact ?? null,
+        guardianName:       r.guardianName     ?? null,
     }));
 };
 

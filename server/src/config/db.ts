@@ -23,6 +23,10 @@ const MIGRATIONS = [
     `ALTER TABLE obligations MODIFY COLUMN description VARCHAR(500) NULL`,
     // Make receipt_filename nullable so uploads without an original filename don't crash
     `ALTER TABLE payment_submissions MODIFY COLUMN receipt_filename VARCHAR(255) NULL`,
+    // students.contact_number and shirt_size/gender not in original schema — add if missing
+    `ALTER TABLE students ADD COLUMN contact_number VARCHAR(20) NULL`,
+    `ALTER TABLE students ADD COLUMN shirt_size VARCHAR(10) NULL`,
+    `ALTER TABLE students ADD COLUMN gender ENUM('Male','Female','Other') NULL`,
     // Audit tables — not in original schema, created here so Railway DB gets them automatically
     `CREATE TABLE IF NOT EXISTS expenses (
         expense_id   INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
