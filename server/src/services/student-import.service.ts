@@ -163,8 +163,9 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
         };
 
         const validRows: ValidRow[] = [];
-        // Track repair user_ids already claimed in this batch to catch in-CSV duplicate emails
-        const usedRepairUserIds = new Set<number>();
+        // Track repair user_ids and student_nos already claimed in this batch
+        const usedRepairUserIds  = new Set<number>();
+        const processedStudentNos = new Set<string>();
 
         for (const row of rows) {
             const ref       = row.studentNo || row.name || "unknown";
@@ -175,7 +176,11 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 skipped++;
                 continue;
             }
-            if (existingStudentNos.has(row.studentNo.trim())) {
+
+            const studentNoKey = row.studentNo.trim();
+
+            // Skip if student_no already in DB or already processed earlier in this CSV
+            if (existingStudentNos.has(studentNoKey) || processedStudentNos.has(studentNoKey)) {
                 skipped++;
                 continue;
             }
@@ -190,9 +195,11 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 fullyImportedEmails.has(emailKey) ||
                 (repairUserId !== null && usedRepairUserIds.has(repairUserId));
 
+            processedStudentNos.add(studentNoKey);
+
             if (emailConflict) {
                 // Import with a unique placeholder email instead of skipping — admin must update later
-                const tempEmail = `temp.${row.studentNo.trim().toLowerCase()}@noemail.import`;
+                const tempEmail = `temp.${studentNoKey.toLowerCase()}@noemail.import`;
                 errors.push(`${ref}: email "${row.email}" is shared with another student — imported with temporary email, please update`);
                 validRows.push({ ...row, email: tempEmail, programId, yearLevel, section, firstName, lastName, repairUserId: null });
             } else {
