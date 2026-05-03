@@ -1,4 +1,3 @@
-import https from "https";
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../middleware/upload.middleware.js";
@@ -101,16 +100,16 @@ export const handleGetPdfFile = async (req: Request, res: Response) => {
         if (!tpl?.pdfPath || !isCloudinaryUrl(tpl.pdfPath))
             return sendError(res, "No PDF attached to this template", 404);
 
+        const cloudRes = await fetch(tpl.pdfPath);
+        if (!cloudRes.ok) return sendError(res, "Failed to fetch PDF from storage", 502);
+
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", "inline");
+        if (cloudRes.headers.get("content-length"))
+            res.setHeader("Content-Length", cloudRes.headers.get("content-length")!);
 
-        https.get(tpl.pdfPath, (proxyRes) => {
-            if (proxyRes.headers["content-length"])
-                res.setHeader("Content-Length", proxyRes.headers["content-length"]);
-            proxyRes.pipe(res);
-        }).on("error", (err) => {
-            if (!res.headersSent) sendError(res, err.message, 502);
-        });
+        const buffer = await cloudRes.arrayBuffer();
+        res.end(Buffer.from(buffer));
     } catch (e: any) { sendError(res, e.message); }
 };
 
