@@ -134,21 +134,27 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
 
 // 4. Bulk-check existing emails — distinguish fully-imported vs user-only (missing students record)
         const allEmails = [...new Set(rows.map(r => r.email.toLowerCase().trim()).filter(Boolean))];
-        // email → user_id for accounts that exist in users but have NO students record (need repair)
-        const repairUserIds = new Map<string, number>();
-        // emails that are fully imported (users + students both exist)
+        // email → user_id for ACTIVE accounts in users with NO students record (reuse user_id)
+        const repairUserIds  = new Map<string, number>();
+        // email → user_id for SOFT-DELETED accounts with NO students record (restore + reuse)
+        const restoreUserIds = new Map<string, number>();
+        // emails that are fully imported (active users + students both exist)
         let fullyImportedEmails = new Set<string>();
         if (allEmails.length) {
             const placeholders = allEmails.map(() => "?").join(",");
             const [exEm]: any = await conn.execute(
-                `SELECT u.user_id, u.email,
+                `SELECT u.user_id, u.email, u.deleted_at,
                         EXISTS(SELECT 1 FROM students s WHERE s.user_id = u.user_id) AS has_student
                  FROM users u WHERE u.email IN (${placeholders})`,
                 allEmails
             );
             for (const r of exEm) {
-                if (r.has_student) fullyImportedEmails.add(r.email);
-                else               repairUserIds.set(r.email, r.user_id);
+                const isDeleted = r.deleted_at !== null;
+                if (!r.has_student && isDeleted)  restoreUserIds.set(r.email, r.user_id);
+                else if (!r.has_student)           repairUserIds.set(r.email, r.user_id);
+                else if (!isDeleted)               fullyImportedEmails.add(r.email);
+                // soft-deleted + has_student: treat as fully imported (student record exists)
+                else                               fullyImportedEmails.add(r.email);
             }
         }
 
@@ -160,6 +166,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             firstName:    string;
             lastName:     string;
             repairUserId: number | null; // non-null = skip users INSERT, only create students
+            needsRestore: boolean;       // true = also un-delete the user account before creating student
         };
 
         const validRows: ValidRow[] = [];
@@ -185,15 +192,18 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 continue;
             }
 
-            const emailKey     = row.email.toLowerCase().trim();
-            const repairUserId = repairUserIds.get(emailKey) ?? null;
+            const emailKey      = row.email.toLowerCase().trim();
+            const repairUserId  = repairUserIds.get(emailKey)  ?? null;
+            const restoreUserId = restoreUserIds.get(emailKey) ?? null;
+            // Use whichever existing user_id is available (active repair takes priority)
+            const existingUserId = repairUserId ?? restoreUserId;
             const { yearLevel, section } = parseYearSection(row.yearSection);
             const { firstName, lastName } = parseName(row.name);
 
-            // Email conflict: already fully imported OR repair slot already claimed by another student
+            // Email conflict: already fully imported OR existing slot already claimed by another student
             const emailConflict =
                 fullyImportedEmails.has(emailKey) ||
-                (repairUserId !== null && usedRepairUserIds.has(repairUserId));
+                (existingUserId !== null && usedRepairUserIds.has(existingUserId));
 
             processedStudentNos.add(studentNoKey);
 
@@ -201,10 +211,10 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 // Import with a unique placeholder email instead of skipping — admin must update later
                 const tempEmail = `temp.${studentNoKey.toLowerCase()}@noemail.import`;
                 errors.push(`${ref}: email "${row.email}" is shared with another student — imported with temporary email, please update`);
-                validRows.push({ ...row, email: tempEmail, programId, yearLevel, section, firstName, lastName, repairUserId: null });
+                validRows.push({ ...row, email: tempEmail, programId, yearLevel, section, firstName, lastName, repairUserId: null, needsRestore: false });
             } else {
-                if (repairUserId !== null) usedRepairUserIds.add(repairUserId);
-                validRows.push({ ...row, programId, yearLevel, section, firstName, lastName, repairUserId });
+                if (existingUserId !== null) usedRepairUserIds.add(existingUserId);
+                validRows.push({ ...row, programId, yearLevel, section, firstName, lastName, repairUserId: existingUserId, needsRestore: restoreUserId !== null && existingUserId === restoreUserId });
             }
         }
 
@@ -228,6 +238,14 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 const row = validRows[i];
                 try {
                     let userId = row.repairUserId;
+
+                    // Restore soft-deleted account before creating student record
+                    if (userId !== null && row.needsRestore) {
+                        await conn.execute(
+                            `UPDATE users SET deleted_at = NULL, status = 'active', updated_at = NOW() WHERE user_id = ?`,
+                            [userId]
+                        );
+                    }
 
                     if (userId === null) {
                         // Full insert: new user + student record
