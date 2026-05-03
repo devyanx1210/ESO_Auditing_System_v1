@@ -23,6 +23,35 @@ const MIGRATIONS = [
     `ALTER TABLE obligations MODIFY COLUMN description VARCHAR(500) NULL`,
     // Make receipt_filename nullable so uploads without an original filename don't crash
     `ALTER TABLE payment_submissions MODIFY COLUMN receipt_filename VARCHAR(255) NULL`,
+    // Audit tables — not in original schema, created here so Railway DB gets them automatically
+    `CREATE TABLE IF NOT EXISTS expenses (
+        expense_id   INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title        VARCHAR(255) NOT NULL,
+        category     VARCHAR(100) NULL,
+        description  VARCHAR(500) NULL,
+        amount       DECIMAL(12,2) NOT NULL,
+        semester     TINYINT NOT NULL,
+        school_year  VARCHAR(10) NOT NULL,
+        recorded_by  INT UNSIGNED NOT NULL,
+        receipt_path VARCHAR(500) NULL,
+        created_at   DATETIME NOT NULL DEFAULT NOW(),
+        updated_at   DATETIME NOT NULL DEFAULT NOW(),
+        deleted_at   DATETIME NULL,
+        FOREIGN KEY (recorded_by) REFERENCES users(user_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS budgets (
+        budget_id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title            VARCHAR(255) NOT NULL,
+        description      VARCHAR(500) NULL,
+        allocated_amount DECIMAL(12,2) NOT NULL,
+        semester         TINYINT NOT NULL,
+        school_year      VARCHAR(10) NOT NULL,
+        created_by       INT UNSIGNED NOT NULL,
+        created_at       DATETIME NOT NULL DEFAULT NOW(),
+        updated_at       DATETIME NOT NULL DEFAULT NOW(),
+        deleted_at       DATETIME NULL,
+        FOREIGN KEY (created_by) REFERENCES users(user_id)
+    )`,
 ];
 
 export async function connectDB(): Promise<void> {

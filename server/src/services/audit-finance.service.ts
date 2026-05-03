@@ -209,18 +209,21 @@ export const getChartData = async (schoolYear: string | null): Promise<ChartData
     ]);
 
     // Build a unified map keyed by "YYYY-YYYY|S"
-    const semLabel = (s: number) => s === 1 ? "1st Sem" : s === 2 ? "2nd Sem" : "Summer";
+    // obligations.semester is ENUM('1st','2nd','Summer'); expenses.semester is TINYINT
+    const semLabel = (s: any) =>
+        (s === 1 || s === "1st") ? "1st Sem" :
+        (s === 2 || s === "2nd") ? "2nd Sem" : "Summer";
     const map = new Map<string, ChartDataPoint>();
 
     for (const r of incRows) {
         const key   = `${r.schoolYear}|${r.semester}`;
-        const label = `${r.schoolYear} ${semLabel(Number(r.semester))}`;
+        const label = `${r.schoolYear} ${semLabel(r.semester)}`;
         if (!map.has(key)) map.set(key, { label, income: 0, expenses: 0 });
         map.get(key)!.income = Number(r.total);
     }
     for (const r of expRows) {
         const key   = `${r.schoolYear}|${r.semester}`;
-        const label = `${r.schoolYear} ${semLabel(Number(r.semester))}`;
+        const label = `${r.schoolYear} ${semLabel(r.semester)}`;
         if (!map.has(key)) map.set(key, { label, income: 0, expenses: 0 });
         map.get(key)!.expenses = Number(r.total);
     }

@@ -65,7 +65,7 @@ function statusBadge(status: number, paymentStatus?: number | null) {
     };
     const labels: Record<number, string> = {
         2: "Verified", 3: "Waived",
-        1: "Pending", 0: "Pending",
+        1: "Submitted", 0: "Unpaid",
     };
     return (
         <span className={`text-xs font-semibold ${colors[status] ?? "text-gray-400"}`}>
@@ -84,8 +84,8 @@ function proofStatusBadge(status: number) {
     const labels: Record<number, string> = {
         2: "Verified",
         3: "Waived",
-        1: "Pending",
-        0: "Pending",
+        1: "Submitted",
+        0: "Unpaid",
     };
     return (
         <span className={`text-xs font-semibold ${colors[status] ?? "text-gray-400"}`}>
