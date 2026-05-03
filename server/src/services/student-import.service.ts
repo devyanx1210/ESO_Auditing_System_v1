@@ -218,6 +218,33 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             }
         }
 
+// 5b. Temp-email repair: if a previous partial import already created a users row for a
+//     temp email but never created the student record, reuse that user_id instead of
+//     trying to INSERT again (which would fail with ER_DUP_ENTRY on email).
+        const tempEmailRows = validRows.filter(r => r.email.endsWith("@noemail.import") && r.repairUserId === null);
+        if (tempEmailRows.length) {
+            const tempEmails   = tempEmailRows.map(r => r.email);
+            const tPlaceholders = tempEmails.map(() => "?").join(",");
+            const [exTemp]: any = await conn.execute(
+                `SELECT u.user_id, u.email, u.deleted_at,
+                        EXISTS(SELECT 1 FROM students s WHERE s.user_id = u.user_id) AS has_student
+                 FROM users u WHERE u.email IN (${tPlaceholders})`,
+                tempEmails
+            );
+            const tempRepairMap = new Map<string, { userId: number; needsRestore: boolean }>();
+            for (const r of exTemp) {
+                if (!r.has_student)
+                    tempRepairMap.set(r.email, { userId: r.user_id, needsRestore: r.deleted_at !== null });
+            }
+            for (const row of validRows) {
+                const match = tempRepairMap.get(row.email);
+                if (match) {
+                    row.repairUserId = match.userId;
+                    row.needsRestore = match.needsRestore;
+                }
+            }
+        }
+
 // 6. Hash passwords — only needed for rows that require a new users INSERT
         const newUserRows    = validRows.filter(r => r.repairUserId === null);
         const hashes: string[] = new Array(validRows.length).fill("");
