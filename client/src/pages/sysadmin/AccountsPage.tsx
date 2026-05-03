@@ -209,9 +209,16 @@ export default function AccountsPage() {
         if (!form.firstName.trim() || !form.lastName.trim()) { setFormError("First and last name are required."); return; }
         if (!form.email.trim())       { setFormError("Email is required."); return; }
         if (form.password.length < 8) { setFormError("Password must be at least 8 characters."); return; }
+        const isStudent = form.role === "student";
         const isClassOfficer = CLASS_ROLES.includes(form.role);
         let position = form.position.trim();
-        if (isClassOfficer) {
+        if (isStudent) {
+            if (!form.studentNo.trim())  { setFormError("Student number is required."); return; }
+            if (!form.programId)         { setFormError("Program is required for students."); return; }
+            if (!form.yearLevel)         { setFormError("Year level is required."); return; }
+            if (!form.section.trim())    { setFormError("Section is required."); return; }
+            if (!form.schoolYear.trim()) { setFormError("School year is required."); return; }
+        } else if (isClassOfficer) {
             if (!form.yearLevel)          { setFormError("Year level is required for Class Officer."); return; }
             if (!form.section.trim())     { setFormError("Section is required for Class Officer."); return; }
             const yrLabel = ["1st Year","2nd Year","3rd Year","4th Year","5th Year"][Number(form.yearLevel) - 1] ?? form.yearLevel;
@@ -225,7 +232,13 @@ export default function AccountsPage() {
                 firstName: form.firstName, lastName: form.lastName,
                 email: form.email, password: form.password, role: form.role,
                 programId: form.programId ? Number(form.programId) : null,
-                position,
+                ...(isStudent ? {
+                    studentNo: form.studentNo.trim(),
+                    yearLevel: Number(form.yearLevel),
+                    section: form.section.trim(),
+                    schoolYear: form.schoolYear.trim(),
+                    semester: Number(form.semester),
+                } : { position }),
             });
             setSuccessMsg(`Account for ${form.firstName} ${form.lastName} created successfully.`);
             setShowCreate(false); setShowCreatePass(false); setForm(BLANK_FORM); load();

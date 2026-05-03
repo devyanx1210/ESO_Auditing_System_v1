@@ -28,6 +28,8 @@ export const sysadminService = {
     createAccount: (token: string, data: {
         firstName: string; lastName: string; email: string;
         password: string; role: string; programId?: number | null; position?: string;
+        yearLevel?: number | null; section?: string | null;
+        studentNo?: string | null; schoolYear?: string | null; semester?: number | null;
     }) =>
         apiFetch<any>("/sysadmin/accounts", {
             method: "POST",

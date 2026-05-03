@@ -173,6 +173,9 @@ export const createAdminAccount = async (data: {
     position?: string;
     yearLevel?: number | null;
     section?: string | null;
+    studentNo?: string | null;
+    schoolYear?: string | null;
+    semester?: number | null;
 }) => {
     const hash = await bcrypt.hash(data.password, 10);
     const [result] = await pool.execute<ResultSetHeader>(
@@ -181,7 +184,25 @@ export const createAdminAccount = async (data: {
         [data.firstName, data.lastName, data.email, hash, data.role, data.programId ?? null]
     );
     const userId = result.insertId;
-    if (data.role !== "system_admin") {
+    if (data.role === "student") {
+        await pool.execute(
+            `INSERT INTO students
+                (user_id, student_no, first_name, last_name, program_id,
+                 year_level, section, school_year, semester, is_enrolled, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+            [
+                userId,
+                data.studentNo?.trim() ?? "",
+                data.firstName.trim(),
+                data.lastName.trim(),
+                data.programId ?? null,
+                data.yearLevel ?? 1,
+                data.section?.trim() ?? null,
+                data.schoolYear?.trim() ?? "",
+                data.semester ?? 1,
+            ]
+        );
+    } else if (data.role !== "system_admin") {
         await pool.execute(
             `INSERT INTO admins (user_id, position, year_level, section, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())`,
             [userId, data.position?.trim() ?? "", data.yearLevel ?? null, data.section ?? null]

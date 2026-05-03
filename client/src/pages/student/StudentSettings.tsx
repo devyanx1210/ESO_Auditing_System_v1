@@ -312,30 +312,24 @@ const StudentSettings = () => {
                                     </div>
                                 </Field>
                                 <Field label="Year Level">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
-                                        value={yearLevel} onChange={e => setYearLevel(e.target.value)}>
-                                        <option value="1">1st Year</option>
-                                        <option value="2">2nd Year</option>
-                                        <option value="3">3rd Year</option>
-                                        <option value="4">4th Year</option>
-                                        <option value="5">5th Year</option>
-                                    </select>
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                        {["1st Year","2nd Year","3rd Year","4th Year","5th Year"][Number(yearLevel) - 1] ?? yearLevel}
+                                    </div>
                                 </Field>
                                 <Field label="Section">
-                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
-                                        value={section} onChange={e => setSection(e.target.value)} placeholder="e.g. A" />
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                        {section || ""}
+                                    </div>
                                 </Field>
                                 <Field label="School Year">
-                                    <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
-                                        value={schoolYear} onChange={e => setSchoolYear(e.target.value)} placeholder="e.g. 2025-2026" />
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                        {schoolYear}
+                                    </div>
                                 </Field>
                                 <Field label="Semester">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
-                                        value={semester} onChange={e => setSemester(Number(e.target.value))}>
-                                        <option value={1}>1st Semester</option>
-                                        <option value={2}>2nd Semester</option>
-                                        <option value={3}>Summer</option>
-                                    </select>
+                                    <div className="border-2 border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm bg-gray-50 dark:bg-[#1e1e1e] text-gray-500 dark:text-gray-500 font-medium">
+                                        {["1st Semester","2nd Semester","Summer"][semester - 1] ?? semester}
+                                    </div>
                                 </Field>
                                 <Field label="Gender">
                                     <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}

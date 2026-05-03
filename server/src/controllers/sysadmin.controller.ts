@@ -47,10 +47,21 @@ export const handleGetAccounts = async (_req: Request, res: Response) => {
 
 export const handleCreateAccount = async (req: Request, res: Response) => {
     try {
-        const { firstName, lastName, email, password, role, programId, position, yearLevel, section } = req.body;
+        const { firstName, lastName, email, password, role, programId, position, yearLevel, section, studentNo, schoolYear, semester } = req.body;
         if (!firstName || !lastName || !email || !password || !role)
             return sendError(res, "firstName, lastName, email, password, role are required", 400);
-        const id = await svc.createAdminAccount({ firstName, lastName, email, password, role, programId, position, yearLevel: yearLevel ? Number(yearLevel) : null, section: section ?? null });
+        if (role === "student" && (!studentNo || !schoolYear || !semester || !yearLevel || !programId))
+            return sendError(res, "studentNo, programId, yearLevel, section, schoolYear, and semester are required for student accounts", 400);
+        const id = await svc.createAdminAccount({
+            firstName, lastName, email, password, role,
+            programId: programId ? Number(programId) : null,
+            position,
+            yearLevel: yearLevel ? Number(yearLevel) : null,
+            section: section ?? null,
+            studentNo: studentNo ?? null,
+            schoolYear: schoolYear ?? null,
+            semester: semester ? Number(semester) : null,
+        });
         logAction({ performedBy: req.user!.userId, action: "create_account", targetType: "user", targetId: id, details: { email, role } });
         sendSuccess(res, { userId: id, message: "Account created" }, "Account created", 201);
     } catch (e: any) { sendError(res, e.message); }

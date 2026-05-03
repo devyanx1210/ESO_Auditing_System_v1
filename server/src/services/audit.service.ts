@@ -24,7 +24,7 @@ export async function logAction(params: {
                 params.ipAddress    ?? null,
             ]
         );
-    } catch {
-        // silent — audit log failure must not disrupt the request
+    } catch (e: unknown) {
+        console.error("[audit] logAction failed:", e);
     }
 }

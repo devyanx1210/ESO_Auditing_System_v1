@@ -38,6 +38,7 @@ export const BLANK_FORM = {
     firstName: "", lastName: "", email: "", password: "",
     role: "eso_officer", programId: "", position: "",
     yearLevel: "", section: "",
+    studentNo: "", schoolYear: "", semester: "1",
 };
 
 export type CreateForm = typeof BLANK_FORM;
@@ -78,6 +79,7 @@ export default function CreateAccountModal({
     onSubmit, onClose,
 }: CreateAccountModalProps) {
     const isClassOfficer = CLASS_ROLES.includes(form.role);
+    const isStudent = form.role === "student";
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
@@ -136,10 +138,11 @@ export default function CreateAccountModal({
                                     setForm(f => ({
                                         ...f, role: roleName,
                                         programId: "", yearLevel: "", section: "",
+                                        studentNo: "", schoolYear: "", semester: "1",
                                         position: POSITION_SUGGESTIONS[roleName] ?? "",
                                     }));
                                 }}>
-                                {roles.filter(r => r.role_name !== "student").map(r => (
+                                {roles.map(r => (
                                     <option key={r.role_name} value={r.role_name}>{r.role_label}</option>
                                 ))}
                             </select>
@@ -155,7 +158,16 @@ export default function CreateAccountModal({
                             </select>
                         </div>
 
-                        {isClassOfficer && (
+                        {isStudent && (
+                            <div style={{ animation: "fadeInUp 0.2s ease both" }}>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Student Number *</label>
+                                <input className={inputCls} value={form.studentNo}
+                                    onChange={e => setForm(f => ({ ...f, studentNo: e.target.value }))}
+                                    placeholder="e.g. 2024-00001" />
+                            </div>
+                        )}
+
+                        {(isStudent || isClassOfficer) && (
                             <div style={{ animation: "fadeInUp 0.2s ease both" }}>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Year Level *</label>
                                 <select className={inputCls} value={form.yearLevel}
@@ -168,7 +180,7 @@ export default function CreateAccountModal({
                             </div>
                         )}
 
-                        {isClassOfficer && (
+                        {(isStudent || isClassOfficer) && (
                             <div style={{ animation: "fadeInUp 0.2s ease both 0.05s" }}>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Section *</label>
                                 <input className={inputCls} value={form.section}
@@ -177,7 +189,28 @@ export default function CreateAccountModal({
                             </div>
                         )}
 
-                        {form.role !== "system_admin" && (
+                        {isStudent && (
+                            <div style={{ animation: "fadeInUp 0.2s ease both 0.08s" }}>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">School Year *</label>
+                                <input className={inputCls} value={form.schoolYear}
+                                    onChange={e => setForm(f => ({ ...f, schoolYear: e.target.value }))}
+                                    placeholder="e.g. 2024-2025" />
+                            </div>
+                        )}
+
+                        {isStudent && (
+                            <div style={{ animation: "fadeInUp 0.2s ease both 0.1s" }}>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Semester *</label>
+                                <select className={inputCls} value={form.semester}
+                                    onChange={e => setForm(f => ({ ...f, semester: e.target.value }))}>
+                                    <option value="1">1st Semester</option>
+                                    <option value="2">2nd Semester</option>
+                                    <option value="3">Summer</option>
+                                </select>
+                            </div>
+                        )}
+
+                        {!isStudent && form.role !== "system_admin" && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
                                 <input list="position-suggestions" className={inputCls}

@@ -186,8 +186,16 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
 
             const studentNoKey = row.studentNo.trim();
 
-            // Skip if student_no already in DB or already processed earlier in this CSV
-            if (existingStudentNos.has(studentNoKey) || processedStudentNos.has(studentNoKey)) {
+            // Skip if student_no already in DB
+            if (existingStudentNos.has(studentNoKey)) {
+                errors.push(`${studentNoKey}: already exists in the database. Skipped.`);
+                skipped++;
+                continue;
+            }
+
+            // Skip if duplicate within the same CSV
+            if (processedStudentNos.has(studentNoKey)) {
+                errors.push(`${studentNoKey}: duplicate student number in CSV. Only the first occurrence was processed.`);
                 skipped++;
                 continue;
             }
