@@ -5,10 +5,10 @@ import { isClassRole } from "../config/role-groups.js";
 
 async function getAdminId(userId: number): Promise<number> {
     const [rows]: any = await pool.execute(
-        "SELECT admin_id, program_id FROM admins WHERE user_id = ?",
+        "SELECT admin_id FROM admins WHERE user_id = ?",
         [userId]
     );
-    if (!rows.length) throw new Error("Admin profile not found");
+    if (!rows.length) throw new Error("Admin profile not found. Please contact the system administrator to fix your account.");
     return rows[0].admin_id;
 }
 
@@ -17,7 +17,8 @@ async function getAdminRecord(userId: number): Promise<{ adminId: number; progra
         "SELECT admin_id, program_id FROM admins WHERE user_id = ?",
         [userId]
     );
-    if (!rows.length) throw new Error("Admin profile not found");
+    // Fall back gracefully — ESO-wide roles don't need a program filter even without an admins row
+    if (!rows.length) return { adminId: 0, programId: null };
     return { adminId: rows[0].admin_id, programId: rows[0].program_id ?? null };
 }
 
