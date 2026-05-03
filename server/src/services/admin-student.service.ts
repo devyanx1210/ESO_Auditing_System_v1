@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { isClassRole } from "../config/role-groups.js";
+import { triggerClearanceIfComplete } from "./clearance-trigger.js";
 
 // Roles that see ALL students across every program (no program filter)
 const ALL_PROGRAMS_ROLES = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "signatory", "osas_coordinator", "dean"];
@@ -226,8 +227,10 @@ export const verifyProofObligation = async (
     status: number
 ): Promise<void> => {
     const [rows]: any = await pool.execute(
-        `SELECT so.student_id, so.amount_due, o.obligation_name,
-                s.user_id AS studentUserId
+        `SELECT so.student_id, so.status AS currentStatus, so.amount_due,
+                o.obligation_name,
+                s.user_id AS studentUserId,
+                s.school_year AS schoolYear, s.semester
          FROM student_obligations so
          JOIN obligations o ON o.obligation_id = so.obligation_id
          JOIN students s    ON s.student_id    = so.student_id
@@ -237,19 +240,37 @@ export const verifyProofObligation = async (
     if (!rows.length) throw new Error("Obligation not found");
     const ob = rows[0];
     if (Number(ob.amount_due) > 0) throw new Error("This obligation requires payment verification, not proof.");
+    if (ob.currentStatus !== 1) throw new Error("Obligation is not in a submitted/pending state.");
 
-    await pool.execute(
-        `UPDATE student_obligations SET status = ?, updated_at = NOW() WHERE student_obligation_id = ?`,
-        [status, studentObligationId]
-    );
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
 
-    const title   = status === 2 ? "Proof Verified" : "Proof Rejected";
-    const message = status === 2
-        ? `Your proof for "${ob.obligation_name}" has been verified.`
-        : `Your proof for "${ob.obligation_name}" was not accepted.`;
-    await pool.execute(
-        `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-         VALUES (?, ?, ?, ?, ?, 'obligation', 0, NOW())`,
-        [ob.studentUserId, title, message, status === 2 ? 3 : 4, studentObligationId]
-    );
+        await conn.execute(
+            `UPDATE student_obligations SET status = ?, updated_at = NOW() WHERE student_obligation_id = ?`,
+            [status, studentObligationId]
+        );
+
+        const title   = status === 2 ? "Proof Verified" : "Proof Rejected";
+        const message = status === 2
+            ? `Your proof for "${ob.obligation_name}" has been verified.`
+            : `Your proof for "${ob.obligation_name}" was not accepted.`;
+        await conn.execute(
+            `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
+             VALUES (?, ?, ?, ?, ?, 'obligation', 0, NOW())`,
+            [ob.studentUserId, title, message, status === 2 ? 3 : 4, studentObligationId]
+        );
+
+        // Auto-create clearance if this was the last unsettled obligation
+        if (status === 2) {
+            await triggerClearanceIfComplete(conn, ob.student_id, ob.schoolYear, ob.semester, ob.studentUserId);
+        }
+
+        await conn.commit();
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
+    }
 };

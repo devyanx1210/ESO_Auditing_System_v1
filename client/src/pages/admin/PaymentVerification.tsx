@@ -928,84 +928,159 @@ const PaymentVerification = () => {
                 <>
                     {/* Pending — List mode */}
                     {subTab === "pending" && (
-                        filteredPending.length === 0 ? (
-                            <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card} ${sub}`}>
-                                {search ? `No payments matching "${search}".` : "No pending payment submissions."}
-                            </div>
-                        ) : (
-                            <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
-                                <table className="eso-table w-full min-w-[640px] border-collapse">
-                                    <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
-                                        <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
-                                            <th className="px-3 py-2 text-center w-10">
-                                                <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
-                                                    checked={allPendingSel}
-                                                    onChange={e => setSelectedPending(e.target.checked ? new Set(filteredPending.map(p => p.paymentId)) : new Set())} />
-                                            </th>
-                                            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
-                                            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
-                                            <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wide w-24">Amount</th>
-                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
-                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Receipt</th>
-                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-20">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredPending.map((p, i) => (
-                                            <tr key={p.paymentId}
-                                                onClick={() => togglePending(p.paymentId, !selectedPending.has(p.paymentId))}
-                                                style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
-                                                className={`transition-colors cursor-pointer ${
-                                                    selectedPending.has(p.paymentId)
-                                                        ? darkMode ? "bg-orange-900/30" : "bg-orange-50"
-                                                        : i % 2 === 0
-                                                            ? darkMode ? "bg-[#1a1a1a] hover:bg-[#2a2a2a]" : "bg-white hover:bg-gray-50"
-                                                            : darkMode ? "bg-[#1a1a1a]/60 hover:bg-[#2a2a2a]" : "bg-gray-50/60 hover:bg-gray-100/50"
-                                                }`}>
-                                                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
-                                                    <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
-                                                        checked={selectedPending.has(p.paymentId)}
-                                                        onChange={e => togglePending(p.paymentId, e.target.checked)} />
-                                                </td>
-                                                <td className="px-3 py-2.5">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <UserAvatar size="sm" src={p.avatarPath} />
-                                                        <div>
-                                                            <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
-                                                            <div className={`text-xs font-mono ${sub}`}>{p.studentNo} · {programLabel(p.programCode)}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
-                                                <td className={`px-3 py-2.5 text-right font-bold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-                                                    PHP {Number(p.amountPaid).toFixed(2)}
-                                                </td>
-                                                <td className="px-3 py-2.5 text-center">
-                                                    <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
-                                                    <div className={`text-[10px] ${sub}`}>{fmtTime(p.submittedAt)}</div>
-                                                </td>
-                                                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
-                                                    {p.receiptPath
-                                                        ? <button onClick={() => setPreviewUrl(receiptUrl(p.receiptPath))}
-                                                            className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">View</button>
-                                                        : <span className={`text-xs ${sub}`}>—</span>}
-                                                </td>
-                                                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        <button onClick={() => listIsAuthed
-                                                            ? adminStudentService.verifyPayment(accessToken!, p.paymentId, 1, "").then(load)
-                                                            : setPendingVerifyId(p.paymentId)}
-                                                            className="px-2 py-1 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition">
-                                                            Verify
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )
+                        <div className="flex flex-col gap-5">
+                            {/* Empty state — both queues empty */}
+                            {filteredPending.length === 0 && filteredProofs.length === 0 && (
+                                <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card} ${sub}`}>
+                                    {search ? `No submissions matching "${search}".` : "No pending submissions."}
+                                </div>
+                            )}
+
+                            {/* GCash Payments section */}
+                            {filteredPending.length > 0 && (
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-wide mb-2 ${sub}`}>GCash Payments ({filteredPending.length})</p>
+                                    <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
+                                        <table className="eso-table w-full min-w-[640px] border-collapse">
+                                            <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+                                                <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+                                                    <th className="px-3 py-2 text-center w-10">
+                                                        <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
+                                                            checked={allPendingSel}
+                                                            onChange={e => setSelectedPending(e.target.checked ? new Set(filteredPending.map(p => p.paymentId)) : new Set())} />
+                                                    </th>
+                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
+                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
+                                                    <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wide w-24">Amount</th>
+                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
+                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Receipt</th>
+                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-20">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredPending.map((p, i) => (
+                                                    <tr key={p.paymentId}
+                                                        onClick={() => togglePending(p.paymentId, !selectedPending.has(p.paymentId))}
+                                                        style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
+                                                        className={`transition-colors cursor-pointer ${
+                                                            selectedPending.has(p.paymentId)
+                                                                ? darkMode ? "bg-orange-900/30" : "bg-orange-50"
+                                                                : i % 2 === 0
+                                                                    ? darkMode ? "bg-[#1a1a1a] hover:bg-[#2a2a2a]" : "bg-white hover:bg-gray-50"
+                                                                    : darkMode ? "bg-[#1a1a1a]/60 hover:bg-[#2a2a2a]" : "bg-gray-50/60 hover:bg-gray-100/50"
+                                                        }`}>
+                                                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                                                            <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
+                                                                checked={selectedPending.has(p.paymentId)}
+                                                                onChange={e => togglePending(p.paymentId, e.target.checked)} />
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <UserAvatar size="sm" src={p.avatarPath} />
+                                                                <div>
+                                                                    <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
+                                                                    <div className={`text-xs font-mono ${sub}`}>{p.studentNo} · {programLabel(p.programCode)}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
+                                                        <td className={`px-3 py-2.5 text-right font-bold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                                            PHP {Number(p.amountPaid).toFixed(2)}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center">
+                                                            <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
+                                                            <div className={`text-[10px] ${sub}`}>{fmtTime(p.submittedAt)}</div>
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                                                            {p.receiptPath
+                                                                ? <button onClick={() => setPreviewUrl(receiptUrl(p.receiptPath))}
+                                                                    className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">View</button>
+                                                                : <span className={`text-xs ${sub}`}>—</span>}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                <button onClick={() => listIsAuthed
+                                                                    ? adminStudentService.verifyPayment(accessToken!, p.paymentId, 1, "").then(load)
+                                                                    : setPendingVerifyId(p.paymentId)}
+                                                                    className="px-2 py-1 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition">
+                                                                    Verify
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Proof of Compliance section */}
+                            {filteredProofs.length > 0 && (
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-wide mb-2 ${sub}`}>Proof of Compliance ({filteredProofs.length})</p>
+                                    <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
+                                        <table className="eso-table w-full min-w-[580px] border-collapse">
+                                            <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+                                                <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
+                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
+                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
+                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Proof</th>
+                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredProofs.map((p, i) => (
+                                                    <tr key={p.studentObligationId}
+                                                        style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
+                                                        className={`transition-colors ${
+                                                            i % 2 === 0
+                                                                ? darkMode ? "bg-[#1a1a1a]" : "bg-white"
+                                                                : darkMode ? "bg-[#1a1a1a]/60" : "bg-gray-50/60"
+                                                        }`}>
+                                                        <td className="px-3 py-2.5">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <UserAvatar size="sm" src={p.avatarPath} />
+                                                                <div>
+                                                                    <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
+                                                                    <div className={`text-xs font-mono ${sub}`}>{p.studentNo} · {programLabel(p.programCode)}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
+                                                        <td className="px-3 py-2.5 text-center">
+                                                            <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
+                                                            <div className={`text-[10px] ${sub}`}>{fmtTime(p.submittedAt)}</div>
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center">
+                                                            {p.proofImage
+                                                                ? <button onClick={() => setPreviewUrl(receiptUrl(p.proofImage))}
+                                                                    className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">View</button>
+                                                                : <span className={`text-xs ${sub}`}>—</span>}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center">
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                <button
+                                                                    onClick={() => adminStudentService.verifyProof(accessToken!, p.studentObligationId, 0).then(load)}
+                                                                    className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-bold hover:bg-red-600 transition">
+                                                                    Reject
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => adminStudentService.verifyProof(accessToken!, p.studentObligationId, 2).then(load)}
+                                                                    className="px-2 py-1 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition">
+                                                                    Approve
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
 
                     {/* History */}

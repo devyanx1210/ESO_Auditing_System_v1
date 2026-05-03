@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { isClassRole } from "../config/role-groups.js";
+import { triggerClearanceIfComplete } from "./clearance-trigger.js";
 
 // Helpers
 
@@ -147,25 +148,28 @@ export const verifyPayment = async (
 ): Promise<void> => {
     const adminId = await getAdminId(userId);
 
-    const [rows]: any = await pool.execute(
-        `SELECT ps.payment_status, ps.student_obligation_id,
-                ps.student_id, o.obligation_name,
-                u.user_id AS studentUserId
-         FROM payment_submissions ps
-         JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
-         JOIN students st ON st.student_id = ps.student_id
-         JOIN users u    ON u.user_id = st.user_id
-         JOIN obligations o ON o.obligation_id = ps.obligation_id
-         WHERE ps.payment_id = ?`,
-        [paymentId]
-    );
-    if (!rows.length) throw new Error("Payment not found");
-    const pmt = rows[0];
-    if (pmt.payment_status !== 0) throw new Error("Payment already processed");
-
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
+
+        // Lock the payment row inside the transaction to prevent concurrent double-approval
+        const [rows]: any = await conn.execute(
+            `SELECT ps.payment_status, ps.student_obligation_id,
+                    ps.student_id, o.obligation_name,
+                    u.user_id AS studentUserId,
+                    st.school_year AS schoolYear, st.semester
+             FROM payment_submissions ps
+             JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
+             JOIN students st ON st.student_id = ps.student_id
+             JOIN users u    ON u.user_id = st.user_id
+             JOIN obligations o ON o.obligation_id = ps.obligation_id
+             WHERE ps.payment_id = ?
+             FOR UPDATE`,
+            [paymentId]
+        );
+        if (!rows.length) throw new Error("Payment not found");
+        const pmt = rows[0];
+        if (pmt.payment_status !== 0) throw new Error("Payment already processed");
 
         // Update payment submission
         await conn.execute(
@@ -202,6 +206,11 @@ export const verifyPayment = async (
             [pmt.studentUserId, title, message, notifType, paymentId]
         );
 
+        // Auto-create clearance if this was the last unsettled obligation
+        if (status === 1) {
+            await triggerClearanceIfComplete(conn, pmt.student_id, pmt.schoolYear, pmt.semester, pmt.studentUserId);
+        }
+
         await conn.commit();
     } catch (err) {
         await conn.rollback();
@@ -224,7 +233,8 @@ export const recordCashPayment = async (
     const [soRows]: any = await pool.execute(
         `SELECT so.status, so.obligation_id, so.student_id,
                 o.obligation_name,
-                st.user_id AS studentUserId
+                st.user_id AS studentUserId,
+                st.school_year AS schoolYear, st.semester
          FROM student_obligations so
          JOIN obligations o  ON o.obligation_id = so.obligation_id
          JOIN students st    ON st.student_id   = so.student_id
@@ -277,6 +287,9 @@ export const recordCashPayment = async (
                 paymentId,
             ]
         );
+
+        // Auto-create clearance if this was the last unsettled obligation
+        await triggerClearanceIfComplete(conn, so.student_id, so.schoolYear, so.semester, so.studentUserId);
 
         await conn.commit();
     } catch (err) {
@@ -364,7 +377,8 @@ export const verifyAllPayments = async (userId: number, role: string): Promise<n
 
     let sql = `
         SELECT ps.payment_id, ps.student_obligation_id,
-               o.obligation_name, st.user_id AS studentUserId
+               o.obligation_name, st.user_id AS studentUserId,
+               ps.student_id AS studentId, st.school_year AS schoolYear, st.semester
         FROM payment_submissions ps
         JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
         JOIN students st ON st.student_id = ps.student_id
@@ -407,6 +421,7 @@ export const verifyAllPayments = async (userId: number, role: string): Promise<n
                  VALUES (?, 'Payment Approved', ?, 3, ?, 'payment', 0, NOW())`,
                 [pmt.studentUserId, "Your GCash payment for \"" + pmt.obligation_name + "\" has been approved.", pmt.payment_id]
             );
+            await triggerClearanceIfComplete(conn, pmt.studentId, pmt.schoolYear, pmt.semester, pmt.studentUserId);
         }
         await conn.commit();
         return rows.length;
@@ -425,7 +440,8 @@ export const bulkVerifyPayments = async (userId: number, paymentIds: number[]): 
     const adminId = await getAdminId(userId);
     const placeholders = paymentIds.map(() => "?").join(",");
     const [rows]: any = await pool.execute(
-        `SELECT ps.payment_id, ps.student_obligation_id, o.obligation_name, st.user_id AS studentUserId
+        `SELECT ps.payment_id, ps.student_obligation_id, o.obligation_name, st.user_id AS studentUserId,
+                ps.student_id AS studentId, st.school_year AS schoolYear, st.semester
          FROM payment_submissions ps
          JOIN student_obligations so ON so.student_obligation_id = ps.student_obligation_id
          JOIN students st ON st.student_id = ps.student_id
@@ -452,6 +468,7 @@ export const bulkVerifyPayments = async (userId: number, paymentIds: number[]): 
             await conn.execute("UPDATE student_obligations SET status = 2, updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
             await conn.execute(`INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at) VALUES (?, 'Payment Approved', ?, 3, ?, 'payment', 0, NOW())`,
                 [pmt.studentUserId, `Your payment for "${pmt.obligation_name}" has been approved.`, pmt.payment_id]);
+            await triggerClearanceIfComplete(conn, pmt.studentId, pmt.schoolYear, pmt.semester, pmt.studentUserId);
         }
         await conn.commit();
         return rows.length;
@@ -480,7 +497,7 @@ export const bulkUnverifyPayments = async (userId: number, paymentIds: number[])
         for (const pmt of rows) {
             await conn.execute("UPDATE payment_submissions SET payment_status = 0, updated_at = NOW() WHERE payment_id = ?", [pmt.payment_id]);
             await conn.execute("DELETE FROM payment_verifications WHERE payment_id = ?", [pmt.payment_id]);
-            await conn.execute("UPDATE student_obligations SET status = 1, updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
+            await conn.execute("UPDATE student_obligations SET status = 0, updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
             await conn.execute(
                 `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
                  VALUES (?, 'Payment Returned for Review', ?, 5, ?, 'payment', 0, NOW())`,
