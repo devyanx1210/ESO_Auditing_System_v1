@@ -252,7 +252,7 @@ export default function StudentImportPage() {
                     <div className={`rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 ${darkMode ? "bg-[#1a1a1a]" : "bg-white"} ${isLocked ? "opacity-60 pointer-events-none" : ""}`}>
                         <h2 className={`font-semibold text-base mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
                             2. Upload CSV File
-                            {isLocked && <span className="ml-2 text-xs text-amber-600 font-normal">(locked — already imported)</span>}
+                            {isLocked && <span className="ml-2 text-xs text-amber-600 font-normal">(locked, already imported)</span>}
                         </h2>
 
                         <div
@@ -269,7 +269,7 @@ export default function StudentImportPage() {
                             {file ? (
                                 <>
                                     <p className="font-semibold text-green-500 text-sm">{file.name}</p>
-                                    <p className="text-xs text-green-500/80 mt-1">{(file.size / 1024).toFixed(1)} KB — click to change</p>
+                                    <p className="text-xs text-green-500/80 mt-1">{(file.size / 1024).toFixed(1)} KB, click to change</p>
                                 </>
                             ) : (
                                 <>
@@ -512,7 +512,7 @@ export default function StudentImportPage() {
                             </li>
                             <li className="flex gap-2 bg-amber-50 rounded-lg px-2 py-1.5">
                                 <span className="text-amber-500 font-bold shrink-0">!</span>
-                                <div><strong>Fields with commas</strong> (names, addresses) must be wrapped in quotes in your CSV file. Save from <strong>Excel or Google Sheets</strong> — they do this automatically. Do not copy-paste raw text into a .csv file.</div>
+                                <div><strong>Fields with commas</strong> (names, addresses) must be wrapped in quotes in your CSV file. Save from <strong>Excel or Google Sheets</strong> as they handle this automatically. Do not copy-paste raw text into a .csv file.</div>
                             </li>
                         </ul>
                     </div>
@@ -586,7 +586,7 @@ export default function StudentImportPage() {
                             <strong>{deleteTarget.schoolYear} {deleteTarget.semester} Semester</strong>?
                         </p>
                         <p className={`text-xs mb-5 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
-                            Only the lock record is deleted — student accounts already created will remain. The period becomes available for re-import.
+                            Only the lock record is deleted. Student accounts already created will remain. The period becomes available for re-import.
                         </p>
 
                         {deleteError && <p className="text-xs text-red-500 mb-3">{deleteError}</p>}
