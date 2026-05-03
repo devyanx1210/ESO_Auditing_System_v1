@@ -84,6 +84,9 @@ export default function StudentImportPage() {
     const [deleting,     setDeleting]     = useState(false);
     const [deleteError,  setDeleteError]  = useState("");
 
+    // ── Errors modal ──────────────────────────────────────────────────────────
+    const [errorsTarget, setErrorsTarget] = useState<ImportSession | null>(null);
+
     // ── Info modal ────────────────────────────────────────────────────────────
     const [showInfo, setShowInfo] = useState(false);
 
@@ -407,6 +410,7 @@ export default function StudentImportPage() {
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Semester</th>
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Imported</th>
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Skipped</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide">Errors</th>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">By</th>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Date</th>
                                             <th className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide"></th>
@@ -423,6 +427,18 @@ export default function StudentImportPage() {
                                                 <td className="px-3 py-2.5 text-center">
                                                     {s.skippedCount > 0
                                                         ? <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-semibold text-[10px]">{s.skippedCount}</span>
+                                                        : <span className="text-gray-300">—</span>}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    {s.errorCount > 0
+                                                        ? (
+                                                            <button
+                                                                onClick={() => setErrorsTarget(s)}
+                                                                className="px-2 py-0.5 bg-red-100 text-red-600 rounded-full font-semibold text-[10px] hover:bg-red-200 transition"
+                                                            >
+                                                                {s.errorCount}
+                                                            </button>
+                                                        )
                                                         : <span className="text-gray-300">—</span>}
                                                 </td>
                                                 <td className={`px-3 py-2.5 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{s.importedBy}</td>
@@ -499,6 +515,48 @@ export default function StudentImportPage() {
                                 <div><strong>Fields with commas</strong> (names, addresses) must be wrapped in quotes in your CSV file. Save from <strong>Excel or Google Sheets</strong> — they do this automatically. Do not copy-paste raw text into a .csv file.</div>
                             </li>
                         </ul>
+                    </div>
+                </div>
+            )}
+
+            {/* ── ERRORS MODAL ── */}
+            {errorsTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+                    onClick={() => setErrorsTarget(null)}>
+                    <div className={`rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] p-6 w-full max-w-lg relative ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}
+                        onClick={e => e.stopPropagation()}
+                        style={{ animation: "fadeInUp 0.2s ease both" }}>
+                        <button onClick={() => setErrorsTarget(null)} className={`absolute top-3 right-3 transition ${darkMode ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"}`}>
+                            <FiX className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 bg-red-100 rounded-xl">
+                                <FiAlertCircle className="w-5 h-5 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className={`font-semibold text-sm ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                    Import Errors
+                                </h3>
+                                <p className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                                    {errorsTarget.schoolYear} &bull; {errorsTarget.semester} Semester &bull; {errorsTarget.errorCount} issue{errorsTarget.errorCount !== 1 ? "s" : ""}
+                                </p>
+                            </div>
+                        </div>
+                        {errorsTarget.errors.length > 0 ? (
+                            <div className={`rounded-xl p-3 max-h-72 overflow-y-auto ${darkMode ? "bg-[#111]" : "bg-red-50"}`}>
+                                {errorsTarget.errors.map((e, i) => (
+                                    <p key={i} className={`text-[11px] leading-5 py-0.5 ${darkMode ? "text-red-400" : "text-red-600"}`}>{e}</p>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className={`text-sm text-center py-4 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                                Error details not available for older imports.
+                            </p>
+                        )}
+                        <button onClick={() => setErrorsTarget(null)}
+                            className="mt-4 w-full py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition">
+                            Close
+                        </button>
                     </div>
                 </div>
             )}

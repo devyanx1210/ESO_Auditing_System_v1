@@ -21,6 +21,7 @@ export interface ImportSession {
     errorCount:   number;
     importedAt:   string;
     importedBy:   string;
+    errors:       string[];
 }
 
 export const studentImportService = {

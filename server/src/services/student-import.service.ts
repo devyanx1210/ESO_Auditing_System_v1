@@ -179,7 +179,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             const programId = programMap.get(row.program.trim().toLowerCase()) ?? null;
 
             if (!programId) {
-                errors.push(`${ref}: unknown program "${row.program}" — skipped`);
+                errors.push(`${ref}: unknown program "${row.program}". Skipped.`);
                 skipped++;
                 continue;
             }
@@ -210,7 +210,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             if (emailConflict) {
                 // Import with a unique placeholder email instead of skipping — admin must update later
                 const tempEmail = `temp.${studentNoKey.toLowerCase()}@noemail.import`;
-                errors.push(`${ref}: email "${row.email}" is shared with another student — imported with temporary email, please update`);
+                errors.push(`${ref}: email "${row.email}" is used by another student. Imported with a temporary email that must be updated later.`);
                 validRows.push({ ...row, email: tempEmail, programId, yearLevel, section, firstName, lastName, repairUserId: null, needsRestore: false });
             } else {
                 if (existingUserId !== null) usedRepairUserIds.add(existingUserId);
@@ -300,7 +300,7 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 } catch (err: any) {
                     const ref = row.studentNo || row.name;
                     if (err.code === "ER_DUP_ENTRY" && err.message.includes("user_id"))
-                        errors.push(`${ref}: shares the same email with another student — only one account can exist per email`);
+                        errors.push(`${ref}: shares the same email with another student. Only one account can exist per email.`);
                     else
                         errors.push(`${ref}: ${err.message}`);
                 }
@@ -309,9 +309,10 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             // Record the session inside the same transaction
             await conn.execute(
                 `INSERT INTO student_imports
-                    (school_year, semester, imported_by, record_count, skipped_count, error_count)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [ctx.schoolYear.trim(), ctx.semester, ctx.importedBy, imported, skipped, errors.length]
+                    (school_year, semester, imported_by, record_count, skipped_count, error_count, errors_detail)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [ctx.schoolYear.trim(), ctx.semester, ctx.importedBy, imported, skipped, errors.length,
+                 errors.length ? JSON.stringify(errors) : null]
             );
 
             await conn.commit();
@@ -340,6 +341,7 @@ export const getImportSessions = async () => {
     const [rows]: any = await pool.execute(
         `SELECT si.import_id, si.school_year, si.semester,
                 si.record_count, si.skipped_count, si.error_count, si.imported_at,
+                si.errors_detail,
                 CONCAT(u.first_name,' ',u.last_name) AS importedBy
          FROM student_imports si
          JOIN users u ON u.user_id = si.imported_by
@@ -354,5 +356,6 @@ export const getImportSessions = async () => {
         errorCount:   r.error_count,
         importedAt:   r.imported_at,
         importedBy:   r.importedBy,
+        errors:       r.errors_detail ? JSON.parse(r.errors_detail) : [],
     }));
 };

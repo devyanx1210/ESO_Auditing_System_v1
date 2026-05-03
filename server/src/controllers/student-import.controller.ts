@@ -72,7 +72,7 @@ export const handleImportCSV = async (req: Request, res: Response) => {
             const id = r.studentNo || r.name || "(unknown)";
             const missing = [!r.name && "NAME", !r.studentNo && "STUDENT NUMBER", !r.email && "EMAIL ADDRESS"]
                 .filter(Boolean).join(", ");
-            return `Row ${id}: missing required field(s): ${missing} — skipped`;
+            return `Row ${id}: missing required field(s): ${missing}. Skipped.`;
         });
 
         if (!rows.length)
