@@ -24,9 +24,10 @@ const StudentSettings = () => {
     const [schoolYear,    setSchoolYear]    = useState("");
     const [semester,      setSemester]      = useState<number>(1);
     const [gender,        setGender]        = useState<number | "">("");
-    const [address,       setAddress]       = useState("");
-    const [contactNumber, setContactNumber] = useState("");
-    const [guardianName,  setGuardianName]  = useState("");
+    const [address,          setAddress]          = useState("");
+    const [contactNumber,    setContactNumber]    = useState("");
+    const [emergencyContact, setEmergencyContact] = useState("");
+    const [guardianName,     setGuardianName]     = useState("");
     const [shirtSize,     setShirtSize]     = useState("");
 
     // Avatar state
@@ -66,8 +67,9 @@ const StudentSettings = () => {
                 setSchoolYear(p.schoolYear);
                 setSemester(p.semester);
                 setGender(p.gender ?? "");
-                setAddress(p.address          ?? "");
+                setAddress(p.address             ?? "");
                 setContactNumber(p.contactNumber    ?? "");
+                setEmergencyContact(p.emergencyContact ?? "");
                 setGuardianName(p.guardianName     ?? "");
                 setShirtSize(p.shirtSize        ?? "");
                 if (p.avatarPath) setAvatarPreview(avatarUrl(p.avatarPath));
@@ -116,9 +118,10 @@ const StudentSettings = () => {
             setSchoolYear(profile.schoolYear);
             setSemester(profile.semester);
             setGender(profile.gender           ?? "");
-            setAddress(profile.address         ?? "");
-            setContactNumber(profile.contactNumber ?? "");
-            setGuardianName(profile.guardianName   ?? "");
+            setAddress(profile.address              ?? "");
+            setContactNumber(profile.contactNumber    ?? "");
+            setEmergencyContact(profile.emergencyContact ?? "");
+            setGuardianName(profile.guardianName       ?? "");
             setShirtSize(profile.shirtSize     ?? "");
         }
         setPw(BLANK_PW);
@@ -147,18 +150,19 @@ const StudentSettings = () => {
         setSaving(true);
         try {
             const updated = await studentService.updateProfile(accessToken, {
-                firstName:     firstName.trim(),
-                lastName:      lastName.trim(),
-                middleName:    middleName.trim(),
-                yearLevel:     Number(yearLevel),
-                section:       section.trim(),
-                schoolYear:    schoolYear.trim(),
+                firstName:        firstName.trim(),
+                lastName:         lastName.trim(),
+                middleName:       middleName.trim(),
+                yearLevel:        Number(yearLevel),
+                section:          section.trim(),
+                schoolYear:       schoolYear.trim(),
                 semester,
-                gender:        gender !== "" ? Number(gender) : null,
-                address:       address.trim(),
-                contactNumber: contactNumber.trim(),
-                guardianName:  guardianName.trim(),
-                shirtSize:     shirtSize.trim(),
+                gender:           gender !== "" ? Number(gender) : null,
+                address:          address.trim(),
+                contactNumber:    contactNumber.trim(),
+                emergencyContact: emergencyContact.trim(),
+                guardianName:     guardianName.trim(),
+                shirtSize:        shirtSize.trim(),
             }, avatarFile);
             setAvatarFile(null);
             if (updated.avatarPath) setAvatarPreview(avatarUrl(updated.avatarPath));
@@ -360,17 +364,21 @@ const StudentSettings = () => {
                             <div className={`mt-6 pt-5 border-t ${dk ? "border-[#2a2a2a]" : "border-gray-100"}`}>
                                 <p className={`text-xs font-bold uppercase tracking-wide mb-4 ${sub}`}>Contact &amp; Guardian Information</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <Field label="Guardian Name">
-                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
-                                            value={guardianName} onChange={e => setGuardianName(e.target.value)} placeholder="Guardian's full name" />
-                                    </Field>
-                                    <Field label="Emergency Contact Number">
+                                    <Field label="My Contact Number">
                                         <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                             value={contactNumber} onChange={e => setContactNumber(e.target.value)} placeholder="e.g. 09XXXXXXXXX" />
                                     </Field>
                                     <Field label="Address">
                                         <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
                                             value={address} onChange={e => setAddress(e.target.value)} placeholder="Complete address" />
+                                    </Field>
+                                    <Field label="Guardian Name">
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                            value={guardianName} onChange={e => setGuardianName(e.target.value)} placeholder="Guardian's full name" />
+                                    </Field>
+                                    <Field label="Guardian Emergency Contact">
+                                        <input className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                            value={emergencyContact} onChange={e => setEmergencyContact(e.target.value)} placeholder="e.g. 09XXXXXXXXX" />
                                     </Field>
                                 </div>
                             </div>

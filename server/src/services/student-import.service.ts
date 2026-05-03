@@ -291,8 +291,8 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                         `INSERT INTO students
                             (user_id, student_no, first_name, last_name, program_id,
                              year_level, section, school_year, semester, shirt_size,
-                             created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                             contact_number, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
                         [
                             userId,
                             row.studentNo.trim(),
@@ -304,12 +304,13 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                             ctx.schoolYear.trim(),
                             ctx.semester,
                             normalizeShirtSize(row.shirtSize),
+                            (row.contact?.trim() || null)?.slice(0, 20) ?? null,
                         ]
                     );
 
-                    const guardianName  = (row.guardian?.trim()  || null)?.slice(0, 100) ?? null;
-                    const contactNumber = (row.contact?.trim()   || null)?.slice(0, 20)  ?? null;
-                    const address       = (row.address?.trim()   || null)?.slice(0, 255) ?? null;
+                    const guardianName  = (row.guardian?.trim()          || null)?.slice(0, 100) ?? null;
+                    const contactNumber = (row.emergencyContact?.trim()   || null)?.slice(0, 20)  ?? null;
+                    const address       = (row.address?.trim()            || null)?.slice(0, 255) ?? null;
                     if (guardianName || contactNumber || address) {
                         await conn.execute(
                             `INSERT INTO guardian (student_id, guardian_name, contact_number, address, created_at, updated_at)

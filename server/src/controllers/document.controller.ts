@@ -1,3 +1,4 @@
+import https from "https";
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../middleware/upload.middleware.js";
@@ -8,9 +9,10 @@ function isCloudinaryUrl(path: string | null): boolean {
 }
 
 function attachPdfUrl(tpl: any): any {
-    // Only expose pdfUrl if it's a valid Cloudinary URL — ignore stale local paths
-    tpl.pdfUrl = isCloudinaryUrl(tpl?.pdfPath) ? tpl.pdfPath : null;
-    if (!isCloudinaryUrl(tpl?.pdfPath)) tpl.pdfPath = null;
+    const valid = isCloudinaryUrl(tpl?.pdfPath);
+    // Use server proxy route so browser never hits Cloudinary directly (avoids CORS issues)
+    tpl.pdfUrl = valid ? `/api/v1/documents/${tpl.templateId}/pdf-file` : null;
+    if (!valid) tpl.pdfPath = null;
     return tpl;
 }
 
@@ -89,7 +91,7 @@ export const handleGetApprovedStudents = async (req: Request, res: Response) => 
     } catch (e: any) { sendError(res, e.message); }
 };
 
-// PDF file — redirect to Cloudinary URL (stored directly as URL in DB)
+// PDF file — proxied through server so browser avoids Cloudinary CORS restrictions
 
 export const handleGetPdfFile = async (req: Request, res: Response) => {
     try {
@@ -98,7 +100,17 @@ export const handleGetPdfFile = async (req: Request, res: Response) => {
         const tpl = await svc.getTemplate(id);
         if (!tpl?.pdfPath || !isCloudinaryUrl(tpl.pdfPath))
             return sendError(res, "No PDF attached to this template", 404);
-        res.redirect(tpl.pdfPath);
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", "inline");
+
+        https.get(tpl.pdfPath, (proxyRes) => {
+            if (proxyRes.headers["content-length"])
+                res.setHeader("Content-Length", proxyRes.headers["content-length"]);
+            proxyRes.pipe(res);
+        }).on("error", (err) => {
+            if (!res.headersSent) sendError(res, err.message, 502);
+        });
     } catch (e: any) { sendError(res, e.message); }
 };
 

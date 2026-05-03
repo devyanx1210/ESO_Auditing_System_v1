@@ -41,7 +41,7 @@ export const updateMyProfile = async (req: Request, res: Response) => {
     try {
         const {
             firstName, lastName, middleName, yearLevel, section, schoolYear, semester,
-            gender, address, contactNumber, guardianName, shirtSize,
+            gender, address, contactNumber, emergencyContact, guardianName, shirtSize,
         } = req.body;
         if (!firstName || !lastName || !yearLevel || !section || !schoolYear || !semester)
             return sendError(res, "firstName, lastName, yearLevel, section, schoolYear, and semester are required", 400);
@@ -57,9 +57,10 @@ export const updateMyProfile = async (req: Request, res: Response) => {
             section,       schoolYear,
             semester:      Number(semester),
             gender:        gender ? Number(gender) : null,
-            address:       address       ?? "",
-            contactNumber: contactNumber ?? "",
-            guardianName:  guardianName  ?? "",
+            address:          address          ?? "",
+            contactNumber:    contactNumber    ?? "",
+            emergencyContact: emergencyContact ?? "",
+            guardianName:     guardianName     ?? "",
             shirtSize:     shirtSize     ?? "",
             avatarPath,
         });

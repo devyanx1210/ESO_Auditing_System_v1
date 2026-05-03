@@ -397,10 +397,10 @@ function PrintHtmlModal({ content, token, darkMode, onClose }: {
 const RENDER_SCALE = 1.5; // render at 1.5× for sharpness
 
 function PdfCanvasViewer({
-    pdfUrl, reloadKey, positions, isDragging, overlayRef, darkMode,
+    pdfUrl, token, reloadKey, positions, isDragging, overlayRef, darkMode,
     onCanvasDrop, onPositionChange, onRemoveChip,
 }: {
-    pdfUrl: string | null; reloadKey: number; positions: FieldPositions;
+    pdfUrl: string | null; token: string; reloadKey: number; positions: FieldPositions;
     isDragging: boolean; overlayRef: React.RefObject<HTMLDivElement | null>; darkMode: boolean;
     onCanvasDrop: (e: React.DragEvent, canvas: HTMLCanvasElement) => void;
     onPositionChange: (key: string, x: number, y: number) => void;
@@ -427,7 +427,10 @@ function PdfCanvasViewer({
             try {
                 const pdfjsLib = await import("pdfjs-dist");
                 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-                const pdf  = await (pdfjsLib as any).getDocument(pdfUrl).promise;
+                const pdf  = await (pdfjsLib as any).getDocument({
+                    url: pdfUrl,
+                    httpHeaders: { Authorization: `Bearer ${token}` },
+                }).promise;
                 if (cancelled) return;
                 const page = await pdf.getPage(1);
                 if (cancelled) return;
@@ -912,6 +915,7 @@ function PdfPanel({ template, token, darkMode, onSaved }: {
                 {/* Canvas viewer */}
                 <PdfCanvasViewer
                     pdfUrl={pdfSrc}
+                    token={token}
                     reloadKey={reloadKey}
                     positions={positions}
                     isDragging={isDragging}

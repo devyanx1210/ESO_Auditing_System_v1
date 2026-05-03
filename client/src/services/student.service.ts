@@ -33,14 +33,16 @@ export interface StudentProfile {
     semester:      number;
     gender:        number | null;
     avatarPath:    string | null;
-    address:       string | null;
-    contactNumber: string | null;
-    guardianName:  string | null;
-    shirtSize:     string | null;
+    address:          string | null;
+    contactNumber:    string | null;   // student's own contact
+    emergencyContact: string | null;   // guardian's emergency contact
+    guardianName:     string | null;
+    shirtSize:        string | null;
 }
 
 export function avatarUrl(p: string | null | undefined): string | null {
     if (!p) return null;
+    if (p.startsWith("http://") || p.startsWith("https://")) return p;
     return `${UPLOADS_BASE}/${p.replace(/^\/uploads\//, "")}`;
 }
 
@@ -101,7 +103,7 @@ export const studentService = {
             yearLevel: number; section: string;
             schoolYear: string; semester: number;
             gender?: number | null;
-            address: string; contactNumber: string;
+            address: string; contactNumber: string; emergencyContact: string;
             guardianName: string; shirtSize: string;
         },
         avatarFile?: File | null,
@@ -115,9 +117,10 @@ export const studentService = {
         form.append("schoolYear",    data.schoolYear);
         form.append("semester",      String(data.semester));
         if (data.gender !== undefined && data.gender !== null) form.append("gender", String(data.gender));
-        form.append("address",       data.address);
-        form.append("contactNumber", data.contactNumber);
-        form.append("guardianName",  data.guardianName);
+        form.append("address",          data.address);
+        form.append("contactNumber",    data.contactNumber);
+        form.append("emergencyContact", data.emergencyContact);
+        form.append("guardianName",     data.guardianName);
         form.append("shirtSize",     data.shirtSize);
         if (avatarFile) form.append("avatar", avatarFile);
         return apiFetch<StudentProfile>("/students/me/profile", {

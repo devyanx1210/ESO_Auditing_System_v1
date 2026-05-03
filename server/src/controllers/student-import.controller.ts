@@ -56,12 +56,12 @@ export const handleImportCSV = async (req: Request, res: Response) => {
             program:          col(r, "program", "program name", "course")                                             || "",
             yearSection:      col(r, "year/section", "year section", "year/sec", "year sec", "year & section")       || "",
             address:          col(r, "address"),
-            contact:          col(r, "contact", "contact no", "contact no.", "contact number"),
+            contact:          col(r, "contact"),                                                                       // student's own contact number
             email:            col(r, "email address", "email addr", "email ad", "email", "e-mail", "school email",
                                    "institutional email")                                                             || "",
             guardian:         col(r, "guardian", "guardian name"),
-            emergencyContact: col(r, "contact number", "emergency contact number", "emergency contact",
-                                   "emergency no", "emergency"),
+            emergencyContact: col(r, "emergency contact number", "emergency contact", "emergency no",
+                                   "emergency", "contact number"),                                                     // guardian's emergency contact
             shirtSize:        col(r, "shirt size", "shirtsize", "shirt"),
         }));
 

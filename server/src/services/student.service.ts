@@ -97,7 +97,8 @@ export interface StudentProfile {
     gender:           string | null;
     avatarPath:       string | null;
     address:          string | null;
-    contactNumber:    string | null;
+    contactNumber:    string | null;   // student's own contact number
+    emergencyContact: string | null;   // guardian's emergency contact
     guardianName:     string | null;
     shirtSize:        string | null;
 }
@@ -153,7 +154,8 @@ export const getStudentProfile = async (userId: number): Promise<StudentProfile>
         `SELECT s.student_id, s.student_no, s.first_name, s.last_name, s.middle_name,
                 s.year_level, s.section, s.school_year, s.semester,
                 s.avatar_path, s.shirt_size, s.gender,
-                g.address, g.contact_number, g.guardian_name,
+                s.contact_number AS studentContact,
+                g.address, g.contact_number AS guardianContact, g.guardian_name,
                 d.code AS programCode, d.name AS programName,
                 u.email
          FROM students s
@@ -178,31 +180,33 @@ export const getStudentProfile = async (userId: number): Promise<StudentProfile>
         section:          r.section,
         schoolYear:       r.school_year,
         semester:         r.semester,
-        gender:           r.gender          ?? null,
-        avatarPath:       r.avatar_path     ?? null,
-        address:          r.address         ?? null,
-        contactNumber:    r.contact_number  ?? null,
-        guardianName:     r.guardian_name   ?? null,
-        shirtSize:        r.shirt_size      ?? null,
+        gender:           r.gender           ?? null,
+        avatarPath:       r.avatar_path      ?? null,
+        address:          r.address          ?? null,
+        contactNumber:    r.studentContact   ?? null,
+        emergencyContact: r.guardianContact  ?? null,
+        guardianName:     r.guardian_name    ?? null,
+        shirtSize:        r.shirt_size       ?? null,
     };
 };
 
 export const updateStudentProfile = async (
     userId: number,
     data: {
-        firstName:     string;
-        lastName:      string;
-        middleName?:   string;
-        yearLevel:     number;
-        section:       string;
-        schoolYear:    string;
-        semester:      number;
-        gender?:       number | null;
-        address:       string;
-        contactNumber: string;
-        guardianName:  string;
-        shirtSize:     string;
-        avatarPath?:   string | null;
+        firstName:        string;
+        lastName:         string;
+        middleName?:      string;
+        yearLevel:        number;
+        section:          string;
+        schoolYear:       string;
+        semester:         number;
+        gender?:          number | null;
+        address:          string;
+        contactNumber:    string;   // student's own contact
+        emergencyContact: string;   // guardian's emergency contact
+        guardianName:     string;
+        shirtSize:        string;
+        avatarPath?:      string | null;
     }
 ): Promise<StudentProfile> => {
     const VALID_SIZES = ["XS","S","M","L","XL","XXL",""];
@@ -224,6 +228,7 @@ export const updateStudentProfile = async (
         data.firstName.trim(), data.lastName.trim(), middleNameVal,
         data.yearLevel, data.section.trim(),
         data.schoolYear.trim(), data.semester, shirtSize, genderVal,
+        data.contactNumber.trim() || null,
     ];
     if (data.avatarPath !== undefined) params.push(data.avatarPath);
     params.push(userId);
@@ -231,7 +236,7 @@ export const updateStudentProfile = async (
     await pool.execute(
         `UPDATE students
             SET first_name = ?, last_name = ?, middle_name = ?, year_level = ?, section = ?,
-                school_year = ?, semester = ?, shirt_size = ?, gender = ?
+                school_year = ?, semester = ?, shirt_size = ?, gender = ?, contact_number = ?
                 ${avatarClause}, updated_at = NOW()
           WHERE user_id = ?`,
         params
@@ -246,7 +251,7 @@ export const updateStudentProfile = async (
              contact_number = VALUES(contact_number),
              address        = VALUES(address),
              updated_at     = NOW()`,
-        [studentId, data.guardianName.trim() || null, data.contactNumber.trim() || null, data.address.trim() || null]
+        [studentId, data.guardianName.trim() || null, data.emergencyContact.trim() || null, data.address.trim() || null]
     );
 
     await pool.execute(
