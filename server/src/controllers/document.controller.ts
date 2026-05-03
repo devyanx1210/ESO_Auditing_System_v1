@@ -10,7 +10,7 @@ function isCloudinaryUrl(path: string | null): boolean {
 function attachPdfUrl(tpl: any): any {
     const valid = isCloudinaryUrl(tpl?.pdfPath);
     // Use server proxy route so browser never hits Cloudinary directly (avoids CORS issues)
-    tpl.pdfUrl = valid ? `/api/v1/documents/${tpl.templateId}/pdf-file` : null;
+    tpl.pdfUrl = valid ? `/api/v1/admin/documents/${tpl.templateId}/pdf-file` : null;
     if (!valid) tpl.pdfPath = null;
     return tpl;
 }
