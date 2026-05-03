@@ -30,6 +30,7 @@ export const submitPayment = async (
     userId: number,
     studentObligationId: number,
     receiptPath: string,
+    receiptFilename: string,
     amountPaid: number,
     notes: string | null
 ): Promise<PaymentSubmission> => {
@@ -69,13 +70,14 @@ export const submitPayment = async (
         const [result]: any = await conn.execute(
             `INSERT INTO payment_submissions
                 (student_id, obligation_id, student_obligation_id, payment_receipt_path,
-                 amount_paid, notes, payment_type, payment_status, submitted_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, 1, 0, NOW(), NOW())`,
+                 receipt_filename, amount_paid, notes, payment_type, payment_status, submitted_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, NOW(), NOW())`,
             [
                 studentId,
                 so.obligation_id,
                 studentObligationId,
                 receiptPath,
+                receiptFilename.slice(0, 255),
                 amountPaid,
                 notes ?? null,
             ]

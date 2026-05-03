@@ -16,9 +16,27 @@ const pool = mysql.createPool({
     timezone: "+08:00",
 });
 
+// Idempotent schema fixes — runs on every startup, safe to repeat
+const MIGRATIONS = [
+    // Railway DB shipped with VARCHAR(25)/VARCHAR(50) — too short for real obligations
+    `ALTER TABLE obligations MODIFY COLUMN obligation_name VARCHAR(255) NOT NULL`,
+    `ALTER TABLE obligations MODIFY COLUMN description VARCHAR(500) NULL`,
+    // Make receipt_filename nullable so uploads without an original filename don't crash
+    `ALTER TABLE payment_submissions MODIFY COLUMN receipt_filename VARCHAR(255) NULL`,
+];
+
 export async function connectDB(): Promise<void> {
     const connection = await pool.getConnection();
     console.log("Database connected successfully");
+    for (const sql of MIGRATIONS) {
+        try { await connection.execute(sql); }
+        catch (e: any) {
+            // 1060 = duplicate column, 1061 = duplicate index — both mean already done
+            if (e.errno !== 1060 && e.errno !== 1061) {
+                console.warn("[migration] skipped:", e.message);
+            }
+        }
+    }
     connection.release();
 }
 

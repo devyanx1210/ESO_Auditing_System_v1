@@ -23,12 +23,16 @@ export default defineConfig({
         ],
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB — background image is ~2.9 MB
-        // Cache the app shell and static assets
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        // Don't cache API calls
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/uploads/],
+        // After a deploy, immediately activate the new SW and drop old caches.
+        // This prevents "Failed to fetch dynamically imported module" errors
+        // caused by stale index.html referencing old chunk hashes.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^\/uploads\/.*/i,
@@ -41,11 +45,22 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        // Enable PWA in dev so you can test install prompt locally
         enabled: true,
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Give PDF.js its own stable-named chunk so old SW caches can't reference
+        // a stale hash after rebuild. The chunk still gets a hash but stays
+        // isolated — the SW pre-caches it and cleanupOutdatedCaches removes the old one.
+        manualChunks: {
+          'pdfjs': ['pdfjs-dist'],
+        },
+      },
+    },
+  },
   server: {
     host: true,
     port: 5174,

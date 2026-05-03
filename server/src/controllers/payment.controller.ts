@@ -17,8 +17,10 @@ export const handleSubmitPayment = (req: Request, res: Response) => {
             if (!studentObligationId || isNaN(amountPaid))
                 return sendError(res, "studentObligationId and amountPaid are required", 400);
 
-            const { url } = await uploadToCloudinary(req.file!.buffer, "eso/receipts");
-            const result = await submitPayment(userId, studentObligationId, url, amountPaid, notes);
+            const isPdf = req.file!.mimetype === "application/pdf";
+            const { url } = await uploadToCloudinary(req.file!.buffer, "eso/receipts", isPdf ? "raw" : "image");
+            const filename = req.file!.originalname || url.split("/").pop() || "receipt";
+            const result = await submitPayment(userId, studentObligationId, url, filename, amountPaid, notes);
             return sendSuccess(res, result, "Payment submitted successfully", 201);
         } catch (e: any) {
             return sendError(res, e.message, 400);
@@ -36,7 +38,8 @@ export const handleSubmitProof = (req: Request, res: Response) => {
             const studentObligationId = Number(req.body.studentObligationId);
             if (!studentObligationId) return sendError(res, "studentObligationId is required", 400);
 
-            const { url } = await uploadToCloudinary(req.file!.buffer, "eso/proofs");
+            const isPdf = req.file!.mimetype === "application/pdf";
+            const { url } = await uploadToCloudinary(req.file!.buffer, "eso/proofs", isPdf ? "raw" : "image");
             const result = await submitProof(userId, studentObligationId, url);
             return sendSuccess(res, result, "Proof submitted successfully", 201);
         } catch (e: any) {

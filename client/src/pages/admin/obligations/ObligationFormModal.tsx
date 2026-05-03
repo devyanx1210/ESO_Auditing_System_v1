@@ -160,6 +160,7 @@ export function ObligationFormModal({
                             <input
                                 className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm transition-colors bg-white dark:bg-[#2a2a2a] dark:text-gray-100 dark:placeholder-gray-500"
                                 placeholder="e.g. ESO T-Shirt Fee"
+                                maxLength={255}
                                 value={form.obligationName}
                                 onChange={e => onChangeForm({ ...form, obligationName: e.target.value })}
                             />

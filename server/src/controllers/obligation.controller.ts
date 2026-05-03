@@ -48,6 +48,9 @@ export const addObligation = (req: Request, res: Response) => {
             if (!obligationName || !scope || !schoolYear || !semester) {
                 return sendError(res, "obligationName, scope, schoolYear, semester are required", 400);
             }
+            if (obligationName.length > 255) {
+                return sendError(res, "Obligation name must not exceed 255 characters", 400);
+            }
             if (description && description.length > 500) {
                 return sendError(res, "Description must not exceed 500 characters", 400);
             }
