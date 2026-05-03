@@ -163,6 +163,8 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
         };
 
         const validRows: ValidRow[] = [];
+        // Track repair user_ids already claimed in this batch to catch in-CSV duplicate emails
+        const usedRepairUserIds = new Set<number>();
 
         for (const row of rows) {
             const ref       = row.studentNo || row.name || "unknown";
@@ -177,18 +179,26 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                 skipped++;
                 continue;
             }
-            const emailKey = row.email.toLowerCase().trim();
-            if (fullyImportedEmails.has(emailKey)) {
-                errors.push(`${ref}: email "${row.email}" already registered — skipped`);
-                skipped++;
-                continue;
-            }
 
+            const emailKey     = row.email.toLowerCase().trim();
+            const repairUserId = repairUserIds.get(emailKey) ?? null;
             const { yearLevel, section } = parseYearSection(row.yearSection);
             const { firstName, lastName } = parseName(row.name);
-            const repairUserId = repairUserIds.get(emailKey) ?? null;
 
-            validRows.push({ ...row, programId, yearLevel, section, firstName, lastName, repairUserId });
+            // Email conflict: already fully imported OR repair slot already claimed by another student
+            const emailConflict =
+                fullyImportedEmails.has(emailKey) ||
+                (repairUserId !== null && usedRepairUserIds.has(repairUserId));
+
+            if (emailConflict) {
+                // Import with a unique placeholder email instead of skipping — admin must update later
+                const tempEmail = `temp.${row.studentNo.trim().toLowerCase()}@noemail.import`;
+                errors.push(`${ref}: email "${row.email}" is shared with another student — imported with temporary email, please update`);
+                validRows.push({ ...row, email: tempEmail, programId, yearLevel, section, firstName, lastName, repairUserId: null });
+            } else {
+                if (repairUserId !== null) usedRepairUserIds.add(repairUserId);
+                validRows.push({ ...row, programId, yearLevel, section, firstName, lastName, repairUserId });
+            }
         }
 
 // 6. Hash passwords — only needed for rows that require a new users INSERT

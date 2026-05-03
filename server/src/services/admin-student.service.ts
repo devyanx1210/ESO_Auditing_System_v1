@@ -75,7 +75,7 @@ export const listStudents = async (
             COUNT(so.student_obligation_id)                         AS obligationsTotal,
             SUM(so.status IN (2,3))                                 AS obligationsPaid,
             SUM(so.status = 1)                                      AS obligationsPending,
-            cl.clearance_status AS clearanceStatus,
+            MAX(cl.clearance_status) AS clearanceStatus,
             COALESCE(SUM(CASE WHEN o.amount > 0 THEN so.amount_due ELSE 0 END), 0)                    AS totalPayable,
             COALESCE(SUM(CASE WHEN o.amount > 0 AND so.status = 2 THEN so.amount_due ELSE 0 END), 0)  AS totalPaid
         FROM students s
