@@ -277,8 +277,11 @@ export default function StudentDashboard() {
         setRetractErr("");
         try {
             await paymentService.retractSubmission(accessToken, o.studentObligationId);
-            const [updatedObs] = await Promise.all([studentService.getMyObligations(accessToken)]);
+            const updatedObs = await studentService.getMyObligations(accessToken);
             setObligations(updatedObs);
+            // Open the upload modal immediately so the student can re-upload in one click
+            const fresh = updatedObs.find(x => x.studentObligationId === o.studentObligationId);
+            openPayModal(fresh ?? o);
         } catch (err: any) {
             setRetractErr(err.message ?? "Failed to retract.");
         } finally {
@@ -639,12 +642,12 @@ export default function StudentDashboard() {
                                                 </button>
                                             )}
 
-                                            {/* Retract button — only on pending (not-yet-reviewed) submissions */}
+                                            {/* Edit button — retracts the pending submission then opens the upload modal */}
                                             {isPending && !isRejected && (
                                                 <button
                                                     onClick={() => handleRetract(o)}
                                                     disabled={retracting === o.studentObligationId}
-                                                    title="Withdraw your submission so you can re-upload"
+                                                    title="Replace your submission with a new file"
                                                     className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 border ${
                                                         dk
                                                             ? "border-gray-600 text-gray-400 hover:text-orange-400 hover:border-orange-500 disabled:opacity-40"
@@ -652,7 +655,7 @@ export default function StudentDashboard() {
                                                     }`}
                                                 >
                                                     <FiRotateCcw className="w-3 h-3" />
-                                                    {retracting === o.studentObligationId ? "..." : "Retract"}
+                                                    {retracting === o.studentObligationId ? "..." : "Edit"}
                                                 </button>
                                             )}
                                         </div>
