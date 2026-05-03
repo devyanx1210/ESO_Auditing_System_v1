@@ -103,13 +103,15 @@ export const handleGetPdfFile = async (req: Request, res: Response) => {
         const cloudRes = await fetch(tpl.pdfPath);
         if (!cloudRes.ok) return sendError(res, "Failed to fetch PDF from storage", 502);
 
+        // Read first to get the actual decompressed size.
+        // Do NOT forward Cloudinary's Content-Length — it reflects the compressed
+        // wire size, but Node fetch decompresses transparently, so the buffer is
+        // larger. Forwarding the wrong length truncates the PDF for the client.
+        const buf = Buffer.from(await cloudRes.arrayBuffer());
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", "inline");
-        if (cloudRes.headers.get("content-length"))
-            res.setHeader("Content-Length", cloudRes.headers.get("content-length")!);
-
-        const buffer = await cloudRes.arrayBuffer();
-        res.end(Buffer.from(buffer));
+        res.setHeader("Content-Length", buf.length);
+        res.end(buf);
     } catch (e: any) { sendError(res, e.message); }
 };
 
