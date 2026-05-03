@@ -39,11 +39,14 @@ app.set("trust proxy", 1);
 
 // Security headers
 app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy:  { policy: "cross-origin" },
+    // COEP require-corp blocks Cloudinary images (they don't send CORP headers) — disable it
+    crossOriginEmbedderPolicy:  false,
     contentSecurityPolicy: isProd ? {
         directives: {
             ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-            "img-src": ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
+            // Allow all HTTPS images (Cloudinary, avatars, QR codes, receipts)
+            "img-src": ["'self'", "data:", "blob:", "https:"],
         },
     } : false,
 }));
