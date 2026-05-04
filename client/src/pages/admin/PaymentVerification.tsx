@@ -525,6 +525,13 @@ const PAYMENT_ROLES = [
     "program_head", "signatory", "osas_coordinator", "dean",
 ];
 
+// Roles that can see ALL programs (no scope restriction)
+const WIDE_ROLES = new Set([
+    "system_admin",
+    "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president",
+    "program_head", "signatory", "osas_coordinator", "dean",
+]);
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const PaymentVerification = () => {
@@ -571,7 +578,8 @@ const PaymentVerification = () => {
     // Image preview
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-    const canAccess = PAYMENT_ROLES.includes(user?.role ?? "");
+    const canAccess  = PAYMENT_ROLES.includes(user?.role ?? "");
+    const isWideRole = WIDE_ROLES.has(user?.role ?? "");
 
     const load = useCallback(() => {
         if (!accessToken || !canAccess) return;
@@ -693,7 +701,7 @@ const PaymentVerification = () => {
     const allProofsSel  = filteredProofs.length  > 0 && filteredProofs.every(p  => selectedProofs.has(p.studentObligationId));
     const allHistorySel = filteredHistory.length > 0 && filteredHistory.every(h => selectedHistory.has(h.paymentId));
 
-    const activeFilterCount = [programFilter !== "all", sortKey !== "date", historyStatusFilter !== "all"].filter(Boolean).length;
+    const activeFilterCount = [isWideRole && programFilter !== "all", sortKey !== "date", historyStatusFilter !== "all"].filter(Boolean).length;
 
     function togglePending(id: number, v: boolean) {
         setSelectedPending(prev => { const s = new Set(prev); v ? s.add(id) : s.delete(id); return s; });
@@ -789,13 +797,19 @@ const PaymentVerification = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className={`block text-xs font-semibold mb-1 ${sub}`}>Program</label>
-                                <select value={programFilter} onChange={e => setProgramFilter(e.target.value)}
-                                    className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
-                                        ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
-                                    <option value="all">All Programs</option>
-                                    {PROGRAMS_LIST.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-                                </select>
+                                {isWideRole ? (
+                                    <>
+                                        <label className={`block text-xs font-semibold mb-1 ${sub}`}>Program</label>
+                                        <select value={programFilter} onChange={e => setProgramFilter(e.target.value)}
+                                            className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
+                                                ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100" : "bg-gray-50 border-gray-200 text-gray-800"}`}>
+                                            <option value="all">All Programs</option>
+                                            {PROGRAMS_LIST.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
+                                        </select>
+                                    </>
+                                ) : (
+                                    <p className={`text-xs ${sub}`}>Showing submissions within your assigned scope only.</p>
+                                )}
                             </div>
                             {viewMode === "list" && subTab === "history" && (
                                 <div>
@@ -810,7 +824,7 @@ const PaymentVerification = () => {
                                 </div>
                             )}
                             {activeFilterCount > 0 && (
-                                <button onClick={() => { setSortKey("date"); setProgramFilter("all"); setHistoryStatusFilter("all"); }}
+                                <button onClick={() => { setSortKey("date"); if (isWideRole) setProgramFilter("all"); setHistoryStatusFilter("all"); }}
                                     className="w-full text-xs text-red-500 hover:text-red-600 font-semibold py-1.5 border border-red-200 rounded-xl hover:bg-red-50 transition">
                                     Clear filters
                                 </button>

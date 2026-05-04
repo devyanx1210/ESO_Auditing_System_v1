@@ -14,7 +14,7 @@ import {
 
 export const listPendingProofs = async (req: Request, res: Response) => {
     try {
-        const items = await getPendingProofs(req.user!.userId, req.user!.role);
+        const items = await getPendingProofs(req.user!.userId, req.user!.role, req.user!.yearLevel, req.user!.section);
         return sendSuccess(res, items);
     } catch (err: any) {
         return sendError(res, err.message, 400);

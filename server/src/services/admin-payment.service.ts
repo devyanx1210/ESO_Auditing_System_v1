@@ -26,7 +26,7 @@ async function getAdminRecord(userId: number): Promise<{ adminId: number; progra
 // Roles that can see all departments
 const ALL_DEPT_ROLES = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "signatory", "osas_coordinator", "dean", "program_head"];
 
-// Pending GCash payments for admin review
+// Pending payment submissions for admin review
 
 export interface PendingPaymentItem {
     paymentId: number;
@@ -104,7 +104,9 @@ export interface PendingProofItem {
 
 export const getPendingProofs = async (
     userId: number,
-    role: string
+    role: string,
+    yearLevel?: number | null,
+    section?: string | null
 ): Promise<PendingProofItem[]> => {
     const { programId } = await getAdminRecord(userId);
 
@@ -132,13 +134,17 @@ export const getPendingProofs = async (
         sql += " AND s.program_id = ?";
         params.push(programId);
     }
+    if (isClassRole(role)) {
+        if (yearLevel != null) { sql += " AND s.year_level = ?"; params.push(yearLevel); }
+        if (section)           { sql += " AND s.section = ?";    params.push(section); }
+    }
     sql += " ORDER BY so.updated_at ASC";
 
     const [rows]: any = await pool.execute(sql, params);
     return rows;
 };
 
-// Verify (approve / reject) a GCash submission
+// Verify (approve / reject) a payment submission
 
 export const verifyPayment = async (
     userId: number,
@@ -370,7 +376,7 @@ export const getPaymentHistory = async (
     return rows;
 };
 
-// --- Approve all pending GCash submissions at once ---
+// --- Approve all pending payment submissions at once ---
 
 export const verifyAllPayments = async (userId: number, role: string): Promise<number> => {
     const { adminId, programId } = await getAdminRecord(userId);
@@ -419,7 +425,7 @@ export const verifyAllPayments = async (userId: number, role: string): Promise<n
             await conn.execute(
                 `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
                  VALUES (?, 'Payment Approved', ?, 3, ?, 'payment', 0, NOW())`,
-                [pmt.studentUserId, "Your GCash payment for \"" + pmt.obligation_name + "\" has been approved.", pmt.payment_id]
+                [pmt.studentUserId, "Your payment for \"" + pmt.obligation_name + "\" has been approved.", pmt.payment_id]
             );
             await triggerClearanceIfComplete(conn, pmt.studentId, pmt.schoolYear, pmt.semester, pmt.studentUserId);
         }
