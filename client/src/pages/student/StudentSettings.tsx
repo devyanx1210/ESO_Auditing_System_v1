@@ -24,6 +24,7 @@ const StudentSettings = () => {
     const [schoolYear,    setSchoolYear]    = useState("");
     const [semester,      setSemester]      = useState<number>(1);
     const [gender,        setGender]        = useState<number | "">("");
+    const [genderOther,   setGenderOther]   = useState("");
     const [address,          setAddress]          = useState("");
     const [contactNumber,    setContactNumber]    = useState("");
     const [emergencyContact, setEmergencyContact] = useState("");
@@ -332,18 +333,26 @@ const StudentSettings = () => {
                                     </div>
                                 </Field>
                                 <Field label="Gender">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium bg-white dark:bg-[#252525] ${gender === "" ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-100"}`}
                                         value={gender} onChange={e => setGender(e.target.value !== "" ? Number(e.target.value) : "")}>
-                                        <option value="">— select —</option>
+                                        <option value="" disabled>— Select Gender —</option>
                                         <option value={1}>Male</option>
                                         <option value={2}>Female</option>
                                         <option value={3}>Other</option>
                                     </select>
+                                    {gender === 3 && (
+                                        <input
+                                            className="mt-1.5 border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]"
+                                            placeholder="Please specify..."
+                                            value={genderOther}
+                                            onChange={e => setGenderOther(e.target.value)}
+                                        />
+                                    )}
                                 </Field>
                                 <Field label="Shirt Size">
-                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-[#252525]`}
+                                    <select className={`border-2 border-gray-300 dark:border-[#3a3a3a] focus:border-orange-400 focus:outline-none rounded-lg px-3 py-2 sm:py-2.5 w-full text-xs sm:text-sm font-medium bg-white dark:bg-[#252525] ${shirtSize === "" ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-100"}`}
                                         value={shirtSize} onChange={e => setShirtSize(e.target.value)}>
-                                        <option value="">— select —</option>
+                                        <option value="" disabled>— Select Size —</option>
                                         <option value="XS">XS</option>
                                         <option value="S">S</option>
                                         <option value="M">M</option>

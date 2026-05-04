@@ -810,7 +810,7 @@ const PaymentVerification = () => {
                                     subTab === "pending" ? "bg-white text-orange-600 shadow-sm" : `${sub} hover:text-gray-700 dark:hover:text-gray-300`
                                 }`}>
                                 <FiCheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                <span>GCash</span>
+                                <span>Payment</span>
                                 {filteredPending.length > 0 && (
                                     <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{filteredPending.length}</span>
                                 )}
@@ -843,7 +843,7 @@ const PaymentVerification = () => {
                                     mainTab === "payments" ? "bg-white text-orange-600 shadow-sm" : `${sub} hover:text-gray-700 dark:hover:text-gray-300`
                                 }`}>
                                 <FiCreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                <span>GCash</span>
+                                <span>Payment</span>
                                 {filteredPending.length > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{filteredPending.length}</span>}
                             </button>
                             <button onClick={() => setMainTab("proof")}
