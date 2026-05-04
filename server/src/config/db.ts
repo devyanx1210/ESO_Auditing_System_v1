@@ -27,6 +27,13 @@ const MIGRATIONS = [
     `ALTER TABLE students ADD COLUMN contact_number VARCHAR(20) NULL`,
     `ALTER TABLE students ADD COLUMN shirt_size VARCHAR(10) NULL`,
     `ALTER TABLE students ADD COLUMN gender ENUM('Male','Female','Other') NULL`,
+    // One-time data fix: import controller previously mapped "CONTACT NUMBER" CSV column to
+    // guardian.contact_number instead of students.contact_number.  Copy it across where the
+    // student's own contact is still empty so the list view shows it correctly.
+    `UPDATE students s
+     INNER JOIN guardian g ON g.student_id = s.student_id
+     SET s.contact_number = g.contact_number
+     WHERE s.contact_number IS NULL AND g.contact_number IS NOT NULL`,
     // Audit tables — not in original schema, created here so Railway DB gets them automatically
     `CREATE TABLE IF NOT EXISTS expenses (
         expense_id   INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
