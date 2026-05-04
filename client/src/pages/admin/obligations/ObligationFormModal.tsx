@@ -19,6 +19,9 @@ const SCOPES = [
     { value: 3, label: "section" },
 ] as const;
 
+const CLASS_ROLES_SET  = new Set(["class_officer", "class_secretary", "class_treasurer", "class_president"]);
+const PROGRAM_ROLES_SET = new Set(["program_officer", "program_treasurer", "program_president"]);
+
 // School year dropdown with free-text entry
 
 function generateSchoolYears(center: number, range = 8): string[] {
@@ -97,6 +100,7 @@ export interface ObligationFormModalProps {
     qrPreview: string | null;
     saving: boolean;
     formError: string;
+    userRole?: string;
     onChangeForm: (f: CreateObligationInput) => void;
     onTogglePayment: () => void;
     onQrChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -114,6 +118,7 @@ export function ObligationFormModal({
     qrPreview,
     saving,
     formError,
+    userRole,
     onChangeForm,
     onTogglePayment,
     onQrChange,
@@ -123,6 +128,22 @@ export function ObligationFormModal({
     onClose,
 }: ObligationFormModalProps) {
     const qrInputRef = useRef<HTMLInputElement>(null);
+
+    const isClassRole   = userRole ? CLASS_ROLES_SET.has(userRole)   : false;
+    const isProgramRole = userRole ? PROGRAM_ROLES_SET.has(userRole) : false;
+
+    // Scopes available for this role
+    const availableScopes = isClassRole
+        ? SCOPES.filter(s => s.value === 3)
+        : isProgramRole
+        ? SCOPES.filter(s => s.value >= 1)
+        : SCOPES;
+
+    // Field visibility
+    const showScopeDropdown = !isClassRole;
+    const showProgramField  = !isClassRole && !isProgramRole && (form.scope === 1 || form.scope === 2 || form.scope === 3);
+    const showYearField     = !isClassRole && (form.scope === 2 || form.scope === 3);
+    const showSectionField  = !isClassRole && (form.scope === 2 || form.scope === 3);
 
     return (
         <div
@@ -293,21 +314,28 @@ export function ObligationFormModal({
                             <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                                 Scope *
                             </label>
-                            <select
-                                className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
-                                value={form.scope}
-                                onChange={e => onChangeForm({
-                                    ...form,
-                                    scope: Number(e.target.value),
-                                    programId: null,
-                                    yearLevel: null,
-                                    section: null,
-                                })}
-                            >
-                                {SCOPES.map(s => (
-                                    <option key={s.value} value={s.value}>{s.label}</option>
-                                ))}
-                            </select>
+                            {showScopeDropdown ? (
+                                <select
+                                    className="border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 w-full text-xs sm:text-sm bg-white dark:bg-[#2a2a2a] dark:text-gray-100 transition-colors"
+                                    value={form.scope}
+                                    onChange={e => onChangeForm({
+                                        ...form,
+                                        scope: Number(e.target.value),
+                                        programId: null,
+                                        yearLevel: null,
+                                        section: null,
+                                    })}
+                                >
+                                    {availableScopes.map(s => (
+                                        <option key={s.value} value={s.value}>{s.label}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="flex items-center gap-2 border-2 border-gray-100 dark:border-gray-700 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 bg-gray-50 dark:bg-[#222]">
+                                    <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Section</span>
+                                    <span className="text-[10px] font-bold bg-orange-100 text-orange-600 rounded-full px-1.5 py-0.5">Your class only</span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="col-span-2 flex items-center gap-2.5">
@@ -327,7 +355,7 @@ export function ObligationFormModal({
                             )}
                         </div>
 
-                        {(form.scope === 1 || form.scope === 2 || form.scope === 3) && (
+                        {showProgramField && (
                             <div>
                                 <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                                     Program
@@ -345,7 +373,7 @@ export function ObligationFormModal({
                             </div>
                         )}
 
-                        {(form.scope === 2 || form.scope === 3) && (
+                        {showYearField && (
                             <div>
                                 <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                                     Year Level
@@ -364,7 +392,7 @@ export function ObligationFormModal({
                             </div>
                         )}
 
-                        {(form.scope === 2 || form.scope === 3) && (
+                        {showSectionField && (
                             <div>
                                 <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                                     Section

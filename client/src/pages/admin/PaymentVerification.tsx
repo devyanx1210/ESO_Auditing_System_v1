@@ -641,10 +641,13 @@ const PaymentVerification = () => {
     const txt  = darkMode ? "text-white" : "text-gray-800";
     const sub  = darkMode ? "text-gray-400" : "text-gray-500";
 
-    // ── Search filters by obligation name ──
-    function applyObligationSearch<T extends { obligationName: string }>(items: T[]) {
+    // ── Search filters by student name or obligation name ──
+    function applyObligationSearch<T extends { obligationName: string; studentName: string }>(items: T[]) {
         const q = search.trim().toLowerCase();
-        return q ? items.filter(i => i.obligationName.toLowerCase().includes(q)) : items;
+        return q ? items.filter(i =>
+            i.obligationName.toLowerCase().includes(q) ||
+            i.studentName.toLowerCase().includes(q)
+        ) : items;
     }
     function applyProgram<T extends { programCode: string }>(items: T[]) {
         return programFilter !== "all" ? items.filter(i => i.programCode === programFilter) : items;
@@ -722,7 +725,7 @@ const PaymentVerification = () => {
             <div className="flex items-center gap-2 mb-4">
                 <div className="relative flex-1 max-w-sm">
                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    <input type="text" placeholder="Search by obligation name..."
+                    <input type="text" placeholder="Search by student or obligation name..."
                         value={search} onChange={e => setSearch(e.target.value)}
                         className={`border-2 focus:border-orange-400 focus:outline-none rounded-xl pl-9 pr-3 py-2 text-sm w-full shadow-sm
                             ${darkMode ? "bg-[#1a1a1a] border-gray-600 text-gray-100 placeholder-gray-500" : "bg-white border-gray-200 text-gray-900"}`} />

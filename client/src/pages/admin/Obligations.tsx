@@ -199,6 +199,7 @@ const Obligations = () => {
                     qrPreview={ob.qrPreview}
                     saving={ob.saving}
                     formError={ob.formError}
+                    userRole={ob.userRole}
                     onChangeForm={ob.setForm}
                     onTogglePayment={ob.handleTogglePayment}
                     onQrChange={ob.handleQrChange}

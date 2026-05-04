@@ -50,8 +50,11 @@ export const BLANK_FORM: CreateObligationInput = {
     gcashQrPath: null,
 };
 
+const CLASS_ROLES  = ["class_officer", "class_secretary", "class_treasurer", "class_president"];
+const PROGRAM_ROLES = ["program_officer", "program_treasurer", "program_president"];
+
 export function useObligations() {
-    const { accessToken } = useAuth();
+    const { accessToken, user } = useAuth();
     const online = useOnlineStatus();
 
     // Active list
@@ -130,7 +133,9 @@ export function useObligations() {
 
     // Modal helpers
     function openAdd() {
-        setEditing(null); setForm(BLANK_FORM); setRequiresPayment(false);
+        const role = user?.role ?? "";
+        const defaultScope = CLASS_ROLES.includes(role) ? 3 : PROGRAM_ROLES.includes(role) ? 1 : 0;
+        setEditing(null); setForm({ ...BLANK_FORM, scope: defaultScope }); setRequiresPayment(false);
         setQrFile(null); setQrPreview(null); setFormError(""); setShowModal(true);
     }
 
@@ -302,6 +307,7 @@ export function useObligations() {
 
     return {
         // Data
+        userRole: user?.role,
         obligations,
         archived,
         loading,
