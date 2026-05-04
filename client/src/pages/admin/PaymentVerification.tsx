@@ -13,6 +13,11 @@ import type { PendingPaymentItem, PendingProofItem, PaymentHistoryItem } from ".
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function fmtMoney(n: number) {
+    const [int, dec] = n.toFixed(2).split(".");
+    return "₱" + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
+}
+
 const PROGRAM_NAMES: Record<string, string> = {
     CpE: "Computer Engineering",
     CE:  "Civil Engineering",
@@ -298,7 +303,7 @@ function PaySwipePanel({ items, token, darkMode, onDone }: PaySwipeProps) {
                             <div className={`rounded-xl p-3 mb-4 ${darkMode ? "bg-[#222]" : "bg-gray-50"}`}>
                                 <p className={`text-xs font-semibold uppercase tracking-wide ${sub} mb-1`}>Obligation</p>
                                 <p className={`font-semibold text-sm ${txt}`}>{cur.obligationName}</p>
-                                <p className="text-orange-500 font-bold text-lg mt-1">PHP {Number(cur.amountPaid).toFixed(2)}</p>
+                                <p className="text-orange-500 font-bold text-lg mt-1">{fmtMoney(Number(cur.amountPaid))}</p>
                                 <p className={`text-xs ${sub} mt-0.5`}>Submitted {fmtDate(cur.submittedAt)} · {fmtTime(cur.submittedAt)}</p>
                                 {cur.notes && <p className={`text-xs mt-1 italic ${sub}`}>"{cur.notes}"</p>}
                             </div>
@@ -1011,7 +1016,7 @@ const PaymentVerification = () => {
                                                 </td>
                                                 <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
                                                 <td className={`px-3 py-2.5 text-right font-bold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-                                                    PHP {Number(p.amountPaid).toFixed(2)}
+                                                    {fmtMoney(Number(p.amountPaid))}
                                                 </td>
                                                 <td className="px-3 py-2.5 text-center">
                                                     <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
@@ -1179,7 +1184,7 @@ const PaymentVerification = () => {
                                                 </td>
                                                 <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{h.obligationName}</td>
                                                 <td className={`px-3 py-2.5 text-right font-bold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-                                                    PHP {Number(h.amountPaid).toFixed(2)}
+                                                    {fmtMoney(Number(h.amountPaid))}
                                                 </td>
                                                 <td className="px-3 py-2.5">
                                                     {h.verifiedByName

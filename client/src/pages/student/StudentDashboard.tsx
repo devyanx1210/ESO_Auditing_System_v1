@@ -15,6 +15,10 @@ import {
 } from "react-icons/fi";
 
 /* ── helpers ── */
+function fmtMoney(n: number) {
+    const [int, dec] = n.toFixed(2).split(".");
+    return "₱" + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
+}
 function timeAgo(dateStr: string) {
     const diff = Date.now() - new Date(dateStr).getTime();
     const m = Math.floor(diff / 60000);
@@ -599,7 +603,7 @@ export default function StudentDashboard() {
 
                                                 <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                                                     {o.requiresPayment
-                                                        ? <span className="font-semibold text-gray-700">₱{Number(o.amount).toFixed(2)}</span>
+                                                        ? <span className="font-semibold text-gray-700">{fmtMoney(Number(o.amount))}</span>
                                                         : <span className="text-orange-600 font-semibold flex items-center gap-1">
                                                             <FiCamera className="w-3 h-3" /> Proof of Compliance
                                                           </span>
@@ -744,7 +748,7 @@ export default function StudentDashboard() {
                                 )}
                                 {isPaymentModal ? (
                                     <p className="text-2xl font-extrabold text-orange-600 mt-2">
-                                        ₱{Number(payModal.amount).toFixed(2)}
+                                        {fmtMoney(Number(payModal.amount))}
                                     </p>
                                 ) : (
                                     <p className="text-xs text-orange-600 font-semibold mt-2 flex items-center gap-1">

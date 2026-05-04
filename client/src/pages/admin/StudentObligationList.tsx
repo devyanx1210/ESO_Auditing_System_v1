@@ -53,7 +53,8 @@ function CashModal({ studentObligationId, obligationName, amount, token, onClose
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtMoney(n: number) {
-    return "₱" + n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const [int, dec] = n.toFixed(2).split(".");
+    return "₱" + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
 }
 
 function statusBadge(status: number, paymentStatus?: number | null) {

@@ -2,6 +2,10 @@ import React from "react";
 import { qrUrl } from "../../../services/obligation.service";
 import type { ObligationData } from "../../../services/obligation.service";
 
+function fmtMoney(n: number) {
+    const [int, dec] = n.toFixed(2).split(".");
+    return "₱" + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
+}
 const SCOPE_LABELS: Record<number, string> = { 0: "all", 1: "program", 2: "year level", 3: "section" };
 const SEMESTER_LABELS: Record<number, string> = { 1: "1st", 2: "2nd", 3: "Summer" };
 
@@ -67,7 +71,7 @@ export function ObligationTable({ rows, selected, onToggleOne, onToggleAll, acti
                             </td>
                             <td className="px-2 py-2 text-center">
                                 {o.amount > 0
-                                    ? <span className="font-semibold text-gray-800 dark:text-gray-100">₱{Number(o.amount).toFixed(2)}</span>
+                                    ? <span className="font-semibold text-gray-800 dark:text-gray-100">{fmtMoney(Number(o.amount))}</span>
                                     : <span className="text-gray-400 dark:text-gray-500">—</span>}
                             </td>
                             <td className="px-2 py-2 text-center capitalize dark:text-gray-300">
