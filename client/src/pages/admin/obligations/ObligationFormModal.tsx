@@ -241,7 +241,7 @@ export function ObligationFormModal({
                                 </div>
                                 <div>
                                     <label className="block text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                                        GCash QR Code
+                                        Payment QR Code
                                     </label>
                                     <button
                                         type="button"

@@ -290,7 +290,7 @@ function ObligationAccordion({ studentId, token, cache, onCache, darkMode }: Obl
                                                 {ob.isOverdue && <span className="ml-1.5 text-red-500 bg-red-50 px-1.5 py-0.5 rounded text-[10px] font-normal">overdue</span>}
                                             </td>
                                             <td className={`px-3 py-2 text-center border-r ${darkMode ? "border-gray-600" : "border-gray-300"}`}>
-                                                {ob.paymentType === 1 && <span className="text-xs font-semibold text-blue-500">GCash</span>}
+                                                {ob.paymentType === 1 && <span className="text-xs font-semibold text-blue-500">Payment</span>}
                                                 {ob.paymentType === 2  && <span className="text-xs font-semibold text-orange-500">Cash</span>}
                                                 {!ob.paymentType && <span className={darkMode ? "text-gray-600" : "text-gray-300"}>—</span>}
                                             </td>
@@ -506,7 +506,7 @@ export function _unusedMobileAccordion({ studentId, token, cache, onCache, darkM
                                             {ob.isOverdue && <span className="ml-1 text-red-500 text-[10px]">(overdue)</span>}
                                         </p>
                                         <div className={`flex items-center gap-2 mt-0.5 text-[11px] ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                            {ob.paymentType === 1 && <span className="text-[10px] font-semibold text-blue-500">GCash</span>}
+                                            {ob.paymentType === 1 && <span className="text-[10px] font-semibold text-blue-500">Payment</span>}
                                             {ob.paymentType === 2  && <span className="text-[10px] font-semibold text-orange-500">Cash</span>}
                                             {ob.amountPaid != null
                                                 ? <span className="font-semibold">{fmtMoney(Number(ob.amountPaid))}</span>

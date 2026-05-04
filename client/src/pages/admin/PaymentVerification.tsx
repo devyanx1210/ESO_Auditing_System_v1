@@ -551,8 +551,10 @@ const PaymentVerification = () => {
 
     // Bulk selection
     const [selectedPending,  setSelectedPending]  = useState<Set<number>>(new Set());
+    const [selectedProofs,   setSelectedProofs]   = useState<Set<number>>(new Set());
     const [selectedHistory,  setSelectedHistory]  = useState<Set<number>>(new Set());
     const [bulkVerifying,    setBulkVerifying]    = useState(false);
+    const [bulkProofVerifying, setBulkProofVerifying] = useState(false);
     const [bulkUnverifying,  setBulkUnverifying]  = useState(false);
     const [bulkMsg,          setBulkMsg]          = useState("");
 
@@ -570,6 +572,7 @@ const PaymentVerification = () => {
         if (!accessToken || !canAccess) return;
         setLoading(true);
         setSelectedPending(new Set());
+        setSelectedProofs(new Set());
         setSelectedHistory(new Set());
         setBulkMsg("");
         Promise.all([
@@ -682,6 +685,7 @@ const PaymentVerification = () => {
     const filteredHistory = applyHistSort(applyHistoryStatus(applyProgram(applyObligationSearch(payHistory))));
 
     const allPendingSel = filteredPending.length > 0 && filteredPending.every(p => selectedPending.has(p.paymentId));
+    const allProofsSel  = filteredProofs.length  > 0 && filteredProofs.every(p  => selectedProofs.has(p.studentObligationId));
     const allHistorySel = filteredHistory.length > 0 && filteredHistory.every(h => selectedHistory.has(h.paymentId));
 
     const activeFilterCount = [programFilter !== "all", sortKey !== "date", historyStatusFilter !== "all"].filter(Boolean).length;
@@ -689,8 +693,25 @@ const PaymentVerification = () => {
     function togglePending(id: number, v: boolean) {
         setSelectedPending(prev => { const s = new Set(prev); v ? s.add(id) : s.delete(id); return s; });
     }
+    function toggleProof(id: number, v: boolean) {
+        setSelectedProofs(prev => { const s = new Set(prev); v ? s.add(id) : s.delete(id); return s; });
+    }
     function toggleHistory(id: number, v: boolean) {
         setSelectedHistory(prev => { const s = new Set(prev); v ? s.add(id) : s.delete(id); return s; });
+    }
+
+    function handleBulkProofVerify() {
+        if (!accessToken || !selectedProofs.size) return;
+        withAuth(async () => {
+            setBulkProofVerifying(true); setBulkMsg("");
+            try {
+                const ids = [...selectedProofs];
+                await Promise.all(ids.map(id => adminStudentService.verifyProof(accessToken!, id, 2)));
+                setBulkMsg(`${ids.length} proof(s) verified.`);
+                load();
+            } catch (e: any) { setBulkMsg(e.message); }
+            finally { setBulkProofVerifying(false); }
+        });
     }
 
     if (!canAccess) {
@@ -890,6 +911,15 @@ const PaymentVerification = () => {
                             </span>
                         </button>
                     )}
+                    {viewMode === "list" && subTab === "proof" && selectedProofs.size > 0 && (
+                        <button onClick={handleBulkProofVerify} disabled={bulkProofVerifying}
+                            className="relative px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-60 transition">
+                            {bulkProofVerifying ? "Verifying..." : "Verify Selected"}
+                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-green-700 rounded-full text-[9px] font-black flex items-center justify-center leading-none px-1 shadow ring-1 ring-green-200">
+                                {selectedProofs.size}
+                            </span>
+                        </button>
+                    )}
                     {viewMode === "list" && subTab === "history" && selectedHistory.size > 0 && (
                         <div className="flex items-center gap-2">
                             <button onClick={handleBulkUnverify} disabled={bulkUnverifying}
@@ -929,11 +959,11 @@ const PaymentVerification = () => {
             {/* ══ LIST MODE ══ */}
             {viewMode === "list" && (
                 <>
-                    {/* GCash Payments — own tab */}
+                    {/* Payment Submissions — own tab */}
                     {subTab === "pending" && (
                         filteredPending.length === 0 ? (
                             <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card} ${sub}`}>
-                                {search ? `No GCash submissions matching "${search}".` : "No pending GCash payments."}
+                                {search ? `No payment submissions matching "${search}".` : "No pending payments."}
                             </div>
                         ) : (
                             <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
@@ -1026,6 +1056,11 @@ const PaymentVerification = () => {
                                 <table className="eso-table w-full min-w-[580px] border-collapse">
                                     <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
                                         <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+                                            <th className="px-3 py-2 text-center w-10">
+                                                <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
+                                                    checked={allProofsSel}
+                                                    onChange={e => setSelectedProofs(e.target.checked ? new Set(filteredProofs.map(p => p.studentObligationId)) : new Set())} />
+                                            </th>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
                                             <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
                                             <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
@@ -1036,12 +1071,20 @@ const PaymentVerification = () => {
                                     <tbody>
                                         {filteredProofs.map((p, i) => (
                                             <tr key={p.studentObligationId}
+                                                onClick={() => toggleProof(p.studentObligationId, !selectedProofs.has(p.studentObligationId))}
                                                 style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
-                                                className={`transition-colors ${
-                                                    i % 2 === 0
-                                                        ? darkMode ? "bg-[#1a1a1a]" : "bg-white"
-                                                        : darkMode ? "bg-[#1a1a1a]/60" : "bg-gray-50/60"
+                                                className={`transition-colors cursor-pointer ${
+                                                    selectedProofs.has(p.studentObligationId)
+                                                        ? darkMode ? "bg-orange-900/30" : "bg-orange-50"
+                                                        : i % 2 === 0
+                                                            ? darkMode ? "bg-[#1a1a1a] hover:bg-[#2a2a2a]" : "bg-white hover:bg-gray-50"
+                                                            : darkMode ? "bg-[#1a1a1a]/60 hover:bg-[#2a2a2a]" : "bg-gray-50/60 hover:bg-gray-100/50"
                                                 }`}>
+                                                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                                                    <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
+                                                        checked={selectedProofs.has(p.studentObligationId)}
+                                                        onChange={e => toggleProof(p.studentObligationId, e.target.checked)} />
+                                                </td>
                                                 <td className="px-3 py-2.5">
                                                     <div className="flex items-center gap-2.5">
                                                         <UserAvatar size="sm" src={p.avatarPath} />

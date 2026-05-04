@@ -36,7 +36,7 @@ export function ObligationTable({ rows, selected, onToggleOne, onToggleAll, acti
                         <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">School Year</th>
                         <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Sem</th>
                         <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Due Date</th>
-                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">GCash QR</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Payment QR</th>
                         <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Created By</th>
                         <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">Actions</th>
                     </tr>

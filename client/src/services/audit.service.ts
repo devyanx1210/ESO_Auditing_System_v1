@@ -16,7 +16,7 @@ export interface IncomeItem {
     programCode:    string;
     obligationName: string;
     amountPaid:     number;
-    paymentType:    number;   // 1=GCash, 2=Cash
+    paymentType:    number;   // 1=Payment, 2=Cash
     semester:       number;
     schoolYear:     string;
     verifiedAt:     string | null;

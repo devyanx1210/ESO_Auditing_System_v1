@@ -759,18 +759,18 @@ export default function StudentDashboard() {
                                 )}
                             </div>
 
-                            {/* GCash QR (payment only) */}
+                            {/* Payment QR (payment only) */}
                             {isPaymentModal && payModal.gcashQrPath && (
                                 <div className="border border-gray-200 rounded-xl p-4 flex items-center gap-4 bg-gray-50">
                                     <img
                                         src={qrUrl(payModal.gcashQrPath)}
-                                        alt="GCash QR"
+                                        alt="Payment QR"
                                         className="w-20 h-20 object-contain rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
                                         onClick={() => setQrView({ url: qrUrl(payModal.gcashQrPath!), name: payModal.obligationName })}
                                     />
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-800">GCash QR Code</p>
-                                        <p className="text-xs text-gray-500 mt-1">Scan with your GCash app to pay</p>
+                                        <p className="text-sm font-semibold text-gray-800">Payment QR Code</p>
+                                        <p className="text-xs text-gray-500 mt-1">Scan with your payment app to pay</p>
                                         <button
                                             type="button"
                                             onClick={() => setQrView({ url: qrUrl(payModal.gcashQrPath!), name: payModal.obligationName })}
@@ -786,8 +786,8 @@ export default function StudentDashboard() {
                             {isPaymentModal ? (
                                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-800 space-y-1">
                                     <p className="font-semibold">Payment Instructions:</p>
-                                    <p>1. Scan the GCash QR above or send to the ESO GCash number</p>
-                                    <p>2. Take a screenshot of your GCash receipt showing the transaction</p>
+                                    <p>1. Scan the Payment QR above or send to the ESO payment number</p>
+                                    <p>2. Take a screenshot of your payment receipt showing the transaction</p>
                                     <p>3. Upload the screenshot below</p>
                                 </div>
                             ) : (
@@ -802,7 +802,7 @@ export default function StudentDashboard() {
                             {/* File upload */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    {isPaymentModal ? "GCash Receipt / Payment Screenshot" : "Proof of Compliance (screenshot or photo)"} *
+                                    {isPaymentModal ? "Payment Receipt / Screenshot" : "Proof of Compliance (screenshot or photo)"} *
                                 </label>
 
                                 {/* Image preview */}
@@ -899,7 +899,7 @@ export default function StudentDashboard() {
                             </button>
                         </div>
                         <div className="p-5">
-                            <img src={qrView.url} alt="GCash QR Code" className="w-full rounded-xl border border-gray-200" />
+                            <img src={qrView.url} alt="Payment QR Code" className="w-full rounded-xl border border-gray-200" />
                             <a
                                 href={qrView.url}
                                 download

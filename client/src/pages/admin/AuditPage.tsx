@@ -152,7 +152,7 @@ function InfoModal({ onClose, darkMode }: { onClose: () => void; darkMode: boole
                         <p className={headingCls}>Collections</p>
                         <p className={textCls}>
                             Collections are all verified student payments received by the organization. A payment appears here only after it has been officially verified by an authorized officer.
-                            Each record shows the student name, obligation covered, payment method (GCash or Cash), amount collected, and the officer who verified it.
+                            Each record shows the student name, obligation covered, payment method (Payment or Cash), amount collected, and the officer who verified it.
                         </p>
                     </div>
 
@@ -1125,7 +1125,7 @@ const AuditPage = () => {
                                     <tr>
                                         <th className="px-4 py-3 text-left text-[10px] uppercase font-semibold tracking-wide">Program</th>
                                         <th className="px-4 py-3 text-center text-[10px] uppercase font-semibold tracking-wide">Payments</th>
-                                        <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">GCash</th>
+                                        <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">Payment</th>
                                         <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">Cash</th>
                                         <th className="px-4 py-3 text-right text-[10px] uppercase font-semibold tracking-wide">Total Collected</th>
                                     </tr>

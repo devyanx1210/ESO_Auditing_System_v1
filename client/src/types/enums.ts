@@ -30,7 +30,7 @@ export const ObligStatusLabel: Record<number, string> = {
     0: "Unpaid", 1: "Pending", 2: "Paid", 3: "Waived",
 };
 export const PaymentTypeLabel: Record<number, string> = {
-    1: "GCash", 2: "Cash",
+    1: "Payment", 2: "Cash",
 };
 export const PaymentStatusLabel: Record<number, string> = {
     0: "Pending", 1: "Approved", 2: "Rejected",
