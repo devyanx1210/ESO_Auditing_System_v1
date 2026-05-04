@@ -477,7 +477,7 @@ function ProofSwipePanel({ items, token, darkMode, onDone }: ProofSwipeProps) {
                             </button>
                             <button onClick={() => handleClick(true)} disabled={saving}
                                 className="flex-1 py-2.5 rounded-xl bg-green-600 text-white font-semibold text-sm hover:bg-green-700 disabled:opacity-60 transition">
-                                {saving ? "Saving…" : "Approve"}
+                                {saving ? "Saving…" : "Verify"}
                             </button>
                         </div>
                     </div>
@@ -536,9 +536,9 @@ const PaymentVerification = () => {
 
     // Tab / mode
     const [mainTab,   setMainTab]   = useState<"payments" | "proof">("payments");
-    const [pendingVerifyId, setPendingVerifyId] = useState<number | null>(null);
+    const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
     const [listIsAuthed, setListIsAuthed] = useState(false);
-    const [subTab,    setSubTab]    = useState<"pending" | "history">("pending");
+    const [subTab,    setSubTab]    = useState<"pending" | "proof" | "history">("pending");
     const [viewMode,  setViewMode]  = useState<"list" | "swipe">("list");
 
     // Search / filter
@@ -583,7 +583,6 @@ const PaymentVerification = () => {
     }, [accessToken, canAccess]);
 
     useEffect(() => { load(); }, [load]);
-    useEffect(() => { const id = setInterval(load, 20_000); return () => clearInterval(id); }, [load]);
 
     useEffect(() => {
         if (!showFilters) return;
@@ -594,17 +593,24 @@ const PaymentVerification = () => {
         return () => document.removeEventListener("mousedown", h);
     }, [showFilters]);
 
+    function withAuth(action: () => void) {
+        if (listIsAuthed) { action(); }
+        else { setPendingAction(() => action); }
+    }
+
     // ── Bulk verify ──
-    async function handleBulkVerify() {
+    function handleBulkVerify() {
         if (!accessToken || !selectedPending.size) return;
-        setBulkVerifying(true); setBulkMsg("");
-        try {
-            const ids = [...selectedPending];
-            await adminStudentService.bulkVerify(accessToken, ids);
-            setBulkMsg(`${ids.length} payment(s) verified.`);
-            load();
-        } catch (e: any) { setBulkMsg(e.message); }
-        finally { setBulkVerifying(false); }
+        withAuth(async () => {
+            setBulkVerifying(true); setBulkMsg("");
+            try {
+                const ids = [...selectedPending];
+                await adminStudentService.bulkVerify(accessToken!, ids);
+                setBulkMsg(`${ids.length} payment(s) verified.`);
+                load();
+            } catch (e: any) { setBulkMsg(e.message); }
+            finally { setBulkVerifying(false); }
+        });
     }
 
     async function handleBulkUnverify() {
@@ -794,128 +800,116 @@ const PaymentVerification = () => {
             </div>
 
             {/* ── Sub-tabs + View mode toggle ── */}
-            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-                {/* List mode: Pending | History */}
-                {viewMode === "list" && (
-                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1">
-                        <button onClick={() => setSubTab("pending")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
-                                subTab === "pending"
-                                    ? "bg-white text-orange-600 shadow-sm"
-                                    : `${sub} hover:text-gray-700`
-                            }`}>
-                            <FiCheckSquare className="w-4 h-4" />
-                            Pending
-                            {filteredPending.length > 0 && (
-                                <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">
-                                    {filteredPending.length}
-                                </span>
-                            )}
-                        </button>
-                        <button onClick={() => setSubTab("history")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
-                                subTab === "history"
-                                    ? "bg-white text-orange-600 shadow-sm"
-                                    : `${sub} hover:text-gray-700`
-                            }`}>
-                            <FiClock className="w-4 h-4" />
-                            History
-                            {filteredHistory.length > 0 && (
-                                <span className={`text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none ${darkMode ? "bg-gray-600" : "bg-gray-400"}`}>
-                                    {filteredHistory.length}
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                )}
+            <div className="flex items-center justify-between mb-4 gap-2">
+                {/* Left: tab pills */}
+                <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1 flex-wrap">
+                    {viewMode === "list" ? (
+                        <>
+                            <button onClick={() => setSubTab("pending")}
+                                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+                                    subTab === "pending" ? "bg-white text-orange-600 shadow-sm" : `${sub} hover:text-gray-700 dark:hover:text-gray-300`
+                                }`}>
+                                <FiCheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span>GCash</span>
+                                {filteredPending.length > 0 && (
+                                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{filteredPending.length}</span>
+                                )}
+                            </button>
+                            <button onClick={() => setSubTab("proof")}
+                                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+                                    subTab === "proof" ? "bg-white text-orange-600 shadow-sm" : `${sub} hover:text-gray-700 dark:hover:text-gray-300`
+                                }`}>
+                                <FiCamera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span>Proof</span>
+                                {filteredProofs.length > 0 && (
+                                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{filteredProofs.length}</span>
+                                )}
+                            </button>
+                            <button onClick={() => setSubTab("history")}
+                                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+                                    subTab === "history" ? "bg-white text-orange-600 shadow-sm" : `${sub} hover:text-gray-700 dark:hover:text-gray-300`
+                                }`}>
+                                <FiClock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span>History</span>
+                                {filteredHistory.length > 0 && (
+                                    <span className={`text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none ${darkMode ? "bg-gray-600" : "bg-gray-400"}`}>{filteredHistory.length}</span>
+                                )}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button onClick={() => setMainTab("payments")}
+                                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+                                    mainTab === "payments" ? "bg-white text-orange-600 shadow-sm" : `${sub} hover:text-gray-700 dark:hover:text-gray-300`
+                                }`}>
+                                <FiCreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span>GCash</span>
+                                {filteredPending.length > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{filteredPending.length}</span>}
+                            </button>
+                            <button onClick={() => setMainTab("proof")}
+                                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
+                                    mainTab === "proof" ? "bg-white text-orange-600 shadow-sm" : `${sub} hover:text-gray-700 dark:hover:text-gray-300`
+                                }`}>
+                                <FiCamera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span className="hidden sm:inline">Proof of Compliance</span>
+                                <span className="sm:hidden">Proof</span>
+                                {filteredProofs.length > 0 && <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{filteredProofs.length}</span>}
+                            </button>
+                        </>
+                    )}
+                </div>
 
-                {/* Swipe mode: Payments | Proof of Compliance */}
-                {viewMode === "swipe" && (
-                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1">
-                        <button onClick={() => setMainTab("payments")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
-                                mainTab === "payments"
-                                    ? "bg-white text-orange-600 shadow-sm"
-                                    : `${sub} hover:text-gray-700`
-                            }`}>
-                            <FiCreditCard className="w-4 h-4" />
-                            Payments
-                            {pending.length > 0 && (
-                                <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{pending.length}</span>
-                            )}
+                {/* Right: view toggle + bulk actions — grouped so select-all doesn't break layout */}
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {viewMode === "list" && (subTab === "pending" || subTab === "proof") && (
+                        <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1">
+                            <button className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-orange-600 shadow-sm">
+                                <FiList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span className="hidden sm:inline">List</span>
+                            </button>
+                            <button onClick={() => { setViewMode("swipe"); setMainTab(subTab === "proof" ? "proof" : "payments"); }}
+                                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${sub} hover:text-gray-700 dark:hover:text-gray-300`}>
+                                <FiChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span className="hidden sm:inline">Swipe</span>
+                            </button>
+                        </div>
+                    )}
+                    {viewMode === "swipe" && (
+                        <button onClick={() => { setViewMode("list"); setSubTab(mainTab === "proof" ? "proof" : "pending"); }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border-2 transition
+                                ${darkMode ? "border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}>
+                            <FiChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">List</span>
                         </button>
-                        <button onClick={() => setMainTab("proof")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
-                                mainTab === "proof"
-                                    ? "bg-white text-orange-600 shadow-sm"
-                                    : `${sub} hover:text-gray-700`
-                            }`}>
-                            <FiCamera className="w-4 h-4" />
-                            Proof of Compliance
-                            {pendingProofs.length > 0 && (
-                                <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold leading-none">{pendingProofs.length}</span>
-                            )}
-                        </button>
-                    </div>
-                )}
-
-                {/* View mode toggle (only in list + pending) */}
-                {viewMode === "list" && subTab === "pending" && (
-                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2a2a2a] rounded-xl p-1">
-                        <button onClick={() => setViewMode("list")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
-                                viewMode === "list"
-                                    ? "bg-white text-orange-600 shadow-sm"
-                                    : `${sub} hover:text-gray-700`
-                            }`}>
-                            <FiList className="w-4 h-4" /> List
-                        </button>
-                        <button onClick={() => { setViewMode("swipe"); setMainTab("payments"); }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition ${sub} hover:text-gray-700`}>
-                            <FiChevronRight className="w-4 h-4" /> Swipe Review
-                        </button>
-                    </div>
-                )}
-
-                {/* Back to list (in swipe mode) */}
-                {viewMode === "swipe" && (
-                    <button onClick={() => { setViewMode("list"); setSubTab("pending"); }}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border-2 transition
-                            ${darkMode ? "border-gray-600 text-gray-300 hover:border-orange-400 hover:text-orange-400" : "border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600"}`}>
-                        <FiChevronLeft className="w-4 h-4" /> List
-                    </button>
-                )}
-
-                {/* Bulk actions for list mode pending payments */}
-                {viewMode === "list" && subTab === "pending" && selectedPending.size > 0 && (
-                    <button onClick={handleBulkVerify} disabled={bulkVerifying}
-                        className="relative px-4 py-2 text-sm bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 disabled:opacity-60 transition">
-                        {bulkVerifying ? "Verifying..." : "Verify Selected"}
-                        <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-orange-600 rounded-full text-[9px] font-black flex items-center justify-center leading-none px-1 shadow ring-1 ring-orange-200">
-                            {selectedPending.size}
-                        </span>
-                    </button>
-                )}
-
-                {/* Bulk actions for history */}
-                {viewMode === "list" && subTab === "history" && selectedHistory.size > 0 && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={handleBulkUnverify} disabled={bulkUnverifying}
-                            className="relative px-4 py-2 text-sm bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600 disabled:opacity-60 transition">
-                            {bulkUnverifying ? "Processing..." : "Return to Pending"}
-                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-yellow-700 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-yellow-200">
-                                {selectedHistory.size}
+                    )}
+                    {viewMode === "list" && subTab === "pending" && selectedPending.size > 0 && (
+                        <button onClick={handleBulkVerify} disabled={bulkVerifying}
+                            className="relative px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 disabled:opacity-60 transition">
+                            {bulkVerifying ? "Verifying..." : "Verify Selected"}
+                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-orange-600 rounded-full text-[9px] font-black flex items-center justify-center leading-none px-1 shadow ring-1 ring-orange-200">
+                                {selectedPending.size}
                             </span>
                         </button>
-                        <button onClick={openDeleteModal}
-                            className="relative px-4 py-2 text-sm bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition flex items-center gap-1.5">
-                            <FiTrash2 className="w-3.5 h-3.5" /> Delete
-                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-red-600 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-red-200">
-                                {selectedHistory.size}
-                            </span>
-                        </button>
-                    </div>
-                )}
+                    )}
+                    {viewMode === "list" && subTab === "history" && selectedHistory.size > 0 && (
+                        <div className="flex items-center gap-2">
+                            <button onClick={handleBulkUnverify} disabled={bulkUnverifying}
+                                className="relative px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600 disabled:opacity-60 transition">
+                                {bulkUnverifying ? "Processing..." : "Return"}
+                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-yellow-700 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-yellow-200">
+                                    {selectedHistory.size}
+                                </span>
+                            </button>
+                            <button onClick={openDeleteModal}
+                                className="relative px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition flex items-center gap-1.5">
+                                <FiTrash2 className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Delete</span>
+                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-white text-red-600 rounded-full text-[9px] font-black flex items-center justify-center px-1 shadow ring-1 ring-red-200">
+                                    {selectedHistory.size}
+                                </span>
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {bulkMsg && (
@@ -935,161 +929,159 @@ const PaymentVerification = () => {
             {/* ══ LIST MODE ══ */}
             {viewMode === "list" && (
                 <>
-                    {/* Pending — List mode */}
+                    {/* GCash Payments — own tab */}
                     {subTab === "pending" && (
-                        <div className="flex flex-col gap-5">
-                            {/* Empty state — both queues empty */}
-                            {filteredPending.length === 0 && filteredProofs.length === 0 && (
-                                <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card} ${sub}`}>
-                                    {search ? `No submissions matching "${search}".` : "No pending submissions."}
-                                </div>
-                            )}
+                        filteredPending.length === 0 ? (
+                            <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card} ${sub}`}>
+                                {search ? `No GCash submissions matching "${search}".` : "No pending GCash payments."}
+                            </div>
+                        ) : (
+                            <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
+                                <table className="eso-table w-full min-w-[640px] border-collapse">
+                                    <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+                                        <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+                                            <th className="px-3 py-2 text-center w-10">
+                                                <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
+                                                    checked={allPendingSel}
+                                                    onChange={e => setSelectedPending(e.target.checked ? new Set(filteredPending.map(p => p.paymentId)) : new Set())} />
+                                            </th>
+                                            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
+                                            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
+                                            <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wide w-24">Amount</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Receipt</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredPending.map((p, i) => (
+                                            <tr key={p.paymentId}
+                                                onClick={() => togglePending(p.paymentId, !selectedPending.has(p.paymentId))}
+                                                style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
+                                                className={`transition-colors cursor-pointer ${
+                                                    selectedPending.has(p.paymentId)
+                                                        ? darkMode ? "bg-orange-900/30" : "bg-orange-50"
+                                                        : i % 2 === 0
+                                                            ? darkMode ? "bg-[#1a1a1a] hover:bg-[#2a2a2a]" : "bg-white hover:bg-gray-50"
+                                                            : darkMode ? "bg-[#1a1a1a]/60 hover:bg-[#2a2a2a]" : "bg-gray-50/60 hover:bg-gray-100/50"
+                                                }`}>
+                                                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                                                    <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
+                                                        checked={selectedPending.has(p.paymentId)}
+                                                        onChange={e => togglePending(p.paymentId, e.target.checked)} />
+                                                </td>
+                                                <td className="px-3 py-2.5">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <UserAvatar size="sm" src={p.avatarPath} />
+                                                        <div>
+                                                            <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
+                                                            <div className={`text-xs font-mono ${sub}`}>{p.studentNo} · {programLabel(p.programCode)}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
+                                                <td className={`px-3 py-2.5 text-right font-bold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                                    PHP {Number(p.amountPaid).toFixed(2)}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
+                                                    <div className={`text-[10px] ${sub}`}>{fmtTime(p.submittedAt)}</div>
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                                                    {p.receiptPath
+                                                        ? <button onClick={() => setPreviewUrl(receiptUrl(p.receiptPath))}
+                                                            className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">View</button>
+                                                        : <span className={`text-xs ${sub}`}>—</span>}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button
+                                                            onClick={() => withAuth(() => adminStudentService.verifyPayment(accessToken!, p.paymentId, 2, "").then(load))}
+                                                            className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-bold hover:bg-red-600 transition">
+                                                            Reject
+                                                        </button>
+                                                        <button
+                                                            onClick={() => withAuth(() => adminStudentService.verifyPayment(accessToken!, p.paymentId, 1, "").then(load))}
+                                                            className="px-2 py-1 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition">
+                                                            Verify
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )
+                    )}
 
-                            {/* GCash Payments section */}
-                            {filteredPending.length > 0 && (
-                                <div>
-                                    <p className={`text-xs font-bold uppercase tracking-wide mb-2 ${sub}`}>GCash Payments ({filteredPending.length})</p>
-                                    <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
-                                        <table className="eso-table w-full min-w-[640px] border-collapse">
-                                            <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
-                                                <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
-                                                    <th className="px-3 py-2 text-center w-10">
-                                                        <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
-                                                            checked={allPendingSel}
-                                                            onChange={e => setSelectedPending(e.target.checked ? new Set(filteredPending.map(p => p.paymentId)) : new Set())} />
-                                                    </th>
-                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
-                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
-                                                    <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wide w-24">Amount</th>
-                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
-                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Receipt</th>
-                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-20">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredPending.map((p, i) => (
-                                                    <tr key={p.paymentId}
-                                                        onClick={() => togglePending(p.paymentId, !selectedPending.has(p.paymentId))}
-                                                        style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
-                                                        className={`transition-colors cursor-pointer ${
-                                                            selectedPending.has(p.paymentId)
-                                                                ? darkMode ? "bg-orange-900/30" : "bg-orange-50"
-                                                                : i % 2 === 0
-                                                                    ? darkMode ? "bg-[#1a1a1a] hover:bg-[#2a2a2a]" : "bg-white hover:bg-gray-50"
-                                                                    : darkMode ? "bg-[#1a1a1a]/60 hover:bg-[#2a2a2a]" : "bg-gray-50/60 hover:bg-gray-100/50"
-                                                        }`}>
-                                                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
-                                                            <input type="checkbox" className="w-4 h-4 accent-orange-500 cursor-pointer"
-                                                                checked={selectedPending.has(p.paymentId)}
-                                                                onChange={e => togglePending(p.paymentId, e.target.checked)} />
-                                                        </td>
-                                                        <td className="px-3 py-2.5">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <UserAvatar size="sm" src={p.avatarPath} />
-                                                                <div>
-                                                                    <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
-                                                                    <div className={`text-xs font-mono ${sub}`}>{p.studentNo} · {programLabel(p.programCode)}</div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
-                                                        <td className={`px-3 py-2.5 text-right font-bold text-xs ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-                                                            PHP {Number(p.amountPaid).toFixed(2)}
-                                                        </td>
-                                                        <td className="px-3 py-2.5 text-center">
-                                                            <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
-                                                            <div className={`text-[10px] ${sub}`}>{fmtTime(p.submittedAt)}</div>
-                                                        </td>
-                                                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
-                                                            {p.receiptPath
-                                                                ? <button onClick={() => setPreviewUrl(receiptUrl(p.receiptPath))}
-                                                                    className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">View</button>
-                                                                : <span className={`text-xs ${sub}`}>—</span>}
-                                                        </td>
-                                                        <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
-                                                            <div className="flex items-center justify-center gap-1.5">
-                                                                <button onClick={() => listIsAuthed
-                                                                    ? adminStudentService.verifyPayment(accessToken!, p.paymentId, 1, "").then(load)
-                                                                    : setPendingVerifyId(p.paymentId)}
-                                                                    className="px-2 py-1 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition">
-                                                                    Verify
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Proof of Compliance section */}
-                            {filteredProofs.length > 0 && (
-                                <div>
-                                    <p className={`text-xs font-bold uppercase tracking-wide mb-2 ${sub}`}>Proof of Compliance ({filteredProofs.length})</p>
-                                    <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
-                                        <table className="eso-table w-full min-w-[580px] border-collapse">
-                                            <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
-                                                <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
-                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
-                                                    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
-                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
-                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Proof</th>
-                                                    <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredProofs.map((p, i) => (
-                                                    <tr key={p.studentObligationId}
-                                                        style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
-                                                        className={`transition-colors ${
-                                                            i % 2 === 0
-                                                                ? darkMode ? "bg-[#1a1a1a]" : "bg-white"
-                                                                : darkMode ? "bg-[#1a1a1a]/60" : "bg-gray-50/60"
-                                                        }`}>
-                                                        <td className="px-3 py-2.5">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <UserAvatar size="sm" src={p.avatarPath} />
-                                                                <div>
-                                                                    <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
-                                                                    <div className={`text-xs font-mono ${sub}`}>{p.studentNo} · {programLabel(p.programCode)}</div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
-                                                        <td className="px-3 py-2.5 text-center">
-                                                            <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
-                                                            <div className={`text-[10px] ${sub}`}>{fmtTime(p.submittedAt)}</div>
-                                                        </td>
-                                                        <td className="px-3 py-2.5 text-center">
-                                                            {p.proofImage
-                                                                ? <button onClick={() => setPreviewUrl(receiptUrl(p.proofImage))}
-                                                                    className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">View</button>
-                                                                : <span className={`text-xs ${sub}`}>—</span>}
-                                                        </td>
-                                                        <td className="px-3 py-2.5 text-center">
-                                                            <div className="flex items-center justify-center gap-1.5">
-                                                                <button
-                                                                    onClick={() => adminStudentService.verifyProof(accessToken!, p.studentObligationId, 0).then(load)}
-                                                                    className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-bold hover:bg-red-600 transition">
-                                                                    Reject
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => adminStudentService.verifyProof(accessToken!, p.studentObligationId, 2).then(load)}
-                                                                    className="px-2 py-1 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition">
-                                                                    Approve
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                    {/* Proof of Compliance — own tab */}
+                    {subTab === "proof" && (
+                        filteredProofs.length === 0 ? (
+                            <div className={`rounded-xl p-10 text-center text-sm shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card} ${sub}`}>
+                                {search ? `No proof submissions matching "${search}".` : "No pending proof of compliance."}
+                            </div>
+                        ) : (
+                            <div className={`rounded-xl overflow-x-auto shadow-[0_2px_12px_rgba(0,0,0,0.08)] ${card}`}>
+                                <table className="eso-table w-full min-w-[580px] border-collapse">
+                                    <thead className={`${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+                                        <tr className={`border-b ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+                                            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Student</th>
+                                            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">Obligation</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Submitted</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-16">Proof</th>
+                                            <th className="px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wide w-28">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredProofs.map((p, i) => (
+                                            <tr key={p.studentObligationId}
+                                                style={{ animation: 'fadeInUp 0.3s ease both', animationDelay: `${i * 0.04}s` }}
+                                                className={`transition-colors ${
+                                                    i % 2 === 0
+                                                        ? darkMode ? "bg-[#1a1a1a]" : "bg-white"
+                                                        : darkMode ? "bg-[#1a1a1a]/60" : "bg-gray-50/60"
+                                                }`}>
+                                                <td className="px-3 py-2.5">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <UserAvatar size="sm" src={p.avatarPath} />
+                                                        <div>
+                                                            <div className={`font-semibold text-xs leading-tight ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{p.studentName}</div>
+                                                            <div className={`text-xs font-mono ${sub}`}>{p.studentNo} · {programLabel(p.programCode)}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className={`px-3 py-2.5 text-xs font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{p.obligationName}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <div className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{fmtDate(p.submittedAt)}</div>
+                                                    <div className={`text-[10px] ${sub}`}>{fmtTime(p.submittedAt)}</div>
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    {p.proofImage
+                                                        ? <button onClick={() => setPreviewUrl(receiptUrl(p.proofImage))}
+                                                            className="text-orange-500 hover:text-orange-600 text-xs font-semibold hover:underline">View</button>
+                                                        : <span className={`text-xs ${sub}`}>—</span>}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button
+                                                            onClick={() => withAuth(() => adminStudentService.verifyProof(accessToken!, p.studentObligationId, 0).then(load))}
+                                                            className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-bold hover:bg-red-600 transition">
+                                                            Reject
+                                                        </button>
+                                                        <button
+                                                            onClick={() => withAuth(() => adminStudentService.verifyProof(accessToken!, p.studentObligationId, 2).then(load))}
+                                                            className="px-2 py-1 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition">
+                                                            Verify
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )
                     )}
 
                     {/* History */}
@@ -1175,17 +1167,17 @@ const PaymentVerification = () => {
                 </>
             )}
 
-            {/* Password modal for inline list-mode verify */}
-            {pendingVerifyId !== null && accessToken && (
+            {/* Password modal — shown once per session, then listIsAuthed=true */}
+            {pendingAction !== null && accessToken && (
                 <PasswordModal
                     token={accessToken}
                     onConfirm={() => {
-                        const id = pendingVerifyId;
-                        setPendingVerifyId(null);
+                        const action = pendingAction;
+                        setPendingAction(null);
                         setListIsAuthed(true);
-                        adminStudentService.verifyPayment(accessToken!, id, 1, "").then(load);
+                        action?.();
                     }}
-                    onClose={() => setPendingVerifyId(null)}
+                    onClose={() => setPendingAction(null)}
                 />
             )}
         </div>
