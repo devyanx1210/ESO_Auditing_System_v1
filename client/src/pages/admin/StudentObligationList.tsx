@@ -739,7 +739,7 @@ const StudentObligationList = () => {
                 return (
                     <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
                         <div>
-                            <h1 className={`text-base sm:text-lg font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>
+                            <h1 className={`text-lg sm:text-2xl lg:text-3xl font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>
                                 Student Obligations
                             </h1>
                         </div>
