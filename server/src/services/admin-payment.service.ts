@@ -45,10 +45,12 @@ export interface PendingPaymentItem {
 export const getPendingPayments = async (
     userId: number,
     role: string,
+    userProgramId?: number | null,
     yearLevel?: number | null,
     section?: string | null
 ): Promise<PendingPaymentItem[]> => {
-    const { programId } = await getAdminRecord(userId);
+    const { programId: adminProgramId } = await getAdminRecord(userId);
+    const programId = adminProgramId ?? userProgramId ?? null;
 
     let sql = `
         SELECT
@@ -105,10 +107,12 @@ export interface PendingProofItem {
 export const getPendingProofs = async (
     userId: number,
     role: string,
+    userProgramId?: number | null,
     yearLevel?: number | null,
     section?: string | null
 ): Promise<PendingProofItem[]> => {
-    const { programId } = await getAdminRecord(userId);
+    const { programId: adminProgramId } = await getAdminRecord(userId);
+    const programId = adminProgramId ?? userProgramId ?? null;
 
     let sql = `
         SELECT
@@ -328,10 +332,12 @@ export interface PaymentHistoryItem {
 export const getPaymentHistory = async (
     userId: number,
     role: string,
+    userProgramId?: number | null,
     yearLevel?: number | null,
     section?: string | null
 ): Promise<PaymentHistoryItem[]> => {
-    const { programId } = await getAdminRecord(userId);
+    const { programId: adminProgramId } = await getAdminRecord(userId);
+    const programId = adminProgramId ?? userProgramId ?? null;
 
     let sql = `
         SELECT
@@ -378,8 +384,9 @@ export const getPaymentHistory = async (
 
 // --- Approve all pending payment submissions at once ---
 
-export const verifyAllPayments = async (userId: number, role: string): Promise<number> => {
-    const { adminId, programId } = await getAdminRecord(userId);
+export const verifyAllPayments = async (userId: number, role: string, userProgramId?: number | null): Promise<number> => {
+    const { adminId, programId: adminProgramId } = await getAdminRecord(userId);
+    const programId = adminProgramId ?? userProgramId ?? null;
 
     let sql = `
         SELECT ps.payment_id, ps.student_obligation_id,

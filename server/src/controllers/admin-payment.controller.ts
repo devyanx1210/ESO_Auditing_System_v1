@@ -15,7 +15,7 @@ import {
 
 export const listPendingProofs = async (req: Request, res: Response) => {
     try {
-        const items = await getPendingProofs(req.user!.userId, req.user!.role, req.user!.yearLevel, req.user!.section);
+        const items = await getPendingProofs(req.user!.userId, req.user!.role, req.user!.programId, req.user!.yearLevel, req.user!.section);
         return sendSuccess(res, items);
     } catch (err: any) {
         return sendError(res, err.message, 400);
@@ -24,7 +24,7 @@ export const listPendingProofs = async (req: Request, res: Response) => {
 
 export const listPendingPayments = async (req: Request, res: Response) => {
     try {
-        const payments = await getPendingPayments(req.user!.userId, req.user!.role, req.user!.yearLevel, req.user!.section);
+        const payments = await getPendingPayments(req.user!.userId, req.user!.role, req.user!.programId, req.user!.yearLevel, req.user!.section);
         return sendSuccess(res, payments);
     } catch (err: any) {
         return sendError(res, err.message, 400);
@@ -66,7 +66,7 @@ export const handleRecordCash = async (req: Request, res: Response) => {
 
 export const handleVerifyAll = async (req: Request, res: Response) => {
     try {
-        const count = await verifyAllPayments(req.user!.userId, req.user!.role);
+        const count = await verifyAllPayments(req.user!.userId, req.user!.role, req.user!.programId);
         logAction({ performedBy: req.user!.userId, action: "payment_verify_all", details: { count }, ipAddress: req.ip });
         return sendSuccess(res, { count }, `${count} payment(s) approved`);
     } catch (err: any) {
@@ -76,7 +76,7 @@ export const handleVerifyAll = async (req: Request, res: Response) => {
 
 export const listPaymentHistory = async (req: Request, res: Response) => {
     try {
-        const items = await getPaymentHistory(req.user!.userId, req.user!.role, req.user!.yearLevel, req.user!.section);
+        const items = await getPaymentHistory(req.user!.userId, req.user!.role, req.user!.programId, req.user!.yearLevel, req.user!.section);
         return sendSuccess(res, items);
     } catch (err: any) {
         return sendError(res, err.message, 400);
