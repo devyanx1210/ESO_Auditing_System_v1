@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import { listStudents, getStudentObligationsForAdmin, verifyProofObligation } from "../services/admin-student.service.js";
+import { logAction } from "../services/audit.service.js";
 
 export const handleListStudents = async (req: Request, res: Response) => {
     try {
@@ -28,6 +29,7 @@ export const handleVerifyProof = async (req: Request, res: Response) => {
         const statusNum = Number(status);
         if (![2, 0].includes(statusNum)) return sendError(res, "status must be 2 (paid) or 0 (unpaid)", 400);
         await verifyProofObligation(req.user!.userId, studentObligationId, statusNum);
+        logAction({ performedBy: req.user!.userId, action: statusNum === 2 ? "proof_verified" : "proof_rejected", targetType: "student_obligation", targetId: studentObligationId, ipAddress: req.ip });
         return sendSuccess(res, null, `Proof ${statusNum === 2 ? "verified" : "rejected"}`);
     } catch (err: any) {
         return sendError(res, err.message, 400);

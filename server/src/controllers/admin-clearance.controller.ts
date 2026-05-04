@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
+import { logAction } from "../services/audit.service.js";
 import {
     getPendingClearance,
     getClearanceHistory,
@@ -25,6 +26,7 @@ export const handleSignClearance = async (req: Request, res: Response) => {
         const studentId = Number(req.params.studentId);
         const { remarks } = req.body;
         await signClearance(req.user!.userId, studentId, remarks ?? null);
+        logAction({ performedBy: req.user!.userId, action: "clearance_signed", targetType: "student", targetId: studentId, ipAddress: req.ip });
         return sendSuccess(res, null, "Clearance signed");
     } catch (err: any) {
         return sendError(res, err.message, 400);
@@ -34,6 +36,7 @@ export const handleSignClearance = async (req: Request, res: Response) => {
 export const handleSignAll = async (req: Request, res: Response) => {
     try {
         const count = await signAllClearance(req.user!.userId, req.user!.role);
+        logAction({ performedBy: req.user!.userId, action: "clearance_sign_all", details: { count }, ipAddress: req.ip });
         return sendSuccess(res, { count }, `${count} clearance(s) signed`);
     } catch (err: any) {
         return sendError(res, err.message, 400);
@@ -54,6 +57,7 @@ export const handleUnapproveHistory = async (req: Request, res: Response) => {
         const { clearanceIds } = req.body;
         if (!Array.isArray(clearanceIds)) return sendError(res, "clearanceIds must be an array", 400);
         const count = await unapproveHistoryClearances(clearanceIds.map(Number));
+        logAction({ performedBy: req.user!.userId, action: "clearance_unapproved", details: { count, clearanceIds }, ipAddress: req.ip });
         return sendSuccess(res, { count }, `${count} clearance(s) returned to pending`);
     } catch (err: any) {
         return sendError(res, err.message, 400);
@@ -65,6 +69,7 @@ export const handleDeleteClearanceHistory = async (req: Request, res: Response) 
         const { clearanceIds } = req.body;
         if (!Array.isArray(clearanceIds)) return sendError(res, "clearanceIds must be an array", 400);
         const count = await deleteHistoryClearances(clearanceIds.map(Number));
+        logAction({ performedBy: req.user!.userId, action: "clearance_deleted", details: { count, clearanceIds }, ipAddress: req.ip });
         return sendSuccess(res, { count }, `${count} clearance record(s) deleted`);
     } catch (err: any) {
         return sendError(res, err.message, 400);

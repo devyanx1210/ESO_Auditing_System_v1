@@ -11,6 +11,7 @@ import {
 } from "../services/obligation.service.js";
 import { uploadQR, uploadToCloudinary } from "../middleware/upload.middleware.js";
 import { sendSuccess, sendError } from "../utils/response.js";
+import { logAction } from "../services/audit.service.js";
 import { isClassRole, isProgramRole } from "../config/role-groups.js";
 import pool from "../config/db.js";
 
@@ -103,6 +104,7 @@ export const addObligation = (req: Request, res: Response) => {
                 },
                 adminId
             );
+            logAction({ performedBy: req.user!.userId, action: "obligation_created", targetType: "obligation", targetId: obligation.obligationId, details: { name: obligationName }, ipAddress: req.ip });
             return sendSuccess(res, obligation, "Obligation created", 201);
         } catch (error: any) {
             return sendError(res, error.message, 500);
@@ -141,6 +143,7 @@ export const editObligation = (req: Request, res: Response) => {
             }
 
             await updateObligation(id, updates);
+            logAction({ performedBy: req.user!.userId, action: "obligation_updated", targetType: "obligation", targetId: id, ipAddress: req.ip });
             return sendSuccess(res, null, "Obligation updated");
         } catch (error: any) {
             return sendError(res, error.message, 500);
@@ -153,6 +156,7 @@ export const removeObligation = async (req: Request, res: Response) => {
         const id = Number(req.params.id);
         if (!id) return sendError(res, "Invalid obligation ID", 400);
         await deleteObligation(id);
+        logAction({ performedBy: req.user!.userId, action: "obligation_archived", targetType: "obligation", targetId: id, ipAddress: req.ip });
         return sendSuccess(res, null, "Obligation deleted");
     } catch (error: any) {
         return sendError(res, error.message, 500);
@@ -174,6 +178,7 @@ export const restoreObligationHandler = async (req: Request, res: Response) => {
         const id = Number(req.params.id);
         if (!id) return sendError(res, "Invalid obligation ID", 400);
         await restoreObligation(id);
+        logAction({ performedBy: req.user!.userId, action: "obligation_restored", targetType: "obligation", targetId: id, ipAddress: req.ip });
         return sendSuccess(res, null, "Obligation restored");
     } catch (error: any) {
         return sendError(res, error.message, 500);
@@ -185,6 +190,7 @@ export const permanentlyDeleteObligationHandler = async (req: Request, res: Resp
         const id = Number(req.params.id);
         if (!id) return sendError(res, "Invalid obligation ID", 400);
         await permanentlyDeleteObligation(id);
+        logAction({ performedBy: req.user!.userId, action: "obligation_permanently_deleted", targetType: "obligation", targetId: id, ipAddress: req.ip });
         return sendSuccess(res, null, "Obligation permanently deleted");
     } catch (error: any) {
         return sendError(res, error.message, 500);
@@ -196,6 +202,7 @@ export const syncObligation = async (req: Request, res: Response) => {
         const id = Number(req.params.id);
         if (!id) return sendError(res, "Invalid obligation ID", 400);
         const inserted = await syncObligationStudents(id);
+        logAction({ performedBy: req.user!.userId, action: "obligation_synced", targetType: "obligation", targetId: id, details: { studentsAssigned: inserted }, ipAddress: req.ip });
         return sendSuccess(res, { inserted }, `Synced: ${inserted} student(s) assigned`);
     } catch (error: any) {
         return sendError(res, error.message, 500);
