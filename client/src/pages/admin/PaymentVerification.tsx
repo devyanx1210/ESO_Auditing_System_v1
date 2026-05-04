@@ -512,7 +512,13 @@ const PROGRAMS_LIST = [
     { code: "ME",  name: "Mechanical Engineering" },
 ];
 
-const PAYMENT_ROLES = ["system_admin", "eso_officer", "class_officer", "program_head"];
+const PAYMENT_ROLES = [
+    "system_admin",
+    "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president",
+    "class_officer", "class_secretary", "class_treasurer", "class_president",
+    "program_officer", "program_treasurer", "program_president",
+    "program_head", "signatory", "osas_coordinator", "dean",
+];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 

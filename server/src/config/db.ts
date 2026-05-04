@@ -34,6 +34,12 @@ const MIGRATIONS = [
      INNER JOIN guardian g ON g.student_id = s.student_id
      SET s.contact_number = g.contact_number
      WHERE s.contact_number IS NULL AND g.contact_number IS NOT NULL`,
+    // Extended roles not in base schema — INSERT IGNORE so re-runs are safe
+    `INSERT IGNORE INTO roles (role_name) VALUES
+        ('eso_treasurer'),('eso_vpsa'),('eso_president'),
+        ('class_secretary'),('class_treasurer'),('class_president'),
+        ('program_officer'),('program_treasurer'),('program_president'),
+        ('osas_coordinator')`,
     // Audit tables — not in original schema, created here so Railway DB gets them automatically
     `CREATE TABLE IF NOT EXISTS expenses (
         expense_id   INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

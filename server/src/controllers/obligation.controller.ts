@@ -11,6 +11,7 @@ import {
 } from "../services/obligation.service.js";
 import { uploadQR, uploadToCloudinary } from "../middleware/upload.middleware.js";
 import { sendSuccess, sendError } from "../utils/response.js";
+import { isClassRole, isProgramRole } from "../config/role-groups.js";
 import pool from "../config/db.js";
 
 async function getAdminId(userId: number): Promise<number | null> {
@@ -58,6 +59,29 @@ export const addObligation = (req: Request, res: Response) => {
             const parsedAmount = parseFloat(amount) || 0;
             const parsedScope = Number(scope);
             const parsedSemester = Number(semester);
+
+            // --- Scope enforcement ---
+            // Clamp target fields so no role can exceed its own scope.
+            const { role, programId: uProg, yearLevel: uYear, section: uSection } = req.user!;
+            let effectiveProgramId = programId ? Number(programId) : null;
+            let effectiveYearLevel = yearLevel  ? Number(yearLevel)  : null;
+            let effectiveSection   = section    || null;
+
+            if (isClassRole(role)) {
+                // Class officers can create for their section/year/program — never scope=0 (all)
+                if (parsedScope === 0)
+                    return sendError(res, "Your role cannot create obligations for all students.", 403);
+                if (uProg)    effectiveProgramId = Number(uProg);
+                if (parsedScope >= 2 && uYear != null) effectiveYearLevel = Number(uYear);
+                if (parsedScope === 3 && uSection)     effectiveSection   = uSection;
+            } else if (isProgramRole(role)) {
+                // Program officers can create for their program only — never scope=0 (all)
+                if (parsedScope === 0)
+                    return sendError(res, "Your role cannot create obligations for all students.", 403);
+                if (uProg) effectiveProgramId = Number(uProg);
+            }
+            // ESO roles, system_admin, program_head, signatory, dean — no restriction
+
             const qrPath = req.file
                 ? (await uploadToCloudinary(req.file.buffer, "eso/qr")).url
                 : null;
@@ -69,13 +93,13 @@ export const addObligation = (req: Request, res: Response) => {
                     amount: parsedAmount,
                     gcashQrPath: qrPath,
                     isRequired: isRequired === "true" || isRequired === true,
-                    scope: parsedScope,
-                    programId: programId ? Number(programId) : null,
-                    yearLevel:   yearLevel   ? Number(yearLevel)   : null,
-                    section:     section     || null,
+                    scope:      parsedScope,
+                    programId:  effectiveProgramId,
+                    yearLevel:  effectiveYearLevel,
+                    section:    effectiveSection,
                     schoolYear,
-                    semester: parsedSemester,
-                    dueDate:     dueDate     || null,
+                    semester:   parsedSemester,
+                    dueDate:    dueDate || null,
                 },
                 adminId
             );
@@ -99,6 +123,22 @@ export const editObligation = (req: Request, res: Response) => {
                 return sendError(res, "Description must not exceed 500 characters", 400);
             if (updates.amount !== undefined) updates.amount = parseFloat(updates.amount) || 0;
             if (req.file) updates.gcashQrPath = (await uploadToCloudinary(req.file.buffer, "eso/qr")).url;
+
+            // Clamp scope fields for class/program roles on edit too
+            const { role, programId: uProg, yearLevel: uYear, section: uSection } = req.user!;
+            if (isClassRole(role)) {
+                if (updates.scope !== undefined && Number(updates.scope) === 0)
+                    return sendError(res, "Your role cannot set scope to all students.", 403);
+                if (uProg) updates.programId = Number(uProg);
+                if (updates.scope !== undefined && Number(updates.scope) >= 2 && uYear != null)
+                    updates.yearLevel = Number(uYear);
+                if (updates.scope !== undefined && Number(updates.scope) === 3 && uSection)
+                    updates.section = uSection;
+            } else if (isProgramRole(role)) {
+                if (updates.scope !== undefined && Number(updates.scope) === 0)
+                    return sendError(res, "Your role cannot set scope to all students.", 403);
+                if (uProg) updates.programId = Number(uProg);
+            }
 
             await updateObligation(id, updates);
             return sendSuccess(res, null, "Obligation updated");
