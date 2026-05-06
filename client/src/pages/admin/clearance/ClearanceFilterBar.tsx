@@ -18,6 +18,7 @@ export interface ClearanceFilterBarProps {
     onStatusFilterChange: (v: string) => void;
     activeResultCount: number;
     darkMode: boolean;
+    isWideRole?: boolean;
 }
 
 export function ClearanceFilterBar({
@@ -26,11 +27,12 @@ export function ClearanceFilterBar({
     statusFilter, onStatusFilterChange,
     activeResultCount,
     darkMode,
+    isWideRole = true,
 }: ClearanceFilterBarProps) {
     const [showFilters, setShowFilters] = React.useState(false);
     const filterRef = useRef<HTMLDivElement>(null);
 
-    const activeFilterCount = [programFilter !== "all", statusFilter !== "all"].filter(Boolean).length;
+    const activeFilterCount = [isWideRole && programFilter !== "all", statusFilter !== "all"].filter(Boolean).length;
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -78,22 +80,28 @@ export function ClearanceFilterBar({
                         ${darkMode ? "bg-[#1a1a1a]" : "bg-white"}`}>
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Filter</p>
 
-                        <div>
-                            <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                Program
-                            </label>
-                            <select
-                                value={programFilter}
-                                onChange={e => onProgramFilterChange(e.target.value)}
-                                className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
-                                    ${darkMode ? "bg-[#222] border-gray-600 text-gray-100" : "bg-white border-gray-200"}`}
-                            >
-                                <option value="all">All Programs</option>
-                                {PROGRAMS_LIST.map(p => (
-                                    <option key={p.code} value={p.code}>{p.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {isWideRole ? (
+                            <div>
+                                <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                    Program
+                                </label>
+                                <select
+                                    value={programFilter}
+                                    onChange={e => onProgramFilterChange(e.target.value)}
+                                    className={`w-full border-2 focus:border-orange-400 focus:outline-none rounded-xl px-3 py-2 text-sm
+                                        ${darkMode ? "bg-[#222] border-gray-600 text-gray-100" : "bg-white border-gray-200"}`}
+                                >
+                                    <option value="all">All Programs</option>
+                                    {PROGRAMS_LIST.map(p => (
+                                        <option key={p.code} value={p.code}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <p className={`text-xs rounded-xl px-3 py-2 ${darkMode ? "bg-[#222] text-gray-400" : "bg-gray-50 text-gray-500"}`}>
+                                Showing clearances within your assigned scope only.
+                            </p>
+                        )}
 
                         <div>
                             <label className={`block text-xs font-semibold mb-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
@@ -114,7 +122,7 @@ export function ClearanceFilterBar({
 
                         {activeFilterCount > 0 && (
                             <button
-                                onClick={() => { onProgramFilterChange("all"); onStatusFilterChange("all"); }}
+                                onClick={() => { if (isWideRole) onProgramFilterChange("all"); onStatusFilterChange("all"); }}
                                 className="w-full text-xs text-red-500 hover:text-red-600 font-semibold py-1.5 border border-red-200 rounded-xl hover:bg-red-50 transition"
                             >
                                 Clear all filters

@@ -67,7 +67,11 @@ const StudentList = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showFilters]);
 
-    const isRestricted = ["class_officer", "program_head"].includes(user?.role ?? "");
+    const isRestricted = [
+        "class_officer", "class_secretary", "class_treasurer", "class_president",
+        "program_officer", "program_treasurer", "program_president",
+        "program_head",
+    ].includes(user?.role ?? "");
 
     const load = useCallback(() => {
         if (!accessToken) return;

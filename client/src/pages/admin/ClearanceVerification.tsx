@@ -277,6 +277,11 @@ const ClearanceVerification = () => {
                 statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
                 activeResultCount={activeResultCount}
                 darkMode={darkMode}
+                isWideRole={![
+                    "class_officer", "class_secretary", "class_treasurer", "class_president",
+                    "program_officer", "program_treasurer", "program_president",
+                    "program_head",
+                ].includes(user?.role ?? "")}
             />
 
             {/* Sub-tabs and pending tab actions */}

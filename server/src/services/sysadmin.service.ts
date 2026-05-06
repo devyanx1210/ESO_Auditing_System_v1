@@ -141,11 +141,12 @@ export const updateAdminAccount = async (
          data.roleId, data.programId, userId]
     );
 
-    // Update password if provided
+    // Update password if provided — also clears any account lock
     if (data.password && data.password.length >= 8) {
         const hash = await bcrypt.hash(data.password, saltRounds);
         await pool.execute(
-            `UPDATE users SET password_hash = ?, password_changed_at = NOW() WHERE user_id = ?`,
+            `UPDATE users SET password_hash = ?, password_changed_at = NOW(),
+                failed_login_attempts = 0, locked_until = NULL WHERE user_id = ?`,
             [hash, userId]
         );
     }
@@ -156,10 +157,18 @@ export const updateAdminAccount = async (
         [data.position.trim() || null, data.yearLevel ?? null, data.section ?? null, userId]
     );
 
-    // If the account is a student, sync name to students table too
+    // If the account is a student, sync fields to students table too
     await pool.execute(
-        `UPDATE students SET first_name = ?, last_name = ?, updated_at = NOW() WHERE user_id = ?`,
-        [data.firstName.trim(), data.lastName.trim(), userId]
+        `UPDATE students
+            SET first_name = ?, last_name = ?,
+                program_id = COALESCE(?, program_id),
+                year_level = COALESCE(?, year_level),
+                section    = COALESCE(?, section),
+                updated_at = NOW()
+          WHERE user_id = ?`,
+        [data.firstName.trim(), data.lastName.trim(),
+         data.programId ?? null, data.yearLevel ?? null, data.section ?? null,
+         userId]
     );
 };
 
@@ -212,8 +221,9 @@ export const createAdminAccount = async (data: {
 };
 
 export const deleteAccount = async (userId: number) => {
+    // Free up the email so it can be reused, while keeping the row for FK integrity (audit_logs)
     await pool.execute(
-        `UPDATE users SET deleted_at = NOW() WHERE user_id = ?`,
+        `UPDATE users SET deleted_at = NOW(), email = CONCAT(email, '__deleted__', UNIX_TIMESTAMP()) WHERE user_id = ?`,
         [userId]
     );
 };
@@ -349,7 +359,9 @@ export const updateClearanceWorkflow = async (
 
 export const getAuditLogs = async (page: number = 1, limit: number = 50) => {
     const offset = (page - 1) * limit;
-    const [rows] = await pool.execute<RowDataPacket[]>(
+    const safeLimit  = Math.max(1, Math.min(200, Math.floor(limit)));
+    const safeOffset = Math.max(0, Math.floor(offset));
+    const [rows] = await pool.query<RowDataPacket[]>(
         `SELECT al.audit_id, al.action, al.target_type, al.target_id,
                 al.details, al.ip_address, al.created_at,
                 CONCAT(u.first_name, ' ', u.last_name) AS performed_by_name,
@@ -358,11 +370,11 @@ export const getAuditLogs = async (page: number = 1, limit: number = 50) => {
          JOIN users u ON u.user_id = al.performed_by
          JOIN roles r ON r.role_id = u.role_id
          ORDER BY al.created_at DESC
-         LIMIT ? OFFSET ?`,
-        [limit, offset]
+         LIMIT ${safeLimit} OFFSET ${safeOffset}`
     );
-    const [[{ total }]] = await pool.execute<RowDataPacket[]>(
+    const [countRows] = await pool.query<RowDataPacket[]>(
         `SELECT COUNT(*) AS total FROM audit_logs`
     );
-    return { logs: rows, total: Number(total), page, limit };
+    const total = Number(countRows[0]?.total ?? 0);
+    return { logs: rows, total, page, limit };
 };

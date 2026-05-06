@@ -69,6 +69,7 @@ export default function EditAccountModal({
 }: EditAccountModalProps) {
     const currentRoleName = roles.find(r => r.role_id === Number(editForm.roleId))?.role_name ?? "";
     const isClassRole     = CLASS_ROLES.includes(currentRoleName);
+    const isStudent       = currentRoleName === "student";
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
@@ -119,7 +120,7 @@ export default function EditAccountModal({
                                     <option value={editForm.roleId}>System Admin</option>
                                 )}
                                 {roles
-                                    .filter(r => r.role_name !== "student" && r.role_name !== "system_admin")
+                                    .filter(r => r.role_name !== "system_admin")
                                     .map(r => (
                                         <option key={r.role_id} value={r.role_id}>{r.role_label}</option>
                                     ))}
@@ -136,7 +137,7 @@ export default function EditAccountModal({
                             </select>
                         </div>
 
-                        {editTarget.role_name !== "system_admin" && (
+                        {!isStudent && editTarget.role_name !== "system_admin" && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
                                 <input list="edit-position-suggestions" className={inputCls}
@@ -151,12 +152,12 @@ export default function EditAccountModal({
                             </div>
                         )}
 
-                        {isClassRole && (
+                        {(isClassRole || isStudent) && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Year Level *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
                                 <select className={inputCls} value={editForm.yearLevel}
                                     onChange={e => setEditForm(f => ({ ...f, yearLevel: e.target.value }))}>
-                                    <option value="" disabled hidden>Select year level</option>
+                                    <option value="">— none —</option>
                                     {YEAR_LEVELS.map(y => (
                                         <option key={y.value} value={y.value}>{y.label}</option>
                                     ))}
@@ -164,9 +165,9 @@ export default function EditAccountModal({
                             </div>
                         )}
 
-                        {isClassRole && (
+                        {(isClassRole || isStudent) && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Section *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
                                 <input className={inputCls} value={editForm.section}
                                     onChange={e => setEditForm(f => ({ ...f, section: e.target.value }))}
                                     placeholder="e.g. A, B, Section 1" />

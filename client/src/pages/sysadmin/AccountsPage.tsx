@@ -307,16 +307,17 @@ export default function AccountsPage() {
         setEditSaving(true);
         try {
             const editRoleName = roles.find(r => r.role_id === Number(editForm.roleId))?.role_name ?? "";
+            const needsYearSection = CLASS_ROLES.includes(editRoleName) || editRoleName === "student";
             await sysadminService.updateAccount(accessToken, editTarget.user_id, {
                 firstName: editForm.firstName.trim(),
                 lastName:  editForm.lastName.trim(),
                 email:     editForm.email.trim(),
                 roleId:    Number(editForm.roleId),
                 programId: editForm.programId ? Number(editForm.programId) : null,
-                position:  editForm.position.trim(),
+                position:  editRoleName === "student" ? "" : editForm.position.trim(),
                 password:  editForm.password || undefined,
-                yearLevel: CLASS_ROLES.includes(editRoleName) && editForm.yearLevel ? Number(editForm.yearLevel) : null,
-                section:   CLASS_ROLES.includes(editRoleName) ? editForm.section.trim() || null : null,
+                yearLevel: needsYearSection && editForm.yearLevel ? Number(editForm.yearLevel) : null,
+                section:   needsYearSection ? editForm.section.trim() || null : null,
             });
             setEditTarget(null); setShowEditPass(false);
             showToast(`${editForm.firstName} ${editForm.lastName} updated.`); load();
