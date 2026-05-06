@@ -192,9 +192,15 @@ export default function CreateAccountModal({
                         {isStudent && (
                             <div style={{ animation: "fadeInUp 0.2s ease both 0.08s" }}>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">School Year *</label>
-                                <input className={inputCls} value={form.schoolYear}
+                                <input list="create-school-year-suggestions" className={inputCls} value={form.schoolYear}
                                     onChange={e => setForm(f => ({ ...f, schoolYear: e.target.value }))}
-                                    placeholder="e.g. 2024-2025" />
+                                    placeholder="e.g. 2025-2026" />
+                                <datalist id="create-school-year-suggestions">
+                                    {Array.from({ length: 8 }, (_, i) => {
+                                        const y = new Date().getFullYear() - 2 + i;
+                                        return <option key={y} value={`${y}-${y + 1}`} />;
+                                    })}
+                                </datalist>
                             </div>
                         )}
 
