@@ -84,7 +84,7 @@ app.use("/api", rateLimit({
 app.use("/api/v1/auth/login", rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
-    keyGenerator: (req) => (req.body?.email ?? "").toString().toLowerCase().trim() || req.ip!,
+    keyGenerator: (req) => (req.body?.email ?? "anonymous").toString().toLowerCase().trim(),
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many login attempts for this account, please try again later.",
@@ -103,7 +103,7 @@ app.use("/api/v1/auth/register", rateLimit({
 const emailRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    keyGenerator: (req) => (req.body?.email ?? "").toString().toLowerCase().trim() || req.ip!,
+    keyGenerator: (req) => (req.body?.email ?? "anonymous").toString().toLowerCase().trim(),
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many email requests, please try again later.",
