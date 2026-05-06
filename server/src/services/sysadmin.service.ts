@@ -221,11 +221,9 @@ export const createAdminAccount = async (data: {
 };
 
 export const deleteAccount = async (userId: number) => {
-    // Free up the email so it can be reused, while keeping the row for FK integrity (audit_logs)
-    await pool.execute(
-        `UPDATE users SET deleted_at = NOW(), email = CONCAT(email, '__deleted__', UNIX_TIMESTAMP()) WHERE user_id = ?`,
-        [userId]
-    );
+    // Remove audit logs first (FK has no cascade), then hard-delete everything else via CASCADE
+    await pool.execute(`DELETE FROM audit_logs WHERE performed_by = ?`, [userId]);
+    await pool.execute(`DELETE FROM users WHERE user_id = ?`, [userId]);
 };
 
 // Year Advancement
