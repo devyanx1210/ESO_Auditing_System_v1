@@ -1,27 +1,37 @@
-import { Resend } from "resend";
-
-const APP_NAME = "ESO Auditing System";
-const FROM_EMAIL = process.env.RESEND_FROM ?? "onboarding@resend.dev";
-
-let _resend: Resend | null = null;
-
-function getResend(): Resend | null {
-    if (_resend) return _resend;
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) { console.log("[email] RESEND_API_KEY not set — emails disabled"); return null; }
-    _resend = new Resend(apiKey);
-    return _resend;
-}
+const APP_NAME   = "ESO Auditing System";
+const FROM_NAME  = process.env.BREVO_FROM_NAME ?? APP_NAME;
+const FROM_EMAIL = process.env.BREVO_FROM ?? "";
 
 async function send(to: string, subject: string, html: string): Promise<void> {
-    const resend = getResend();
-    if (!resend) {
-        console.log(`[email] Skipped (no API key) | To: ${to} | Subject: ${subject}`);
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+        console.log(`[email] Skipped (no BREVO_API_KEY) | To: ${to} | Subject: ${subject}`);
+        return;
+    }
+    if (!FROM_EMAIL) {
+        console.error("[email] BREVO_FROM not set — cannot send email");
         return;
     }
     try {
-        const { error } = await resend.emails.send({ from: `${APP_NAME} <${FROM_EMAIL}>`, to, subject, html });
-        if (error) { console.error("[email] Send failed:", error.message); return; }
+        const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+            method: "POST",
+            headers: {
+                "accept":       "application/json",
+                "api-key":      apiKey,
+                "content-type": "application/json",
+            },
+            body: JSON.stringify({
+                sender:      { name: FROM_NAME, email: FROM_EMAIL },
+                to:          [{ email: to }],
+                subject,
+                htmlContent: html,
+            }),
+        });
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({})) as any;
+            console.error("[email] Send failed:", body?.message ?? res.status);
+            return;
+        }
         console.log(`[email] Sent to: ${to}`);
     } catch (err: any) {
         console.error("[email] Send failed:", err.message);
