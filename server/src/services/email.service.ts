@@ -1,38 +1,30 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 const APP_NAME = "ESO Auditing System";
+const FROM_EMAIL = process.env.RESEND_FROM ?? "onboarding@resend.dev";
 
-let _transporter: nodemailer.Transporter | null = null;
+let _resend: Resend | null = null;
 
-function getTransporter(): nodemailer.Transporter | null {
-    if (_transporter) return _transporter;
-    const user = process.env.GMAIL_USER;
-    const pass = process.env.GMAIL_APP_PASSWORD;
-    console.log("[email] GMAIL_USER:", user ?? "NOT SET");
-    console.log("[email] GMAIL_APP_PASSWORD:", pass ? "SET" : "NOT SET");
-    if (!user || !pass) return null;
-    _transporter = nodemailer.createTransport({
-        service: "gmail", auth: { user, pass },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 5000,
-    });
-    return _transporter;
+function getResend(): Resend | null {
+    if (_resend) return _resend;
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) { console.log("[email] RESEND_API_KEY not set — emails disabled"); return null; }
+    _resend = new Resend(apiKey);
+    return _resend;
 }
 
 async function send(to: string, subject: string, html: string): Promise<void> {
-    const transporter = getTransporter();
-    const user = process.env.GMAIL_USER;
-    if (!transporter || !user) {
-        console.log(`[email] To: ${to} | Subject: ${subject}`);
+    const resend = getResend();
+    if (!resend) {
+        console.log(`[email] Skipped (no API key) | To: ${to} | Subject: ${subject}`);
         return;
     }
     try {
-        await transporter.sendMail({ from: `"${APP_NAME}" <${user}>`, to, subject, html });
+        const { error } = await resend.emails.send({ from: `${APP_NAME} <${FROM_EMAIL}>`, to, subject, html });
+        if (error) { console.error("[email] Send failed:", error.message); return; }
         console.log(`[email] Sent to: ${to}`);
     } catch (err: any) {
         console.error("[email] Send failed:", err.message);
-        // Don't throw — email failure should never block the API response
     }
 }
 
