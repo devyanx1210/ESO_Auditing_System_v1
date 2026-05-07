@@ -293,7 +293,7 @@ export const signClearance = async (
         // Notify student of full step completion
         const message = finalStatus === 2
             ? "Your clearance has been fully approved!"
-            : `Your clearance has been approved at step ${clearanceStep}. Proceeding to next step.`;
+            : `Step ${clearanceStep} approved. Moving on to the next step.`;
         await createNotification(conn, studentUserId, "Clearance Update", message, 6, clearanceId, "clearance");
 
         await conn.commit();
@@ -399,7 +399,7 @@ export const unapproveHistoryClearances = async (clearanceIds: number[]): Promis
         await createNotification(
             pool, row.studentUserId,
             "Clearance Returned",
-            "Your clearance approval has been returned and needs to restart the process.",
+            "Your clearance was returned and will need to go through the process again.",
             8, row.clearance_id, "clearance"
         );
     }

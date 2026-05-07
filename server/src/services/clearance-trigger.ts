@@ -46,7 +46,7 @@ export async function triggerClearanceIfComplete(
     await createNotification(
         conn, studentUserId,
         "All Obligations Cleared!",
-        "All your obligations are settled. Your clearance process has been initiated.",
+        "All obligations settled. Your clearance is now being processed.",
         6, ins.insertId, "clearance"
     );
 }
