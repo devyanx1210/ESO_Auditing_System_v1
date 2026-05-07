@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { createNotification } from "./notification.service.js";
 
 export interface PaymentSubmission {
     paymentId: number;
@@ -99,15 +100,11 @@ export const submitPayment = async (
              WHERE r.role_name = 'eso_officer' AND u.status = 'active'`
         );
         for (const officer of officers) {
-            await conn.execute(
-                `INSERT INTO notifications
-                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Payment Submitted', ?, 2, ?, 'payment', 0, NOW())`,
-                [
-                    officer.user_id,
-                    `A student submitted a payment receipt for: ${so.obligation_name}`,
-                    paymentId,
-                ]
+            await createNotification(
+                conn, officer.user_id,
+                "Payment Submitted",
+                `A student submitted a payment receipt for: ${so.obligation_name}`,
+                2, paymentId, "payment"
             );
         }
 
@@ -172,15 +169,11 @@ export const submitProof = async (
              WHERE r.role_name = 'eso_officer' AND u.status = 'active'`
         );
         for (const officer of officers) {
-            await conn.execute(
-                `INSERT INTO notifications
-                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Proof Submitted', ?, 2, ?, 'obligation', 0, NOW())`,
-                [
-                    officer.user_id,
-                    `A student submitted proof for: ${so.obligation_name}`,
-                    studentObligationId,
-                ]
+            await createNotification(
+                conn, officer.user_id,
+                "Proof Submitted",
+                `A student submitted proof for: ${so.obligation_name}`,
+                2, studentObligationId, "obligation"
             );
         }
 

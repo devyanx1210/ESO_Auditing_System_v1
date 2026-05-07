@@ -3,6 +3,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
 import { jwtConfig } from "../config/jwt.js";
+import { createNotification } from "./notification.service.js";
 import { logAction } from "./audit.service.js";
 import { sendVerificationEmail, sendPasswordResetEmail } from "./email.service.js";
 import {
@@ -332,15 +333,11 @@ export const registerUser = async (
                  VALUES (?, ?, ?, 0, NOW(), NOW())`,
                 [studentId, ob.obligation_id, ob.amount]
             );
-            await conn.execute(
-                `INSERT INTO notifications
-                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'New Obligation Assigned', ?, 1, ?, 'obligation', 0, NOW())`,
-                [
-                    userId,
-                    `New obligation assigned: ${ob.obligation_name ?? "obligation"}`,
-                    ob.obligation_id,
-                ]
+            await createNotification(
+                conn, userId,
+                "New Obligation Assigned",
+                `New obligation assigned: ${ob.obligation_name ?? "obligation"}`,
+                1, ob.obligation_id, "obligation"
             );
         }
 

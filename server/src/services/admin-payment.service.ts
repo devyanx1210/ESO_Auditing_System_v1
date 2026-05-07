@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { isClassRole } from "../config/role-groups.js";
 import { triggerClearanceIfComplete } from "./clearance-trigger.js";
+import { createNotification } from "./notification.service.js";
 
 // Helpers
 
@@ -209,12 +210,7 @@ export const verifyPayment = async (
             ? `Your payment for "${pmt.obligation_name}" has been approved.`
             : `Your payment for "${pmt.obligation_name}" was rejected${remarks ? ": " + remarks : ""}.`;
         const notifType = status === 1 ? 3 : 4;
-        await conn.execute(
-            `INSERT INTO notifications
-                (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-             VALUES (?, ?, ?, ?, ?, 'payment', 0, NOW())`,
-            [pmt.studentUserId, title, message, notifType, paymentId]
-        );
+        await createNotification(conn, pmt.studentUserId, title, message, notifType, paymentId, "payment");
 
         // Auto-create clearance if this was the last unsettled obligation
         if (status === 1) {
@@ -286,16 +282,11 @@ export const recordCashPayment = async (
             [studentObligationId]
         );
 
-        // Notify student
-        await conn.execute(
-            `INSERT INTO notifications
-                (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-             VALUES (?, 'Cash Payment Recorded', ?, 3, ?, 'payment', 0, NOW())`,
-            [
-                so.studentUserId,
-                `Your cash payment of ₱${amountPaid} for "${so.obligation_name}" has been recorded.`,
-                paymentId,
-            ]
+        await createNotification(
+            conn, so.studentUserId,
+            "Cash Payment Recorded",
+            `Your cash payment of ₱${amountPaid} for "${so.obligation_name}" has been recorded.`,
+            3, paymentId, "payment"
         );
 
         // Auto-create clearance if this was the last unsettled obligation
@@ -429,10 +420,11 @@ export const verifyAllPayments = async (userId: number, role: string, userProgra
                 "UPDATE student_obligations SET status = 2, updated_at = NOW() WHERE student_obligation_id = ?",
                 [pmt.student_obligation_id]
             );
-            await conn.execute(
-                `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Payment Approved', ?, 3, ?, 'payment', 0, NOW())`,
-                [pmt.studentUserId, "Your payment for \"" + pmt.obligation_name + "\" has been approved.", pmt.payment_id]
+            await createNotification(
+                conn, pmt.studentUserId,
+                "Payment Approved",
+                `Your payment for "${pmt.obligation_name}" has been approved.`,
+                3, pmt.payment_id, "payment"
             );
             await triggerClearanceIfComplete(conn, pmt.studentId, pmt.schoolYear, pmt.semester, pmt.studentUserId);
         }
@@ -479,8 +471,12 @@ export const bulkVerifyPayments = async (userId: number, paymentIds: number[]): 
                 [pmt.payment_id, adminId]
             );
             await conn.execute("UPDATE student_obligations SET status = 2, updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
-            await conn.execute(`INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at) VALUES (?, 'Payment Approved', ?, 3, ?, 'payment', 0, NOW())`,
-                [pmt.studentUserId, `Your payment for "${pmt.obligation_name}" has been approved.`, pmt.payment_id]);
+            await createNotification(
+                conn, pmt.studentUserId,
+                "Payment Approved",
+                `Your payment for "${pmt.obligation_name}" has been approved.`,
+                3, pmt.payment_id, "payment"
+            );
             await triggerClearanceIfComplete(conn, pmt.studentId, pmt.schoolYear, pmt.semester, pmt.studentUserId);
         }
         await conn.commit();
@@ -511,10 +507,11 @@ export const bulkUnverifyPayments = async (userId: number, paymentIds: number[])
             await conn.execute("UPDATE payment_submissions SET payment_status = 0, updated_at = NOW() WHERE payment_id = ?", [pmt.payment_id]);
             await conn.execute("DELETE FROM payment_verifications WHERE payment_id = ?", [pmt.payment_id]);
             await conn.execute("UPDATE student_obligations SET status = 0, updated_at = NOW() WHERE student_obligation_id = ?", [pmt.student_obligation_id]);
-            await conn.execute(
-                `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Payment Returned for Review', ?, 5, ?, 'payment', 0, NOW())`,
-                [pmt.studentUserId, `Your payment for "${pmt.obligation_name}" has been returned for re-review.`, pmt.payment_id]
+            await createNotification(
+                conn, pmt.studentUserId,
+                "Payment Returned for Review",
+                `Your payment for "${pmt.obligation_name}" has been returned for re-review.`,
+                5, pmt.payment_id, "payment"
             );
         }
         await conn.commit();

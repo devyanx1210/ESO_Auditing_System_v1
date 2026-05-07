@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { isClassRole } from "../config/role-groups.js";
 import { triggerClearanceIfComplete } from "./clearance-trigger.js";
+import { createNotification } from "./notification.service.js";
 
 // Roles that see ALL students across every program (no program filter)
 const ALL_PROGRAMS_ROLES = ["system_admin", "eso_officer", "eso_treasurer", "eso_vpsa", "eso_president", "signatory", "osas_coordinator", "dean"];
@@ -258,10 +259,9 @@ export const verifyProofObligation = async (
         const message = status === 2
             ? `Your proof for "${ob.obligation_name}" has been verified.`
             : `Your proof for "${ob.obligation_name}" was not accepted.`;
-        await conn.execute(
-            `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-             VALUES (?, ?, ?, ?, ?, 'obligation', 0, NOW())`,
-            [ob.studentUserId, title, message, status === 2 ? 3 : 4, studentObligationId]
+        await createNotification(
+            conn, ob.studentUserId, title, message,
+            status === 2 ? 3 : 4, studentObligationId, "obligation"
         );
 
         // Auto-create clearance if this was the last unsettled obligation

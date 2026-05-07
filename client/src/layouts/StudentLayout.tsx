@@ -13,11 +13,13 @@ import "../../styles/index.css";
 import logo from "../assets/ESO_Logo.png";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 
 
 export default function StudentLayout() {
-    const { logout, user } = useAuth();
+    const { logout, user, accessToken } = useAuth();
     useTheme(); // ensure theme class is applied on mount
+    usePushNotifications(user?.userId, accessToken);
     const location = useLocation();
     const navigate = useNavigate();
 

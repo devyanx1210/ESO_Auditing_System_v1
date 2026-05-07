@@ -23,6 +23,7 @@ import "../../styles/index.css";
 import logo from "../assets/ESO_Logo.png";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 
 const ALL_STUDENT_SUB_ITEMS = [
     { path: "/dashboard/students/import",           label: "Import Students",     icon: <FaFileUpload className="text-[11px]" />,     roles: ["eso_officer"] },
@@ -46,7 +47,8 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const AdminLayout = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, accessToken } = useAuth();
+    usePushNotifications(user?.userId, accessToken);
     const role = user?.role ?? "";
     const studentSubItems = ALL_STUDENT_SUB_ITEMS.filter(i => i.roles.includes(role));
     const location  = useLocation();

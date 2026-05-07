@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'android-chrome-192x192.png', 'android-chrome-512x512.png'],
       manifest: {
@@ -22,39 +25,19 @@ export default defineConfig({
           { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/uploads/],
-        // After a deploy, immediately activate the new SW and drop old caches.
-        // This prevents "Failed to fetch dynamically imported module" errors
-        // caused by stale index.html referencing old chunk hashes.
-        skipWaiting: true,
-        clientsClaim: true,
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^\/uploads\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'uploads-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: true,
+        type: 'module',
       },
     }),
   ],
   build: {
     rollupOptions: {
       output: {
-        // Give PDF.js its own stable-named chunk so old SW caches can't reference
-        // a stale hash after rebuild. The chunk still gets a hash but stays
-        // isolated — the SW pre-caches it and cleanupOutdatedCaches removes the old one.
         manualChunks: {
           'pdfjs': ['pdfjs-dist'],
         },

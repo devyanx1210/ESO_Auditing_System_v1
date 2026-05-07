@@ -319,7 +319,25 @@ CREATE TABLE notifications (
 
 
 -- ============================================================
--- 13. AUDIT LOGS
+-- 13. PUSH SUBSCRIPTIONS
+-- ============================================================
+CREATE TABLE push_subscriptions (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NOT NULL,
+    endpoint    TEXT NOT NULL,
+    p256dh      VARCHAR(255) NOT NULL,
+    auth        VARCHAR(255) NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_push_user FOREIGN KEY (user_id)
+        REFERENCES users(user_id) ON DELETE CASCADE,
+
+    UNIQUE KEY uq_push_endpoint (endpoint(512))
+);
+
+
+-- ============================================================
+-- 14. AUDIT LOGS
 -- ============================================================
 CREATE TABLE audit_logs (
     audit_id        BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
+import { createNotification } from "./notification.service.js";
 
 // System Settings
 
@@ -108,11 +109,7 @@ export const updateAccountStatus = async (userId: number, status: "active" | "in
         : status === "inactive"
         ? "Your account has been deactivated."
         : "Your account has been reactivated. You can now log in.";
-    await pool.execute(
-        `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-         VALUES (?, ?, ?, 9, ?, 'user', 0, NOW())`,
-        [userId, title, message, userId]
-    );
+    await createNotification(pool, userId, title, message, 9, userId, "user");
 };
 
 export const updateAdminAccount = async (

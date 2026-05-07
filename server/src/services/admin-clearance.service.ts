@@ -1,5 +1,6 @@
 import pool from "../config/db.js";
 import { isClassRole, isProgramRole } from "../config/role-groups.js";
+import { createNotification } from "./notification.service.js";
 
 async function getAdminClearanceStep(userId: number): Promise<{
     adminId: number;
@@ -293,11 +294,7 @@ export const signClearance = async (
         const message = finalStatus === 2
             ? "Your clearance has been fully approved!"
             : `Your clearance has been approved at step ${clearanceStep}. Proceeding to next step.`;
-        await conn.execute(
-            `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-             VALUES (?, 'Clearance Update', ?, 6, ?, 'clearance', 0, NOW())`,
-            [studentUserId, message, clearanceId]
-        );
+        await createNotification(conn, studentUserId, "Clearance Update", message, 6, clearanceId, "clearance");
 
         await conn.commit();
     } catch (err) {
@@ -399,10 +396,11 @@ export const unapproveHistoryClearances = async (clearanceIds: number[]): Promis
     );
 
     for (const row of affected) {
-        await pool.execute(
-            `INSERT INTO notifications (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-             VALUES (?, 'Clearance Returned', 'Your clearance approval has been returned and needs to restart the process.', 8, ?, 'clearance', 0, NOW())`,
-            [row.studentUserId, row.clearance_id]
+        await createNotification(
+            pool, row.studentUserId,
+            "Clearance Returned",
+            "Your clearance approval has been returned and needs to restart the process.",
+            8, row.clearance_id, "clearance"
         );
     }
 

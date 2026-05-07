@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { createNotification } from "./notification.service.js";
 
 export interface ObligationData {
     obligationId: number;
@@ -240,15 +241,11 @@ export const createObligation = async (
                 [student.student_id, obligationId, input.amount]
             );
 
-            await conn.execute(
-                `INSERT INTO notifications
-                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'New Obligation Assigned', ?, 1, ?, 'obligation', 0, NOW())`,
-                [
-                    student.user_id,
-                    `New obligation assigned: ${input.obligationName}`,
-                    obligationId,
-                ]
+            await createNotification(
+                conn, student.user_id,
+                "New Obligation Assigned",
+                `New obligation assigned: ${input.obligationName}`,
+                1, obligationId, "obligation"
             );
         }
 
@@ -374,15 +371,11 @@ export const syncObligationStudents = async (obligationId: number): Promise<numb
                  VALUES (?, ?, ?, 0, NOW(), NOW())`,
                 [student.student_id, obligationId, ob.amount]
             );
-            await conn.execute(
-                `INSERT INTO notifications
-                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'New Obligation Assigned', ?, 1, ?, 'obligation', 0, NOW())`,
-                [
-                    student.user_id,
-                    `New obligation assigned: ${ob.obligation_name}`,
-                    obligationId,
-                ]
+            await createNotification(
+                conn, student.user_id,
+                "New Obligation Assigned",
+                `New obligation assigned: ${ob.obligation_name}`,
+                1, obligationId, "obligation"
             );
             inserted++;
         }
@@ -419,11 +412,11 @@ export const permanentlyDeleteObligation = async (obligationId: number): Promise
     if (students.length) {
         const name = students[0].obligation_name;
         for (const s of students) {
-            await pool.execute(
-                `INSERT INTO notifications
-                    (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-                 VALUES (?, 'Obligation Removed', ?, 3, ?, 'obligation', 0, NOW())`,
-                [s.user_id, `The obligation "${name}" has been permanently removed.`, obligationId]
+            await createNotification(
+                pool, s.user_id,
+                "Obligation Removed",
+                `The obligation "${name}" has been permanently removed.`,
+                3, obligationId, "obligation"
             );
         }
     }

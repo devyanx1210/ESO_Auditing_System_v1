@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { createNotification } from "./notification.service.js";
 
 /**
  * After an obligation is approved, check whether ALL of the student's obligations
@@ -42,12 +43,10 @@ export async function triggerClearanceIfComplete(
         [studentId, schoolYear, semester]
     );
 
-    await conn.execute(
-        `INSERT INTO notifications
-            (user_id, title, message, type, reference_id, reference_type, is_read, created_at)
-         VALUES (?, 'All Obligations Cleared!',
-                 'All your obligations are settled. Your clearance process has been initiated.',
-                 6, ?, 'clearance', 0, NOW())`,
-        [studentUserId, ins.insertId]
+    await createNotification(
+        conn, studentUserId,
+        "All Obligations Cleared!",
+        "All your obligations are settled. Your clearance process has been initiated.",
+        6, ins.insertId, "clearance"
     );
 }
