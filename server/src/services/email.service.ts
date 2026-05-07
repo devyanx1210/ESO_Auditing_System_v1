@@ -11,7 +11,12 @@ function getTransporter(): nodemailer.Transporter | null {
     console.log("[email] GMAIL_USER:", user ?? "NOT SET");
     console.log("[email] GMAIL_APP_PASSWORD:", pass ? "SET" : "NOT SET");
     if (!user || !pass) return null;
-    _transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+    _transporter = nodemailer.createTransport({
+        service: "gmail", auth: { user, pass },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000,
+    });
     return _transporter;
 }
 
@@ -27,7 +32,7 @@ async function send(to: string, subject: string, html: string): Promise<void> {
         console.log(`[email] Sent to: ${to}`);
     } catch (err: any) {
         console.error("[email] Send failed:", err.message);
-        throw err;
+        // Don't throw — email failure should never block the API response
     }
 }
 
