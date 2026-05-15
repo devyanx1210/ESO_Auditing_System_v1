@@ -243,7 +243,7 @@ export const registerUser = async (
                 `UPDATE users SET verification_token = ?, verification_token_exp = ? WHERE user_id = ?`,
                 [token, tokenExp, existingEmail[0].user_id]
             );
-            sendVerificationEmail(normalEmail, token).catch(() => {});
+            sendVerificationEmail(normalEmail, token);
             return { email: normalEmail };
         }
         throw new Error("Email is already registered");
@@ -351,8 +351,8 @@ export const registerUser = async (
 
         await conn.commit();
 
-        // Send verification email (non-blocking — don't fail registration if email fails)
-        sendVerificationEmail(input.email.toLowerCase().trim(), verificationToken).catch(() => {});
+        // Queue verification email (non-blocking — delivered via rate-limited queue)
+        sendVerificationEmail(input.email.toLowerCase().trim(), verificationToken);
 
         return { email: input.email.toLowerCase().trim() };
     } catch (err) {
@@ -391,7 +391,7 @@ export const resendVerificationEmail = async (email: string): Promise<void> => {
         `UPDATE users SET verification_token = ?, verification_token_exp = ? WHERE user_id = ?`,
         [token, tokenExp, rows[0].user_id]
     );
-    await sendVerificationEmail(email.toLowerCase().trim(), token);
+    sendVerificationEmail(email.toLowerCase().trim(), token);
 };
 
 export const requestPasswordReset = async (email: string): Promise<void> => {
@@ -407,7 +407,7 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
         `UPDATE users SET reset_token = ?, reset_token_exp = ? WHERE user_id = ?`,
         [token, tokenExp, rows[0].user_id]
     );
-    await sendPasswordResetEmail(email.toLowerCase().trim(), token);
+    sendPasswordResetEmail(email.toLowerCase().trim(), token);
 };
 
 export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
