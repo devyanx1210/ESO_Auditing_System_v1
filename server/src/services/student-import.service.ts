@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import pool   from "../config/db.js";
+import { sendVerificationEmail } from "./email.service.js";
 
 export interface ImportRow {
     name:             string;   // "Bunyi, Mariel Andrea L."
@@ -102,8 +103,10 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
     const HASH_BATCH    = 20;
 
     const conn = await pool.getConnection();
-    let imported = 0, skipped = 0;
+    let imported = 0, skipped = 0, emailsQueued = 0;
     const errors: string[] = [];
+    // Collect emails to queue after the transaction commits
+    const pendingEmails: Array<{ email: string; studentNo: string }> = [];
 
     try {
 // 1. Fetch student role ID
@@ -333,6 +336,12 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
                     }
 
                     imported++;
+
+                    // Queue a welcome email for real (non-temp) addresses
+                    const emailAddr = row.email.toLowerCase().trim();
+                    if (!emailAddr.endsWith("@noemail.import")) {
+                        pendingEmails.push({ email: emailAddr, studentNo: row.studentNo.trim() });
+                    }
                 } catch (err: any) {
                     const ref = row.studentNo || row.name;
                     if (err.code === "ER_DUP_ENTRY" && err.message.includes("user_id"))
@@ -352,6 +361,19 @@ async function _runImport(rows: ImportRow[], ctx: ImportContext): Promise<Import
             );
 
             await conn.commit();
+
+            // Queue welcome emails after the transaction commits so we don't
+            // send emails for rows that were rolled back.
+            // sendVerificationEmail() is now fire-and-forget via the rate-limited queue.
+            for (const { email, studentNo } of pendingEmails) {
+                sendVerificationEmail(email, studentNo);
+                emailsQueued++;
+            }
+            console.log(
+                `[student-import] Import complete — ` +
+                `imported: ${imported}, skipped: ${skipped}, ` +
+                `emails queued: ${emailsQueued}, errors: ${errors.length}`
+            );
         } catch (e) {
             await conn.rollback();
             throw e;

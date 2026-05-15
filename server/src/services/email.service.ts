@@ -1,8 +1,17 @@
+import { enqueue, registerSendFn, getQueueStatus, flushQueue } from "./email-queue.service.js";
+
+export { getQueueStatus, flushQueue };
+
 const APP_NAME   = "ESO Auditing System";
 const FROM_NAME  = process.env.BREVO_FROM_NAME ?? APP_NAME;
 const FROM_EMAIL = process.env.BREVO_FROM ?? "";
 
-async function send(to: string, subject: string, html: string): Promise<void> {
+/**
+ * Low-level Brevo API call.  Throws on 429 / network errors so the queue's
+ * retry logic can handle them; returns silently on other non-OK responses
+ * (e.g. 400 bad address) so they are not retried indefinitely.
+ */
+async function sendImmediate(to: string, subject: string, html: string): Promise<void> {
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
         console.log(`[email] Skipped (no BREVO_API_KEY) | To: ${to} | Subject: ${subject}`);
@@ -27,15 +36,31 @@ async function send(to: string, subject: string, html: string): Promise<void> {
                 htmlContent: html,
             }),
         });
+        if (res.status === 429) {
+            // Signal to the queue that this is a rate-limit error worth retrying
+            throw new Error(`429 Too Many Requests — Brevo rate limit hit`);
+        }
         if (!res.ok) {
             const body = await res.json().catch(() => ({})) as any;
-            console.error("[email] Send failed:", body?.message ?? res.status);
+            console.error("[email] Send failed (non-retryable):", body?.message ?? res.status);
             return;
         }
         console.log(`[email] Sent to: ${to}`);
     } catch (err: any) {
-        console.error("[email] Send failed:", err.message);
+        // Re-throw so the queue can decide whether to retry
+        throw err;
     }
+}
+
+// Register the concrete sender with the queue service (avoids circular imports)
+registerSendFn(sendImmediate);
+
+/**
+ * Queue an email for rate-limited delivery.
+ * Use this for all bulk / non-urgent sends (verification emails, etc.).
+ */
+function send(to: string, subject: string, html: string): void {
+    enqueue(to, subject, html);
 }
 
 function baseTemplate(title: string, body: string): string {
@@ -77,7 +102,7 @@ function baseTemplate(title: string, body: string): string {
     </html>`;
 }
 
-export async function sendVerificationEmail(to: string, token: string): Promise<void> {
+export function sendVerificationEmail(to: string, token: string): void {
     const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const link   = `${appUrl}/verify-email?token=${token}`;
     const body   = `
@@ -92,10 +117,10 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
         If the button does not work, copy and paste this link into your browser:<br>
         <a href="${link}" style="color:#f97316;word-break:break-all;">${link}</a>
       </p>`;
-    await send(to, "Verify your ESO account", baseTemplate("Verify Your Email", body));
+    send(to, "Verify your ESO account", baseTemplate("Verify Your Email", body));
 }
 
-export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
+export function sendPasswordResetEmail(to: string, token: string): void {
     const appUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const link   = `${appUrl}/reset-password?token=${token}`;
     const body   = `
@@ -111,5 +136,5 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
         If the button does not work, copy and paste this link into your browser:<br>
         <a href="${link}" style="color:#f97316;word-break:break-all;">${link}</a>
       </p>`;
-    await send(to, "Reset your ESO password", baseTemplate("Password Reset Request", body));
+    send(to, "Reset your ESO password", baseTemplate("Password Reset Request", body));
 }
