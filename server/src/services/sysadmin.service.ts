@@ -138,13 +138,26 @@ export const updateAdminAccount = async (
          data.roleId, data.programId, userId]
     );
 
-    // Update password if provided — also clears any account lock
+    // Update password if provided — also clears any account lock and invalidates sessions
     if (data.password && data.password.length >= 8) {
         const hash = await bcrypt.hash(data.password, saltRounds);
         await pool.execute(
             `UPDATE users SET password_hash = ?, password_changed_at = NOW(),
-                failed_login_attempts = 0, locked_until = NULL WHERE user_id = ?`,
+                failed_login_attempts = 0, locked_until = NULL,
+                refresh_token = NULL, refresh_token_expires_at = NULL WHERE user_id = ?`,
             [hash, userId]
+        );
+    } else {
+        // Even without a password change, clear any account lock and invalidate sessions
+        // so the user can log in immediately with their existing (or newly changed) credentials
+        await pool.execute(
+            `UPDATE users SET
+                failed_login_attempts = 0,
+                locked_until = NULL,
+                refresh_token = NULL,
+                refresh_token_expires_at = NULL
+             WHERE user_id = ?`,
+            [userId]
         );
     }
 
