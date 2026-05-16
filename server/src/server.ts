@@ -73,7 +73,7 @@ app.use(cors({
 // Rate limiting — high cap for shared school WiFi / Railway proxy (many users share one IP)
 app.use("/api", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: isProd ? 10000 : 50000,
+    max: isProd ? 50000 : 100000,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many requests, please try again later.",
@@ -83,7 +83,7 @@ app.use("/api", rateLimit({
 // network / Railway proxy don't block each other — only brute-force on one account is blocked
 app.use("/api/v1/auth/login", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 100,
     keyGenerator: (req) => (req.body?.email ?? "anonymous").toString().toLowerCase().trim(),
     standardHeaders: true,
     legacyHeaders: false,
@@ -93,7 +93,7 @@ app.use("/api/v1/auth/login", rateLimit({
 // Prevent mass account creation spam (per IP, low volume expected)
 app.use("/api/v1/auth/register", rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 50,
+    max: 200,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many registration attempts, please try again later.",
@@ -102,7 +102,7 @@ app.use("/api/v1/auth/register", rateLimit({
 // Prevent email spam via forgot-password and resend-verification (per email key)
 const emailRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 50,
     keyGenerator: (req) => (req.body?.email ?? "anonymous").toString().toLowerCase().trim(),
     standardHeaders: true,
     legacyHeaders: false,
@@ -114,7 +114,7 @@ app.use("/api/v1/auth/resend-verification",  emailRateLimit);
 // Prevent brute-force on reset-password tokens (per IP, token is already single-use)
 app.use("/api/v1/auth/reset-password", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: "Too many password reset attempts, please try again later.",
