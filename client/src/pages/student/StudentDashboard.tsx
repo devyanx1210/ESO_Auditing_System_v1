@@ -143,7 +143,7 @@ export default function StudentDashboard() {
             .finally(() => setLoading(false));
     }, [accessToken]);
 
-    /* ── real-time: poll notifications + obligations every 15s ── */
+    /* ── real-time: poll notifications + obligations every 60s ── */
     useEffect(() => {
         if (!accessToken) return;
         const id = setInterval(() => {
@@ -156,7 +156,7 @@ export default function StudentDashboard() {
                 setClearance(c);
                 setNotifications(n);
             }).catch(() => { /* silent — keep stale data */ });
-        }, 15_000);
+        }, 60_000);
         return () => clearInterval(id);
     }, [accessToken]);
 
